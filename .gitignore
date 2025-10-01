@@ -1,0 +1,29 @@
+# 공통 비밀/환경
+**/.env
+**/.env.*
+
+# Python (ai)
+**/.venv/
+**/__pycache__/
+**/*.pyc
+
+# Node (frontend)
+frontend/node_modules/
+frontend/.vite/
+frontend/dist/
+
+# Java (backend)
+backend/target/
+backend/.mvn/
+*.iml
+
+# 로그/캐시
+*.log
+logs/
+.cache/
+
+# IDE/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
