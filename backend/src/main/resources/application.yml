@@ -2,20 +2,26 @@ server:
     port: 8081
 
 # 추후에 디비 만들시 이거 삭제 후 밑에꺼 사용하면 됩니다.
-spring:
-  autoconfigure:
-    exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
-
 # spring:
-#     datasource:
-#         driver-class-name: oracle.jdbc.driver.OracleDriver
-#         url: jdbc:oracle:thin:@localhost:1521/xepdb1
-#         username: prac
-#         password: 1234
+#   autoconfigure:
+#     exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+
+spring:
+    datasource:
+        driver-class-name: oracle.jdbc.driver.OracleDriver
+        url: jdbc:oracle:thin:@localhost:1521/xe
+        username: alice
+        password: 1234
 
 
 #  mapUnderscoreToCamelCase=true
-# mybatis:
-#     mapper-locations: classpath:mapper/*.xml
-#     type-aliases-package: com.example.backend.domain
-    
+mybatis:
+    mapper-locations: classpath:mapper/*.xml
+    type-aliases-package: com.example.backend.domain
+
+logging:
+    level:
+        org.mybatis: DEBUG
+        org.apache.ibatis: DEBUG
+        org.mybatis.spring.SqlSessionFactoryBean: DEBUG
+        com.example.backend.mapper: DEBUG
