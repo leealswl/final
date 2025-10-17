@@ -17,6 +17,9 @@ backend/target/
 backend/.mvn/
 *.iml
 
+*.local.yml
+*.secret.yml
+
 # 로그/캐시
 *.log
 logs/
