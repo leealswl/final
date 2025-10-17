@@ -16,6 +16,7 @@ frontend/dist/
 backend/target/
 backend/.mvn/
 *.iml
+backend/src/main/resources/application.yml
 
 *.local.yml
 *.secret.yml
