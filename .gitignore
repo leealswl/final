@@ -18,6 +18,9 @@ backend/.mvn/
 *.iml
 backend/src/main/resources/application.yml
 
+*.local.yml
+*.secret.yml
+
 # 로그/캐시
 *.log
 logs/
