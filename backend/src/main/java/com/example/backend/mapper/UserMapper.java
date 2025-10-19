@@ -11,6 +11,6 @@ public interface UserMapper {
     public User getUser(User user);
     public int deleteUser(User user);
     public int updateUser(User user);
-    public int validateId(@Param("userId")String userId);
+    public int validateId(@Param("userId") String userId);
     
 }
