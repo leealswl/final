@@ -20,7 +20,7 @@
     </resultMap>
 
         <insert id="insertProject">
-            <selectKey keyProperty="idx" order="BEFORE" resultType="long">
+            <selectKey keyProperty="projectIdx" order="BEFORE" resultType="long">
                 select project_seq.nextval from dual
             </selectKey>
             insert into projects (project_idx, user_idx, project_name, created_at, updated_at)
