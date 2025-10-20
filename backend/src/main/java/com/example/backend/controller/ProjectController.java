@@ -10,6 +10,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
 
 
 @RestController
@@ -23,6 +26,15 @@ public class ProjectController {
     public ResponseEntity<Project> getProject(@RequestParam Long projectidx) {
         return new ResponseEntity<>(projectService.getProject(projectidx), HttpStatus.OK);
     }
+
+    @PostMapping("insert")
+    public ResponseEntity<String> insertProject(@RequestBody Project project) {
+        int insertCount = projectService.insertProject(project);
+        System.out.println("insertCount" + insertCount);
+        
+        return insertCount == 1 ? new ResponseEntity<String>("success", HttpStatus.OK) : new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+    
     
     
 }
