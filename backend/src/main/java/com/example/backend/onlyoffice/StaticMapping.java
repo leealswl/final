@@ -13,7 +13,7 @@ public class StaticMapping implements WebMvcConfigurer{
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry reg) {
         // 프로젝트 루트의 ./uploads 폴더를 http://localhost:8081/uploads/** 로 공개
-        Path uploadDir = Path.of("uploads").toAbsolutePath();
+        Path uploadDir = Path.of("backend/uploads").toAbsolutePath();
         reg.addResourceHandler("/uploads/**")
            .addResourceLocations(uploadDir.toUri().toString());
     }
