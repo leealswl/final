@@ -9,31 +9,31 @@ import com.example.backend.mapper.UserMapper;
 @Service
 public class UserServiceImpl implements UserService{
 
-    @Autowired UserMapper mapper;
+    @Autowired UserMapper userMapper;
 
     @Override
     public User getUser(User user) {
-        return mapper.getUser(user);
+        return userMapper.getUser(user);
     }
 
     @Override
     public int insertUser(User user) {
-        return mapper.insertUser(user);
+        return userMapper.insertUser(user);
     }
 
     @Override
     public int deletetUser(User user) {
-        return mapper.deleteUser(user);
+        return userMapper.deleteUser(user);
     }
 
     @Override
     public int updateUser(User user) {
-        return mapper.updateUser(user);
+        return userMapper.updateUser(user);
     }
 
     @Override
     public int validateId(String userId) {
-        return mapper.validateId(userId);
+        return userMapper.validateId(userId);
     }
     
 }
