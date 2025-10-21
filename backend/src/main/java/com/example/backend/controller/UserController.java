@@ -19,41 +19,42 @@ import org.springframework.web.bind.annotation.PutMapping;
 
 
 @RestController
-@RequestMapping("/user/*")
+@RequestMapping("/api/user/*")
 public class UserController {
 
-    @Autowired UserService service;
+    @Autowired
+    UserService userService;
 
     @PostMapping("/insert")
     public ResponseEntity<String> insertUser(@RequestBody User user) {
-        int insertCount = service.insertUser(user);
+        int insertCount = userService.insertUser(user);
         
         return insertCount == 1 ? new ResponseEntity<String>("success", HttpStatus.OK) : new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @PostMapping("/login")
     public ResponseEntity<User> getUser(@RequestBody User user) {
-        System.out.println("login user: " + service.getUser(user));
-        return new ResponseEntity<>(service.getUser(user), HttpStatus.OK);
+        System.out.println("login user: " + userService.getUser(user));
+        return new ResponseEntity<>(userService.getUser(user), HttpStatus.OK);
     }
 
     @DeleteMapping("/delete")
     public ResponseEntity<String> deleteUser(@RequestBody User user) {
-        int deleteCount = service.deletetUser(user);
+        int deleteCount = userService.deletetUser(user);
         
         return deleteCount == 1 ? new ResponseEntity<String>("success", HttpStatus.OK) : new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @PutMapping("/update")
     public ResponseEntity<String> updateUser(@RequestBody User user) {
-        int updateCount = service.updateUser(user);
+        int updateCount = userService.updateUser(user);
         
         return updateCount == 1 ? new ResponseEntity<String>("success", HttpStatus.OK) : new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
     
-    @GetMapping("/insert/validate/id")
-    public ResponseEntity<String> validateId(@RequestParam String userId) {
-        int validateIdCount = service.validateId(userId);
+    @GetMapping("/insert/validate/{id}")
+    public ResponseEntity<String> validateId(@RequestParam String id) {
+        int validateIdCount = userService.validateId(id);
         System.out.println("idcheck: " + validateIdCount);
 
         return validateIdCount == 0 ? new ResponseEntity<String>("success", HttpStatus.OK) : new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);

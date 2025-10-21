@@ -12,10 +12,14 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+<<<<<<< HEAD
     "@mui/icons-material": "^7.3.4",
     "@mui/lab": "^7.0.1-beta.18",
     "@mui/material": "^7.3.4",
     "@mui/x-tree-view": "^8.14.1",
+=======
+    "@mui/material": "^7.3.4",
+>>>>>>> dev
     "@tanstack/react-query": "^5.90.2",
     "axios": "^1.12.2",
     "dotenv": "^17.2.3",
