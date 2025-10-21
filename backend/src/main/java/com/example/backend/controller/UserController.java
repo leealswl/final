@@ -22,7 +22,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 @RequestMapping("/api/user/*")
 public class UserController {
 
-    @Autowired UserService userService;
+    @Autowired
+    UserService userService;
 
     @PostMapping("/insert")
     public ResponseEntity<String> insertUser(@RequestBody User user) {
