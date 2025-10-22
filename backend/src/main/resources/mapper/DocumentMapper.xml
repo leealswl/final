@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.backend.mapper.DocumenttMapper">
+
+    <resultMap id="documentMap" type="Document">
+        <id property="documentIdx" column="document_idx"/>
+        <result property="projectIdx" column="project_idx"/>
+        <result property="folder" column="folder"/>
+        <result property="fileName" column="file_name"/>
+        <result property="filePath" column="file_path"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+        <insert id="insertDocument">
+            <selectKey keyProperty="documentIdx" order="BEFORE" resultType="long">
+                select document_seq.nextval from dual
+            </selectKey>
+            insert into documents (document_idx, project_idx, folder, file_name, file_path)
+            values (#{documentIdx}, #{projectIdx}, #{folder}, #{fileName}, #{filePath})
+        </insert>
+
+        <!-- <delete id="deleteProject">
+            delete from projects
+            where project_idx = #{projectIdx} and user_idx = #{userIdx}
+        </delete>
+
+        <update id="updateProject">
+                update projects
+                set project_name = #{projectName}, updated_at = sysdate
+                where project_idx = #{projectIdx}
+        </update>
+
+        <select id="getProject" resultMap="projectMap">
+            select project_idx, user_idx, project_name, created_at, updated_at, idx, user_id
+            from projects
+            left join users
+            on projects.user_idx = users.idx
+            where project_idx = #{projectIdx}
+        </select>
+
+        <select id="getProjectList" resultMap="projectMap">
+            select *
+            from projects
+            left join users
+            on projects.user_idx = users.idx
+            where user_idx = #{userIdx}
+            order by project_idx desc;
+        </select> -->
+
+</mapper>

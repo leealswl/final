@@ -13,8 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.backend.FastAPI.FastAPIService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import com.example.backend.service.DocumentService;
 
 
 @RestController
@@ -23,6 +22,9 @@ public class AnalysisController {
 
     @Autowired
     FastAPIService fastApi;
+
+    @Autowired
+    DocumentService documentService;
 
     @GetMapping("/path")
     public String test() {
@@ -35,26 +37,17 @@ public class AnalysisController {
     @PostMapping("/")
     public ResponseEntity<String> receiveAndSendFiles(
             @RequestParam("files") List<MultipartFile> files,
-            @RequestParam("folders") List<String> folders) {
+            @RequestParam("folders") List<Long> folders,
+            @RequestParam("projectidx") Long projectidx,
+            @RequestParam("userid") String userid) {
 
         try {
-            for (int i = 0; i < files.size(); i++) {
-                MultipartFile file = files.get(i);
-                String folderName = folders.get(i);
-
-                Path uploadPath = Paths.get("uploads/" + folderName);
-                if (!Files.exists(uploadPath)) {
-                    Files.createDirectories(uploadPath);
-                }
-
-                Path filePath = uploadPath.resolve(file.getOriginalFilename());
-                Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            }
-
+            documentService.saveFilesAndDocuments(files, folders, userid, projectidx);
             return ResponseEntity.ok("모든 파일 업로드 성공!");
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().body("업로드 실패: " + e.getMessage());
         }
     }
+
 }
