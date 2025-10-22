@@ -24,10 +24,9 @@ import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 
 import { useFileStore } from "../../../../store/useFileStore";
 
-
-// ── 파일 아이콘 ──────────────────────────────────────────────────────────────
+// 파일 아이콘
 const FileIcon = ({ mime = "", name = "" }) => {
-  const lower = name.toLowerCase();
+  const lower = (name || "").toLowerCase();
   if (mime.includes("pdf") || lower.endsWith(".pdf")) return <PictureAsPdfIcon fontSize="small" sx={{ mr: 1 }} />;
   if (mime.startsWith("text/") || mime.includes("markdown") || lower.endsWith(".md") || lower.endsWith(".txt"))
     return <DescriptionIcon fontSize="small" sx={{ mr: 1 }} />;
@@ -35,7 +34,7 @@ const FileIcon = ({ mime = "", name = "" }) => {
   return <InsertDriveFileIcon fontSize="small" sx={{ mr: 1 }} />;
 };
 
-// ── 트리에서 id로 노드 찾기 ──────────────────────────────────────────────────
+// 트리 탐색
 function findNode(nodes, id) {
   for (const n of nodes) {
     if (n.id === id) return n;
@@ -47,26 +46,23 @@ function findNode(nodes, id) {
   return null;
 }
 
-// ── 메인 컴포넌트 ───────────────────────────────────────────────────────────
 export default function Sidebar() {
   const {
     tree,
     selectedNodeId,
     selectNode,
-    uploadFiles,   // zustand: 프론트 더미 or 백엔드 업로드
-    renameNode,    // zustand: 이름 변경
+    uploadFiles,
+    renameNode,
   } = useFileStore();
 
-  // 현재 선택한 노드(폴더면 업로드 위치로 사용)
   const selectedNode = useMemo(
     () => (selectedNodeId ? findNode(tree, selectedNodeId) : null),
     [tree, selectedNodeId]
   );
 
-  // ── 업로드 핸들러 ─────────────────────────────────────────────────────────
+  // 업로드
   const fileInputRef = useRef(null);
   const onClickUpload = () => fileInputRef.current?.click();
-
   const onChangeUpload = async (e) => {
     const files = e.target.files;
     if (!files?.length) return;
@@ -75,11 +71,11 @@ export default function Sidebar() {
     try {
       await uploadFiles(files, parentId);
     } finally {
-      e.target.value = ""; // 같은 파일 다시 선택 가능
+      e.target.value = "";
     }
   };
 
-  // ── 이름 변경 다이얼로그 ──────────────────────────────────────────────────
+  // 이름 변경
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState(null);
   const [renameValue, setRenameValue] = useState("");
@@ -97,10 +93,9 @@ export default function Sidebar() {
     setRenameOpen(false);
   };
 
-  // ── 트리 렌더러 ────────────────────────────────────────────────────────────
+  // 트리 렌더
   const renderNode = (node) => {
     const isFolder = node.type === "folder";
-
     const label = (
       <Stack
         direction="row"
@@ -113,21 +108,12 @@ export default function Sidebar() {
         ) : (
           <FileIcon mime={node.mime} name={node.name} />
         )}
-
-        <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }}>
-          {node.name}
-        </Typography>
-
-
-        {/* 이름 변경 버튼 (호버 시 나타남) */}
+        <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }}>{node.name}</Typography>
         <IconButton
           size="small"
           className="rename-btn"
           sx={{ opacity: 0, transition: "opacity .15s" }}
-          onClick={(e) => {
-            e.stopPropagation();
-            openRename(node);
-          }}
+          onClick={(e) => { e.stopPropagation(); openRename(node); }}
           aria-label="rename"
         >
           <EditOutlinedIcon fontSize="inherit" />
@@ -138,9 +124,9 @@ export default function Sidebar() {
     return (
       <TreeItem
         key={node.id}
-        itemId={String(node.id)}  // SimpleTreeView는 itemId 사용
+        itemId={String(node.id)}         // ✅ itemId는 "doc-1" 같은 실제 ID
         label={label}
-        onClick={() => selectNode(node.id)}
+        // ❌ 여기 onClick 제거 (내부 이벤트와 충돌 가능)
       >
         {Array.isArray(node.children) && node.children.map(renderNode)}
       </TreeItem>
@@ -149,20 +135,9 @@ export default function Sidebar() {
 
   return (
     <Box sx={{ height: "100%", p: 1, overflow: "auto", bgcolor: "background.paper" }}>
-      {/* 헤더: 타이틀 + 업로드 버튼 */}
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{ px: 1, pb: 1 }}
-      >
-        <Typography variant="subtitle2" sx={{ color: "#374151" }}>
-          제안서 파일
-        </Typography>
-
-        <Button size="small" startIcon={<UploadIcon />} onClick={onClickUpload}>
-          업로드
-        </Button>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1, pb: 1 }}>
+        <Typography variant="subtitle2" sx={{ color: "#374151" }}>제안서 파일</Typography>
+        <Button size="small" startIcon={<UploadIcon />} onClick={onClickUpload}>업로드</Button>
         <input
           ref={fileInputRef}
           type="file"
@@ -173,11 +148,12 @@ export default function Sidebar() {
         />
       </Stack>
 
-      {/* 트리 */}
+      {/* ✅ 선택 제어는 상위에서 onItemClick 사용 */}
       <SimpleTreeView
         slots={{ collapseIcon: ExpandMoreIcon, expandIcon: ChevronRightIcon }}
         selectedItems={selectedNodeId ? [String(selectedNodeId)] : []}
         defaultExpandedItems={(tree || []).map((n) => String(n.id))}
+        onItemClick={(_e, itemId) => selectNode(itemId)}   // ✅ 핵심 수정
         sx={{
           "& .MuiTreeItem-label": { py: 0.5 },
           "& .MuiTreeItem-content.Mui-selected .MuiTreeItem-label": {
@@ -189,27 +165,21 @@ export default function Sidebar() {
         {(tree || []).map(renderNode)}
       </SimpleTreeView>
 
-      {/* 이름 변경 다이얼로그 */}
       <Dialog open={renameOpen} onClose={closeRename}>
         <DialogTitle>이름 변경</DialogTitle>
         <DialogContent>
           <TextField
-            autoFocus
-            fullWidth
+            autoFocus fullWidth
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") confirmRename();
-            }}
+            onKeyDown={(e) => { if (e.key === "Enter") confirmRename(); }}
             placeholder="새 이름을 입력하세요"
             sx={{ mt: 1 }}
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={closeRename}>취소</Button>
-          <Button variant="contained" onClick={confirmRename}>
-            확인
-          </Button>
+          <Button variant="contained" onClick={confirmRename}>확인</Button>
         </DialogActions>
       </Dialog>
     </Box>

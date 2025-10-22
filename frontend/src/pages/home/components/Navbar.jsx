@@ -3,6 +3,10 @@ import {Button,  Grid, Stack, Box} from "@mui/material";
 import logo from './앨리스.png'
 
 const Navbar = () => {
+
+  const edit =() => {
+    window.location.href="/edit"
+  }
   return (
     <Grid container pt={3} pb={3} borderBottom={1} borderColor={'black'} ml={15} mr={15}>
 
@@ -25,7 +29,7 @@ const Navbar = () => {
           <Button size='large' color='success'>요금제</Button>
           <Button size='large' color='primary'>AI</Button>
           <Button size='large' color='error'>고객지원</Button>
-          <Button size='large' color='secondary'><strong>시작하기</strong></Button>
+          <Button size='large' color='secondary' onClick={edit}><strong>시작하기</strong></Button>
         </Stack>
       </Grid>
       <Grid size={2}display="flex" justifyContent="center" alignItems="center">
