@@ -17,55 +17,81 @@ import com.auth0.jwt.algorithms.Algorithm;
 @RestController
 @RequestMapping("/onlyoffice")
 public class OnlyOfficeController {
+
     private final OnlyOfficeProps props;
     private final FileService files;
+
     public OnlyOfficeController(OnlyOfficeProps props, FileService files) {
-        this.props = props; this.files = files;
+        this.props = props;
+        this.files = files;
     }
 
+    /**
+     * OnlyOffice DocEditor에 줄 config와 JWT를 생성해서 반환
+     * - 문서서버(local.json) 설정: token.enable.browser=true, inBody=false
+     * - JWT는 "루트 클레임" 방식으로 서명 (payload에 넣지 않음)
+     */
     @GetMapping("/config/{fileId}")
     public ResponseEntity<?> getConfig(@PathVariable String fileId) {
+        // 1) 파일 메타 조회
         FileMeta f = files.getById(fileId);
         if (f == null) return ResponseEntity.notFound().build();
 
-        String fileUrl = props.getPublicBase() + "/uploads/" + f.storageKey; // 문서서버가 직접 GET
-        String key = f.id + "-" + System.currentTimeMillis();                // 콜백 식별자
+        // 2) 문서서버가 직접 다운로드할 URL (127.0.0.1 권장)
+        final String fileUrl = props.getPublicBase() + "/uploads/" + f.storageKey;
 
-        Map<String,Object> doc = new HashMap<>();
+        // 3) 문서 캐시 구분용 키(변경 시 새로고침 유도)
+        final String key = f.id + "-" + System.currentTimeMillis();
+
+        // 4) document 블록
+        Map<String, Object> doc = new HashMap<>();
         doc.put("title", f.name);
         doc.put("url", fileUrl);
         doc.put("fileType", "docx");
         doc.put("key", key);
-        doc.put("permissions", Map.of("edit", true, "download", true, "print", true));
+        doc.put("permissions", Map.of(
+                "edit", true,
+                "download", true,
+                "print", true
+        ));
 
-        Map<String,Object> editorCfg = new HashMap<>();
+        // 5) editorConfig 블록
+        Map<String, Object> editorCfg = new HashMap<>();
         editorCfg.put("callbackUrl", props.getCallbackUrl());
         editorCfg.put("customization", Map.of("autosave", true));
+        editorCfg.put("mode", "edit");
+        editorCfg.put("lang", "ko");
 
-        Map<String,Object> config = new HashMap<>();
+        // 6) 최종 config
+        Map<String, Object> config = new HashMap<>();
         config.put("document", doc);
         config.put("documentType", "word");
         config.put("editorConfig", editorCfg);
-        config.put("height", "100%");
-        config.put("width", "100%");
         config.put("type", "desktop");
+        config.put("width", "100%");
+        config.put("height", "100%");
 
+        // 7) ✅ 브라우저 모드용 JWT (루트 클레임으로 서명)
         String token = JWT.create()
                 .withClaim("document", doc)
                 .withClaim("documentType", "word")
                 .withClaim("editorConfig", editorCfg)
-                .withClaim("height", "100%")
-                .withClaim("width", "100%")
                 .withClaim("type", "desktop")
+                .withClaim("width", "100%")
+                .withClaim("height", "100%")
                 .sign(Algorithm.HMAC256(props.getJwtSecret()));
 
+        // 프론트는 {config, token}을 그대로 DocEditor에 전달하면 됨
         return ResponseEntity.ok(Map.of("config", config, "token", token));
     }
 
-    // 저장 콜백(추후: status==2면 payload.url에서 파일 다운로드 → 새 버전 저장)
+    /**
+     * OnlyOffice 저장 콜백 (status==2 등일 때 url로 새 버전 다운로드 가능)
+     */
     @PostMapping("/callback")
-    public Map<String,Object> callback(@RequestBody Map<String,Object> body) {
+    public Map<String, Object> callback(@RequestBody Map<String, Object> body) {
         System.out.println("OnlyOffice callback: " + body);
+        // TODO: status가 2일 때 body.get("url")로 파일 받아 저장하는 로직 추가 가능
         return Map.of("error", 0);
     }
 }
