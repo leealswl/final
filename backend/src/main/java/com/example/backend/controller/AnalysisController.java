@@ -42,6 +42,7 @@ public class AnalysisController {
         @RequestParam("folders") List<Long> folders,
         @RequestParam("projectidx") Long projectidx,
         @RequestParam("userid") String userid) {
+            System.out.println("analysis controller 작동 시작");
 
         try {
             int resultDocs = documentService.saveFilesAndDocuments(files, folders, userid, projectidx);

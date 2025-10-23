@@ -24,6 +24,7 @@ public class DocumentServiceImpl implements DocumentService{
     @Transactional
     @Override
     public int saveFilesAndDocuments(List<MultipartFile> files, List<Long> folders, String userid, Long projectIdx) throws IOException {
+        System.out.println("document service 작동 시작");
         int totalInserted = 0;
         for (int i = 0; i < files.size(); i++) {
             MultipartFile file = files.get(i);
@@ -45,6 +46,7 @@ public class DocumentServiceImpl implements DocumentService{
 
             totalInserted += documentMapper.insertDocument(document);
         }
+        System.out.println("document service 작동 완료");
         return totalInserted;
     }
 }
