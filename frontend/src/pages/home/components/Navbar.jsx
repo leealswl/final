@@ -10,7 +10,7 @@ const Navbar = () => {
   return (
     <Grid container pt={3} pb={3} borderBottom={1} borderColor={'black'} ml={15} mr={15}>
 
-      <Grid size={1}display="flex" justifyContent="center" alignItems="center">
+      <Grid size={1} display="flex" justifyContent="center" alignItems="center">
         <Box
           component="img"
           src={logo}
@@ -32,7 +32,7 @@ const Navbar = () => {
           <Button size='large' color='secondary' onClick={edit}><strong>시작하기</strong></Button>
         </Stack>
       </Grid>
-      <Grid size={2}display="flex" justifyContent="center" alignItems="center">
+      <Grid size={2} display="flex" justifyContent="center" alignItems="center">
         <Stack direction="row" spacing={2}>
           <Button variant="outlined">LOG IN</Button>
           <Button variant="contained">SIGN UP</Button>
