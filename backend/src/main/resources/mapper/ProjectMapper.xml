@@ -32,7 +32,7 @@
             where project_idx = #{projectIdx} and user_idx = #{userIdx}
         </delete>
 
-        <update id="updateProject">
+        <update id="updateProjectName">
                 update projects
                 set project_name = #{projectName}, updated_at = sysdate
                 where project_idx = #{projectIdx}
@@ -49,10 +49,9 @@
         <select id="getProjectList" resultMap="projectMap">
             select *
             from projects
-            left join users
-            on projects.user_idx = users.idx
             where user_idx = #{userIdx}
-            order by project_idx desc;
+            order by project_idx desc
         </select>
+
 
 </mapper>
