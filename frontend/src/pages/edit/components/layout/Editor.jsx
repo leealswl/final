@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Box, CircularProgress, TextField } from "@mui/material";
 import { useFileStore } from "../../../../store/useFileStore";
 import api from "../../../../utils/api";
-
 
 /* 공용 UI */
 function Center({ children }) {
@@ -24,7 +23,7 @@ function pickKind(file) {
   return "unknown";
 }
 
-/* OnlyOffice api.js 로드 */
+/* OnlyOffice api.js 로더 */
 function useOnlyOfficeReady() {
   const [ready, setReady] = useState(!!window.DocsAPI);
   useEffect(() => {
@@ -45,40 +44,18 @@ function useOnlyOfficeReady() {
   return ready || !!window.DocsAPI;
 }
 
-/* DOCX 뷰 (OnlyOffice) — DOM element로 attach + 컨테이너 크기 보장 */
-function DocxView({ fileId }) {
+/* DOCX 뷰 (OnlyOffice) — file.path 사용 */
+function DocxView({ file }) {
   const hostRef = React.useRef(null);
   const editorRef = React.useRef(null);
   const constructedRef = React.useRef(false);
-  const [status, setStatus] = React.useState("idle"); // idle | loading | error
-  const [debug, setDebug] = React.useState("");
+  const [status, setStatus] = useState("idle"); // idle | loading | error
+  const [debug, setDebug] = useState("");
+  const ready = useOnlyOfficeReady();
 
-  // api.js 로드 + DocsAPI 준비 대기
-  React.useEffect(() => {
+  useEffect(() => {
     let cancelled = false;
-
-    const loadApi = () =>
-      new Promise((resolve, reject) => {
-        if (window.DocsAPI?.DocEditor) return resolve(true);
-        const src = import.meta.env.VITE_ONLYOFFICE_SRC;
-        if (!src) return reject(new Error("VITE_ONLYOFFICE_SRC 미설정"));
-        const s = document.createElement("script");
-        s.src = src; s.async = true;
-        s.onload = resolve;
-        s.onerror = () => reject(new Error("OnlyOffice API 로드 실패: " + src));
-        document.body.appendChild(s);
-      });
-
-    const waitForDocsApi = (tries = 40) =>
-      new Promise((resolve, reject) => {
-        const tick = () => {
-          if (cancelled) return;
-          if (window.DocsAPI?.DocEditor) return resolve(true);
-          if (tries-- <= 0) return reject(new Error("DocsAPI 준비 실패"));
-          setTimeout(tick, 50);
-        };
-        tick();
-      });
+    if (!file || !ready) return;
 
     const waitForSize = (el, tries = 40) =>
       new Promise((resolve, reject) => {
@@ -98,19 +75,21 @@ function DocxView({ fileId }) {
     (async () => {
       try {
         setStatus("loading");
-        setDebug("api.js 로드…");
-        await loadApi();
-        await waitForDocsApi();
-
         const el = hostRef.current;
-        // 컨테이너에 id 보장
-        if (el && !el.id) el.id = `onlyoffice-${fileId}`;
+        if (el && !el.id) el.id = `onlyoffice-${file.id || Math.random().toString(36).slice(2)}`;
         await waitForSize(el);
 
+        // 백엔드에 문서 절대 URL 전달해서 config 받기
+        // 프론트는 5173, 백엔드는 8081에서 정적 파일 제공하므로 8081 기준으로 조립
+        const absoluteUrl = `http://127.0.0.1:8081${file.path}`;
         setDebug("config 요청…");
-        const { data } = await api.get(`/onlyoffice/config/${fileId}`);
-        const { config, token } = data;
+        const { data } = await api.post("/onlyoffice/config", {
+          url: absoluteUrl,
+          title: file.name,
+        });
+        const { config, token } = data || {};
 
+        if (!window.DocsAPI?.DocEditor) throw new Error("DocsAPI 미준비");
         if (constructedRef.current) {
           setDebug((d) => d + " | already constructed(skip)");
           setStatus("idle");
@@ -132,10 +111,9 @@ function DocxView({ fileId }) {
           },
         };
 
-        // ★ 안전모드: id 문자열로 attach (타이밍 문제 우회)
         editorRef.current = new window.DocsAPI.DocEditor(el.id, cfg);
         constructedRef.current = true;
-        setDebug((d) => d + " | constructed");
+        setStatus("idle");
       } catch (e) {
         console.error("[DocxView] init error:", e);
         setDebug(`init error: ${e?.message || e}`);
@@ -148,79 +126,67 @@ function DocxView({ fileId }) {
       try { editorRef.current?.destroyEditor?.(); } catch {}
       constructedRef.current = false;
     };
-  }, [fileId]);
+  }, [file, ready]);
 
-  return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* <Box sx={{ p: 1, fontSize: 12, borderBottom: "1px solid #eee", color: status === "error" ? "error.main" : "#4b5563" }}>
-        {status === "loading" ? "로딩 중…" :
-          status === "error"   ? `에디터 초기화 실패 — ${debug}` :
-                                `상태 OK${debug ? " — " + debug : ""}`}
-      </Box> */}
-      <Box
-        ref={hostRef}
-        id="onlyoffice-host"
-        sx={{ flex: 1, minHeight: 780, position: "relative" }}
-      />
-    </Box>
-  );
+  if (status === "loading") {
+    return (
+      <Center>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <CircularProgress size={20} /> <span>OnlyOffice 로딩 중…</span>
+        </Box>
+      </Center>
+    );
+  }
+  if (status === "error") {
+    return <Pad>OnlyOffice 초기화 실패: {debug}</Pad>;
+  }
+
+  return <Box ref={hostRef} sx={{ width: "100%", height: "100%" }} />;
 }
 
-
-
-/* 텍스트 뷰 (md/txt) */
-function TextView({ fileId }) {
+/* 텍스트 뷰 (md/txt) — file.path에서 직접 읽기 (읽기 전용) */
+function TextView({ file }) {
   const [value, setValue] = useState("");
-  const [saving, setSaving] = useState("idle"); // idle | saving | saved
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let ignore = false;
     (async () => {
       try {
-        const res = await api.get(`/files/${fileId}/content`, { responseType: "text" });
-        if (!ignore) setValue(typeof res.data === "string" ? res.data : "");
-      } catch (e) { console.error(e); }
+        setLoading(true);
+        const res = await fetch(file.path);
+        const txt = await res.text();
+        if (!ignore) setValue(txt);
+      } catch (e) {
+        console.error(e);
+        if (!ignore) setValue("(불러오기 실패)");
+      } finally {
+        if (!ignore) setLoading(false);
+      }
     })();
     return () => { ignore = true; };
-  }, [fileId]);
+  }, [file?.path]);
 
-  useEffect(() => {
-    const t = setTimeout(async () => {
-      try {
-        setSaving("saving");
-        await api.put(`/files/${fileId}/content`, value ?? "", {
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-        });
-        setSaving("saved");
-        setTimeout(() => setSaving("idle"), 700);
-      } catch (e) { console.error(e); setSaving("idle"); }
-    }, 700);
-    return () => clearTimeout(t);
-  }, [fileId, value]);
-
+  if (loading) return <Center><CircularProgress size={20} /></Center>;
   return (
-    <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <Box sx={{ p: 1, borderBottom: "1px solid #eee", fontSize: 12, color: "#666" }}>
-        {saving === "saving" ? "저장 중…" : saving === "saved" ? "저장 완료" : " "}
-      </Box>
-      <TextField
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        fullWidth
-        multiline
-        minRows={8}
-        sx={{ flex: 1, "& .MuiInputBase-root": { height: "100%" } }}
-      />
-    </Box>
+    <TextField
+      value={value}
+      onChange={() => {}}
+      fullWidth
+      multiline
+      minRows={12}
+      sx={{ "& .MuiInputBase-root": { fontFamily: "monospace" } }}
+      helperText="읽기 전용 미리보기 (서버 저장 API 없어서 수정은 비활성)"
+    />
   );
 }
 
-/* PDF 뷰 */
-function PdfView({ url }) {
-  if (!url) return <Pad>PDF 주소가 없습니다.</Pad>;
+/* PDF 뷰 — file.path 직접 사용 */
+function PdfView({ file }) {
+  if (!file?.path) return <Pad>PDF 경로가 없습니다.</Pad>;
   return (
     <Box sx={{ width: "100%", height: "100%" }}>
-      <iframe title="pdf" src={url} style={{ border: "none", width: "100%", height: "100%" }} />
+      <iframe title="pdf" src={file.path} style={{ border: "none", width: "100%", height: "100%" }} />
     </Box>
   );
 }
@@ -228,49 +194,36 @@ function PdfView({ url }) {
 /* 메인 Editor */
 export default function Editor() {
   const { selectedFile } = useFileStore();
-  const [meta, setMeta] = useState(null);
   const file = useMemo(() => selectedFile || null, [selectedFile]);
-
-  useEffect(() => {
-    setMeta(null);
-    if (!file || file.type === "folder") return;
-
-    const isDocx =
-      (file.name || "").toLowerCase().endsWith(".docx") ||
-      (file.mime || "").toLowerCase().includes("officedocument.wordprocessingml.document");
-
-    if (isDocx) { setMeta(file); return; }
-
-    (async () => {
-      try {
-        const { data } = await api.get(`/files/${file.id}`);
-        setMeta({ ...file, ...data });
-      } catch { setMeta(file); }
-    })();
-  }, [file]);
-
-  const kind = pickKind(meta || file);
-  console.log("[Editor] selected:", file?.id, file?.name, "kind:", kind);
+  const kind = pickKind(file);
 
   if (!file) return <Pad>왼쪽에서 파일을 선택하세요.</Pad>;
-  if (file.type === "folder") return <Pad>폴더를 선택했습니다. 파일을 선택해 주세요.</Pad>;
+  if (file.type === "folder") return <Pad>폴더가 아니라 파일을 선택해 주세요.</Pad>;
 
   return (
     <Box sx={{ width: "100%", minHeight: "85vh" }}>
       {kind === "docx" && (
-        // ★ 부모 박스에 확실한 높이 부여 (height: 80vh)
         <Box sx={{ width: "100%", height: "100vh", bgcolor: '#f0f9ff' }}>
-          <DocxView fileId={file.id} />
+          <DocxView file={file} />
         </Box>
       )}
-      {kind === "text" && <TextView fileId={file.id} />}
-      {kind === "pdf" && <PdfView url={(meta || file)?.public_url} />}
+      {kind === "text" && <TextView file={file} />}
+      {kind === "pdf" && (
+        <Box sx={{ width: "100%", height: "100vh" }}>
+          <PdfView file={file} />
+        </Box>
+      )}
       {!(kind === "docx" || kind === "text" || kind === "pdf") && (
         <Pad>
           미지원 형식입니다. (권장: DOCX / MD / TXT / PDF)
           <Box sx={{ mt: 1, fontSize: 12 }}>
             선택된 파일: <b>{file.name}</b> ({file.mime || "unknown"})
           </Box>
+          {file.path && (
+            <Box sx={{ mt: 1 }}>
+              <a href={file.path} target="_blank" rel="noreferrer">원본 열기</a>
+            </Box>
+          )}
         </Pad>
       )}
     </Box>
