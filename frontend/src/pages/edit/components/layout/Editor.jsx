@@ -1,4 +1,3 @@
-// src/pages/edit/components/layout/Editor.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Box, CircularProgress, TextField } from "@mui/material";
 import { useFileStore } from "../../../../store/useFileStore";
@@ -153,11 +152,11 @@ function DocxView({ fileId }) {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <Box sx={{ p: 1, fontSize: 12, borderBottom: "1px solid #eee", color: status === "error" ? "error.main" : "#4b5563" }}>
+      {/* <Box sx={{ p: 1, fontSize: 12, borderBottom: "1px solid #eee", color: status === "error" ? "error.main" : "#4b5563" }}>
         {status === "loading" ? "로딩 중…" :
           status === "error"   ? `에디터 초기화 실패 — ${debug}` :
                                 `상태 OK${debug ? " — " + debug : ""}`}
-      </Box>
+      </Box> */}
       <Box
         ref={hostRef}
         id="onlyoffice-host"
@@ -260,7 +259,7 @@ export default function Editor() {
     <Box sx={{ width: "100%", minHeight: "85vh" }}>
       {kind === "docx" && (
         // ★ 부모 박스에 확실한 높이 부여 (height: 80vh)
-        <Box sx={{ width: "100%", height: "80vh", border: '2px dashed #0ea5e9', bgcolor: '#f0f9ff' }}>
+        <Box sx={{ width: "100%", height: "100vh", bgcolor: '#f0f9ff' }}>
           <DocxView fileId={file.id} />
         </Box>
       )}
