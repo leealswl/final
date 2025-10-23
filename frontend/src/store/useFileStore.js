@@ -1,92 +1,59 @@
-import { create } from "zustand";
+// src/store/useFileStore.js
+import { create } from 'zustand'
 
-// 초기 트리: doc-1 추가 (백엔드 FileService 매핑과 동일)
-const initialTree = [
-  {
-    id: "root-01",
-    type: "folder",
-    name: "01. 제안서",
-    children: [
-      {
-        id: "doc-1",
-        type: "file",
-        name: "제안서.docx",
-        mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        status: "unknown",
-      },
-    ],
-  },
-  { id: "root-02", type: "folder", name: "02. 첨부서류", children: [] },
-  { id: "root-03", type: "folder", name: "03. 추가자료", children: [] },
+const ROOTS = [
+  { id: 'root-01', type: 'folder', name: '01. 제안서',  children: [] },
+  { id: 'root-02', type: 'folder', name: '02. 첨부서류', children: [] },
+  { id: 'root-03', type: 'folder', name: '03. 추가자료', children: [] },
 ];
 
-export const useFileStore = create((set, get) => ({
-  tree: initialTree,
-  selectedNodeId: null,
-  selectedFile: null,
-
-  selectNode: (id) => {
-    const n = findNode(get().tree, id);
-    set({
-      selectedNodeId: id,
-      selectedFile: n?.type === "file" ? n : null,
-    });
-  },
-
-  uploadFiles: async (files, parentId = null) => {
-    if (!files?.length) return;
-    const toNode = (f) => ({
-      id: crypto.randomUUID(),
-      type: "file",
-      name: f.name,
-      mime: f.type || guessMime(f.name),
-      status: "unknown",
-    });
-    const newNodes = Array.from(files).map(toNode);
-    set((s) => {
-      let next = s.tree;
-      for (const node of newNodes) next = insertNode(next, parentId, node);
-      return { tree: next };
-    });
-    return newNodes;
-  },
-
-  renameNode: (id, name) =>
-    set((s) => ({ tree: mapNode(s.tree, id, (n) => ({ ...n, name })) })),
-}));
-
-// helpers
-function guessMime(name) {
-  const x = (name || "").toLowerCase();
-  if (x.endsWith(".md") || x.endsWith(".txt")) return "text/markdown";
-  if (x.endsWith(".pdf")) return "application/pdf";
-  if (x.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-  if (x.endsWith(".hwp") || x.endsWith(".hwpx")) return "application/x-hwp";
-  return "application/octet-stream";
-}
-function findNode(nodes, id) {
+const findNode = (nodes, id) => {
   for (const n of nodes) {
     if (n.id === id) return n;
-    if (n.children) {
+    if (n.children?.length) {
       const k = findNode(n.children, id);
       if (k) return k;
     }
   }
   return null;
-}
-function insertNode(nodes, parentId, node) {
+};
+const insertNode = (nodes, parentId, node) => {
   if (!parentId) return [...nodes, node];
   return nodes.map((n) => {
-    if (n.id === parentId && n.type === "folder")
+    if (n.id === parentId && n.type === 'folder') {
       return { ...n, children: [...(n.children || []), node] };
-    if (n.children) return { ...n, children: insertNode(n.children, parentId, node) };
+    }
+    if (n.children?.length) return { ...n, children: insertNode(n.children, parentId, node) };
     return n;
   });
-}
-function mapNode(nodes, id, fn) {
-  return nodes.map((n) => {
+};
+const mapNode = (nodes, id, fn) =>
+  nodes.map((n) => {
     const cur = n.id === id ? fn(n) : n;
-    if (cur.children) return { ...cur, children: mapNode(cur.children, id, fn) };
+    if (cur.children?.length) return { ...cur, children: mapNode(cur.children, id, fn) };
     return cur;
   });
-}
+
+export const useFileStore = create((set, get) => ({
+  tree: structuredClone(ROOTS),
+  selectedNodeId: null,
+  selectedFile: null,
+
+  addUploadedFileNodes: (rootId, nodes) =>
+    set((s) => {
+      let next = s.tree;
+      for (const node of nodes) {
+        next = insertNode(next, rootId, { ...node, children: undefined });
+      }
+      return { tree: next };
+    }),
+
+  selectNode: (id) => {
+    const n = findNode(get().tree, id);
+    set({ selectedNodeId: id, selectedFile: n?.type === 'file' ? n : null });
+  },
+
+  resetTree: () => set({ tree: structuredClone(ROOTS), selectedNodeId: null, selectedFile: null }),
+  renameNode: (id, name) =>
+    set((s) => ({ tree: mapNode(s.tree, id, (n) => ({ ...n, name })) })),
+}));
