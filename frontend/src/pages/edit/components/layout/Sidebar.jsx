@@ -1,3 +1,4 @@
+// src/components/Sidebar/Sidebar.jsx
 import React, { useMemo, useRef, useState } from "react";
 import {
   Box,
@@ -12,7 +13,6 @@ import {
   TextField,
 } from "@mui/material";
 import { SimpleTreeView, TreeItem } from "@mui/x-tree-view";
-
 import UploadIcon from "@mui/icons-material/Upload";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -23,8 +23,11 @@ import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 
 import { useFileStore } from "../../../../store/useFileStore";
+import useUpload from "../../../../hooks/useUpload";
+import { filesToNodes } from "../../../../utils/fileToNodes";
+import { useNavigate } from "react-router-dom";
 
-// 파일 아이콘
+/* Icons */
 const FileIcon = ({ mime = "", name = "" }) => {
   const lower = (name || "").toLowerCase();
   if (mime.includes("pdf") || lower.endsWith(".pdf")) return <PictureAsPdfIcon fontSize="small" sx={{ mr: 1 }} />;
@@ -34,7 +37,7 @@ const FileIcon = ({ mime = "", name = "" }) => {
   return <InsertDriveFileIcon fontSize="small" sx={{ mr: 1 }} />;
 };
 
-// 트리 탐색
+/* Helpers */
 function findNode(nodes, id) {
   for (const n of nodes) {
     if (n.id === id) return n;
@@ -45,55 +48,59 @@ function findNode(nodes, id) {
   }
   return null;
 }
+const resolveRootId = (selectedNode, tree) =>
+  selectedNode?.type === "folder" && /^root-\d{2}$/.test(selectedNode.id) ? selectedNode.id : (tree?.[0]?.id ?? "root-01");
 
 export default function Sidebar() {
-  const {
-    tree,
-    selectedNodeId,
-    selectNode,
-    uploadFiles,
-    renameNode,
-  } = useFileStore();
+  const { tree, selectedNodeId, selectNode, addUploadedFileNodes, renameNode } = useFileStore();
+  const { uploadAsync, isUploading } = useUpload();
+  const navigate = useNavigate();
 
+  // TODO: 실제 값으로 주입(라우터/컨텍스트 등). 데모 기본값:
+  const projectId = 1;          // ✅ 반드시 DB에 존재하는 projects.project_idx
+  const userId = "userId";      // ✅ 저장 경로와 일치하는 식별자
+
+  const [expandedItems, setExpandedItems] = useState(() => (tree || []).map(n => String(n.id)));
   const selectedNode = useMemo(
     () => (selectedNodeId ? findNode(tree, selectedNodeId) : null),
     [tree, selectedNodeId]
   );
 
-  // 업로드
+  /* Upload */
   const fileInputRef = useRef(null);
   const onClickUpload = () => fileInputRef.current?.click();
   const onChangeUpload = async (e) => {
     const files = e.target.files;
     if (!files?.length) return;
-    const parentId =
-      selectedNode?.type === "folder" ? selectedNode.id : tree?.[0]?.id ?? null;
+
+    const rootId = resolveRootId(selectedNode, tree);
     try {
-      await uploadFiles(files, parentId);
+      await uploadAsync({ files, rootId, projectId, userId });
+      const nodes = filesToNodes({ files, rootId, projectId, userId });
+      addUploadedFileNodes(rootId, nodes);
+      setExpandedItems(prev => Array.from(new Set([...prev, String(rootId)])));
+      selectNode(nodes[0].id);
+      navigate("/editor");
+    } catch (err) {
+      alert(`업로드 실패: ${err?.message || err}`);
+      // console.error(err);
     } finally {
       e.target.value = "";
     }
   };
 
-  // 이름 변경
+  /* Rename */
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState(null);
   const [renameValue, setRenameValue] = useState("");
-
-  const openRename = (node) => {
-    setRenameTarget(node);
-    setRenameValue(node.name);
-    setRenameOpen(true);
-  };
+  const openRename = (node) => { setRenameTarget(node); setRenameValue(node.name); setRenameOpen(true); };
   const closeRename = () => setRenameOpen(false);
   const confirmRename = () => {
-    if (renameTarget && renameValue.trim()) {
-      renameNode(renameTarget.id, renameValue.trim());
-    }
+    if (renameTarget && renameValue.trim()) renameNode(renameTarget.id, renameValue.trim());
     setRenameOpen(false);
   };
 
-  // 트리 렌더
+  /* Render */
   const renderNode = (node) => {
     const isFolder = node.type === "folder";
     const label = (
@@ -109,25 +116,22 @@ export default function Sidebar() {
           <FileIcon mime={node.mime} name={node.name} />
         )}
         <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }}>{node.name}</Typography>
-        <IconButton
-          size="small"
-          className="rename-btn"
-          sx={{ opacity: 0, transition: "opacity .15s" }}
-          onClick={(e) => { e.stopPropagation(); openRename(node); }}
-          aria-label="rename"
-        >
-          <EditOutlinedIcon fontSize="inherit" />
-        </IconButton>
+        {!isFolder && (
+          <IconButton
+            size="small"
+            className="rename-btn"
+            sx={{ opacity: 0, transition: "opacity .15s" }}
+            onClick={(e) => { e.stopPropagation(); openRename(node); }}
+            aria-label="rename"
+          >
+            <EditOutlinedIcon fontSize="inherit" />
+          </IconButton>
+        )}
       </Stack>
     );
 
     return (
-      <TreeItem
-        key={node.id}
-        itemId={String(node.id)}         // ✅ itemId는 "doc-1" 같은 실제 ID
-        label={label}
-        // ❌ 여기 onClick 제거 (내부 이벤트와 충돌 가능)
-      >
+      <TreeItem key={node.id} itemId={String(node.id)} label={label}>
         {Array.isArray(node.children) && node.children.map(renderNode)}
       </TreeItem>
     );
@@ -137,23 +141,25 @@ export default function Sidebar() {
     <Box sx={{ height: "100%", p: 1, overflow: "auto", bgcolor: "background.paper" }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1, pb: 1 }}>
         <Typography variant="subtitle2" sx={{ color: "#374151" }}>제안서 파일</Typography>
-        <Button size="small" startIcon={<UploadIcon />} onClick={onClickUpload}>업로드</Button>
+        <Button size="small" startIcon={<UploadIcon />} onClick={onClickUpload} disabled={isUploading}>
+          업로드
+        </Button>
         <input
           ref={fileInputRef}
           type="file"
           hidden
           multiple
-          accept=".md,.txt,.pdf,.docx,.hwp,.hwpx"
+          accept=".md,.txt,.pdf,.docx,.hwp,.hwpx,.xlsx,.pptx"
           onChange={onChangeUpload}
         />
       </Stack>
 
-      {/* ✅ 선택 제어는 상위에서 onItemClick 사용 */}
       <SimpleTreeView
         slots={{ collapseIcon: ExpandMoreIcon, expandIcon: ChevronRightIcon }}
         selectedItems={selectedNodeId ? [String(selectedNodeId)] : []}
-        defaultExpandedItems={(tree || []).map((n) => String(n.id))}
-        onItemClick={(_e, itemId) => selectNode(itemId)}   // ✅ 핵심 수정
+        expandedItems={expandedItems}
+        onExpandedItemsChange={(_e, items) => setExpandedItems(items)}
+        onItemClick={(_e, itemId) => selectNode(itemId)}
         sx={{
           "& .MuiTreeItem-label": { py: 0.5 },
           "& .MuiTreeItem-content.Mui-selected .MuiTreeItem-label": {
@@ -169,7 +175,8 @@ export default function Sidebar() {
         <DialogTitle>이름 변경</DialogTitle>
         <DialogContent>
           <TextField
-            autoFocus fullWidth
+            autoFocus
+            fullWidth
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") confirmRename(); }}
