@@ -6,8 +6,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,18 +37,33 @@ public class AnalysisController {
     
 
     @PostMapping("/")
-    public ResponseEntity<String> receiveAndSendFiles(
-            @RequestParam("files") List<MultipartFile> files,
-            @RequestParam("folders") List<Long> folders,
-            @RequestParam("projectidx") Long projectidx,
-            @RequestParam("userid") String userid) {
+    public ResponseEntity<Map<String, Object>> receiveAndSendFiles(
+        @RequestParam("files") List<MultipartFile> files,
+        @RequestParam("folders") List<Long> folders,
+        @RequestParam("projectidx") Long projectidx,
+        @RequestParam("userid") String userid) {
 
         try {
-            documentService.saveFilesAndDocuments(files, folders, userid, projectidx);
-            return ResponseEntity.ok("모든 파일 업로드 성공!");
+            int resultDocs = documentService.saveFilesAndDocuments(files, folders, userid, projectidx);
+
+            if (resultDocs <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("status", "fail", "message", "문서 저장 실패"));
+            }
+
+            Map<String, Object> fastApiResult = fastApi.sendFilesToFastAPI(files, folders, userid);
+
+            if (fastApiResult != null && "success".equals(fastApiResult.get("status"))) {
+                return new ResponseEntity<>(fastApiResult, HttpStatus.OK);
+            } else {
+                return ResponseEntity.internalServerError()
+                        .body(Map.of("status", "fail", "message", "FastAPI 처리 실패"));
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.internalServerError().body("업로드 실패: " + e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("status", "error", "message", e.getMessage()));
         }
     }
 

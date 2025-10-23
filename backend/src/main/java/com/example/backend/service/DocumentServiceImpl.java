@@ -43,7 +43,7 @@ public class DocumentServiceImpl implements DocumentService{
             document.setFileName(file.getOriginalFilename());
             document.setFilePath(filePath.toString());
 
-            // totalInserted += documentMapper.insertDocument(document);
+            totalInserted += documentMapper.insertDocument(document);
         }
         return totalInserted;
     }
