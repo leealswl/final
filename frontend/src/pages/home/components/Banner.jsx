@@ -6,8 +6,8 @@ const Banner = () => {
   return (
     <Grid ml={15} mr={15} mt={4}>
       <Stack direction="row" display={'flex'} justifyContent={'space-between'}>
-        <Grid sx={{width: '40%'}}>123</Grid>
-        <Grid sx={{width: '60%'}}>
+        {/* <Grid sx={{width: '30%'}}>123</Grid> */}
+        <Grid sx={{width: '100%'}}>
           <Box 
             component="img"
             src={img}

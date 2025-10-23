@@ -7,6 +7,7 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import reactor.core.publisher.Mono;
@@ -24,6 +25,7 @@ public class FastAPIService {
     }
 
     public Map<String, Object> sendFilesToFastAPI(List<MultipartFile> files, List<Long> folders, String userId) {
+        System.out.println("fastapi 작동 시작");
         try {
             MultipartBodyBuilder builder = new MultipartBodyBuilder();
 
@@ -44,11 +46,13 @@ public class FastAPIService {
             Mono<Map> response = webClient.post()
                     .uri("/analyze")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .bodyValue(builder.build())
+                    // .bodyValue(builder.build())
+                    .body(BodyInserters.fromMultipartData(builder.build()))
                     .retrieve()
                     .bodyToMono(Map.class);
 
             // 동기 호출
+            System.out.println("fastapi 작동 완료");
             return response.block();
         } catch (Exception e) {
             e.printStackTrace();
