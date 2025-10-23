@@ -1,5 +1,7 @@
 package com.example.backend.service;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,7 +17,7 @@ public class ProjectServiceImpl implements ProjectService{
     @Override
     public int deleteProject(Project project) {
 
-        return 0;
+        return projectMapper.deleteProject(project);
     }
 
     @Override
@@ -31,9 +33,14 @@ public class ProjectServiceImpl implements ProjectService{
     }
 
     @Override
-    public int updateProject(Project project) {
+    public int updateProjectName(Project project) {
 
-        return 0;
+        return projectMapper.updateProjectName(project);
+    }
+
+    @Override
+    public List<Project> getProjectList(Long useridx) {
+        return projectMapper.getProjectList(useridx);
     }
 
     
