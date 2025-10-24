@@ -3,6 +3,9 @@ import { Box, CircularProgress, TextField } from "@mui/material";
 import { useFileStore } from "../../../../store/useFileStore";
 import api from "../../../../utils/api";
 
+
+// 파일 최상단 근처에 추가
+const toAbs = (p) => (p?.startsWith('http') ? p : `http://127.0.0.1:8081${p}`);
 /* 공용 UI */
 function Center({ children }) {
   return <Box sx={{ height: "100%", display: "grid", placeItems: "center" }}>{children}</Box>;
@@ -154,7 +157,7 @@ function TextView({ file }) {
     (async () => {
       try {
         setLoading(true);
-        const res = await fetch(file.path);
+        const res = await fetch(toAbs(file.path));
         const txt = await res.text();
         if (!ignore) setValue(txt);
       } catch (e) {
@@ -184,12 +187,14 @@ function TextView({ file }) {
 /* PDF 뷰 — file.path 직접 사용 */
 function PdfView({ file }) {
   if (!file?.path) return <Pad>PDF 경로가 없습니다.</Pad>;
+    const url = toAbs(file.path);
   return (
     <Box sx={{ width: "100%", height: "100%" }}>
-      <iframe title="pdf" src={file.path} style={{ border: "none", width: "100%", height: "100%" }} />
+      <iframe title="pdf" src={url} style={{ border: "none", width: "100%", height: "100%" }} />
     </Box>
   );
 }
+
 
 /* 메인 Editor */
 export default function Editor() {
@@ -221,7 +226,7 @@ export default function Editor() {
           </Box>
           {file.path && (
             <Box sx={{ mt: 1 }}>
-              <a href={file.path} target="_blank" rel="noreferrer">원본 열기</a>
+              <a href={toAbs(file.path)} target="_blank" rel="noreferrer">원본 열기</a>
             </Box>
           )}
         </Pad>
