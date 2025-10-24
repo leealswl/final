@@ -49,6 +49,130 @@ function useOnlyOfficeReady() {
 }
 
 /* DOCX 뷰 (OnlyOffice) — file.path 사용 */
+// function DocxView({ file }) {
+//   const hostRef = React.useRef(null);
+//   const editorRef = React.useRef(null);
+//   const constructedRef = React.useRef(false);
+//   const [status, setStatus] = useState("idle"); // idle | loading | error
+//   const [debug, setDebug] = useState("");
+//   const ready = useOnlyOfficeReady();
+
+//   useEffect(() => {
+//     console.log("editor useeffect 실행");
+//     let cancelled = false;
+//     if (!file || !ready) return;
+
+//     const waitForSize = (el, tries = 40) =>
+//       new Promise((resolve, reject) => {
+//         const tick = () => {
+//           if (cancelled) return;
+//           if (!el) return reject(new Error("host element null"));
+//           const r = el.getBoundingClientRect();
+//           const cs = getComputedStyle(el);
+//           if (r.width >= 10 && r.height >= 10 && cs.display !== "none" && cs.visibility !== "hidden")
+//             return resolve(true);
+//           if (tries-- <= 0) return reject(new Error(`host size zero: ${r.width}x${r.height}`));
+//           setTimeout(tick, 50);
+//         };
+//         tick();
+//       });
+
+//     (async () => {
+//       try {
+//         setStatus("loading");
+//         const el = hostRef.current;
+//         const rect = el.getBoundingClientRect();
+//         console.log("el: ", el);
+//         console.log("rect: ", rect);
+//         if (el && !el.id) el.id = `onlyoffice-${file.id || Math.random().toString(36).slice(2)}`;
+//         await waitForSize(el);
+
+//         // 백엔드에 문서 절대 URL 전달해서 config 받기
+//         // 프론트는 5173, 백엔드는 8081에서 정적 파일 제공하므로 8081 기준으로 조립
+//         console.log("editor 실행")
+//         const absoluteUrl = `http://127.0.0.1:8081${file.path}`;
+//         console.log("absoluteUrl: ", absoluteUrl);
+//         console.log("filepath: ", file.path);
+//         setDebug("config 요청…");
+//         const { data } = await api.post("/onlyoffice/config", {
+//           url: absoluteUrl,
+//           title: file.name,
+//         });
+
+//         console.log("data: ", data)
+//         console.log("url: ", data.config.document.url)
+//         const { config, token } = data || {};
+
+//         console.log("config: ", config)
+
+//         console.log("window.DocsAPI: ", window.DocsAPI);
+//         if (!window.DocsAPI?.DocEditor) throw new Error("DocsAPI 미준비");
+//         if (constructedRef.current) {
+//           setDebug((d) => d + " | already constructed(skip)");
+//           setStatus("idle");
+//           return;
+//         }
+
+//         const cfg = {
+//           ...config,
+//           token,
+//           width: "100%",
+//           height: "100%",
+//           events: {
+//             onAppReady() { console.log("[OO] onAppReady"); },
+//             onDocumentReady() { console.log("[OO] onDocumentReady"); },
+//             onError(e) {
+//               try { console.error("[OO] onError:", e, e?.data ? JSON.stringify(e.data) : ""); }
+//               catch(_) { console.error("[OO] onError (raw):", e); }
+//             },
+//           },
+//         };
+
+//         console.log("el.id:", el.id);
+//         console.log("cfg:", cfg);
+
+//         editorRef.current = new window.DocsAPI.DocEditor(el.id, cfg);
+//         console.log("editorRef.current: ", editorRef.current)
+//         constructedRef.current = true;
+//         setStatus("idle");
+//         console.log("status: ", status);
+//       } catch (e) {
+//         console.error("[DocxView] init error:", e);
+//         setDebug(`init error: ${e?.message || e}`);
+//         setStatus("error");
+//       }
+//     })();
+
+//     return () => {
+//       cancelled = true;
+//       console.log()
+//       try { editorRef.current?.destroyEditor?.(); } catch {}
+//       constructedRef.current = false;
+//     };
+//   }, [file, ready]);
+
+//   console.log("hostRef: ", hostRef);
+//   console.log("hostRef.current: ", hostRef.current);
+
+//   if (status === "loading") {
+//     return (
+//       <Center>
+//         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+//           <CircularProgress size={20} /> <span>OnlyOffice 로딩 중…</span>
+//         </Box>
+//       </Center>
+//     );
+//   }
+//   if (status === "error") {
+//     return <Pad>OnlyOffice 초기화 실패: {debug}</Pad>;
+//   }
+
+//   // return <Box ref={hostRef} sx={{ width: "100%", height: "100%" }} />;
+//   // console.log(hostRef.current.getBoundingClientRect());
+//   return <div ref={hostRef} style={{ width: '100%', height: '600px' }} />
+
+// }
+
 function DocxView({ file }) {
   const hostRef = React.useRef(null);
   const editorRef = React.useRef(null);
@@ -58,9 +182,9 @@ function DocxView({ file }) {
   const ready = useOnlyOfficeReady();
 
   useEffect(() => {
-    console.log("editor useeffect 실행");
-    let cancelled = false;
     if (!file || !ready) return;
+
+    let cancelled = false;
 
     const waitForSize = (el, tries = 40) =>
       new Promise((resolve, reject) => {
@@ -77,33 +201,26 @@ function DocxView({ file }) {
         tick();
       });
 
-    (async () => {
+    const initEditor = async () => {
       try {
         setStatus("loading");
+
+        // hostRef.current가 존재할 때까지 기다림
         const el = hostRef.current;
-        console.log("el: ", el);
-        if (el && !el.id) el.id = `onlyoffice-${file.id || Math.random().toString(36).slice(2)}`;
+        if (!el) throw new Error("hostRef.current is null");
         await waitForSize(el);
 
-        // 백엔드에 문서 절대 URL 전달해서 config 받기
-        // 프론트는 5173, 백엔드는 8081에서 정적 파일 제공하므로 8081 기준으로 조립
-        console.log("editor 실행")
+        if (!el.id) el.id = `onlyoffice-${file.id || Math.random().toString(36).slice(2)}`;
+
+        // 백엔드 config 요청
         const absoluteUrl = `http://127.0.0.1:8081${file.path}`;
-        console.log("absoluteUrl: ", absoluteUrl);
-        console.log("filepath: ", file.path);
         setDebug("config 요청…");
         const { data } = await api.post("/onlyoffice/config", {
           url: absoluteUrl,
           title: file.name,
         });
+        const { config, token } = data;
 
-        console.log("data: ", data)
-        console.log("url: ", data.config.document.url)
-        const { config, token } = data || {};
-
-        console.log("config: ", config)
-
-        console.log("window.DocsAPI: ", window.DocsAPI);
         if (!window.DocsAPI?.DocEditor) throw new Error("DocsAPI 미준비");
         if (constructedRef.current) {
           setDebug((d) => d + " | already constructed(skip)");
@@ -120,44 +237,38 @@ function DocxView({ file }) {
             onAppReady() { console.log("[OO] onAppReady"); },
             onDocumentReady() { console.log("[OO] onDocumentReady"); },
             onError(e) {
-              try { console.error("[OO] onError:", e, e?.data ? JSON.stringify(e.data) : ""); }
-              catch(_) { console.error("[OO] onError (raw):", e); }
+              console.error("[OO] onError:", e, e?.data ? JSON.stringify(e.data) : "");
             },
           },
         };
 
-        console.log("el.id:", el.id);
-        console.log("cfg:", cfg);
-
         editorRef.current = new window.DocsAPI.DocEditor(el.id, cfg);
-        console.log("editorRef.current: ", editorRef.current)
         constructedRef.current = true;
         setStatus("idle");
-        console.log("status: ", status);
       } catch (e) {
         console.error("[DocxView] init error:", e);
         setDebug(`init error: ${e?.message || e}`);
         setStatus("error");
       }
-    })();
+    };
+
+    // DOM이 렌더링될 때까지 다음 tick에서 실행
+    const id = setTimeout(() => initEditor(), 0);
 
     return () => {
       cancelled = true;
-      console.log()
       try { editorRef.current?.destroyEditor?.(); } catch {}
       constructedRef.current = false;
+      clearTimeout(id);
     };
   }, [file, ready]);
-
-  console.log("hostRef: ", hostRef);
-  console.log("hostRef.current: ", hostRef.current);
 
   if (status === "loading") {
     return (
       <Center>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <CircularProgress size={20} /> <span>OnlyOffice 로딩 중…</span>
-        </Box>
+        </div>
       </Center>
     );
   }
@@ -165,8 +276,9 @@ function DocxView({ file }) {
     return <Pad>OnlyOffice 초기화 실패: {debug}</Pad>;
   }
 
-  return <Box ref={hostRef} sx={{ width: "100%", height: "100%" }} />;
+  return <Box ref={hostRef} style={{ width: '100%', height: '600px' }} />;
 }
+
 
 /* 텍스트 뷰 (md/txt) — file.path에서 직접 읽기 (읽기 전용) */
 function TextView({ file }) {
