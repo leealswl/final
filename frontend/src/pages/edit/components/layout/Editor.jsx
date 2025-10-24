@@ -20,6 +20,7 @@ function pickKind(file) {
   if (file.type === "folder") return "folder";
   const name = (file.name || "").toLowerCase();
   const mime = (file.mime || "").toLowerCase();
+  console.log("name: ", name);
   if (name.endsWith(".docx") || mime.includes("officedocument.wordprocessingml.document")) return "docx";
   if (name.endsWith(".md") || name.endsWith(".txt") || mime.startsWith("text/") || mime.includes("markdown")) return "text";
   if (name.endsWith(".pdf") || mime.includes("pdf")) return "pdf";
@@ -57,6 +58,7 @@ function DocxView({ file }) {
   const ready = useOnlyOfficeReady();
 
   useEffect(() => {
+    console.log("editor useeffect 실행");
     let cancelled = false;
     if (!file || !ready) return;
 
@@ -79,19 +81,29 @@ function DocxView({ file }) {
       try {
         setStatus("loading");
         const el = hostRef.current;
+        console.log("el: ", el);
         if (el && !el.id) el.id = `onlyoffice-${file.id || Math.random().toString(36).slice(2)}`;
         await waitForSize(el);
 
         // 백엔드에 문서 절대 URL 전달해서 config 받기
         // 프론트는 5173, 백엔드는 8081에서 정적 파일 제공하므로 8081 기준으로 조립
+        console.log("editor 실행")
         const absoluteUrl = `http://127.0.0.1:8081${file.path}`;
+        console.log("absoluteUrl: ", absoluteUrl);
+        console.log("filepath: ", file.path);
         setDebug("config 요청…");
         const { data } = await api.post("/onlyoffice/config", {
           url: absoluteUrl,
           title: file.name,
         });
+
+        console.log("data: ", data)
+        console.log("url: ", data.config.document.url)
         const { config, token } = data || {};
 
+        console.log("config: ", config)
+
+        console.log("window.DocsAPI: ", window.DocsAPI);
         if (!window.DocsAPI?.DocEditor) throw new Error("DocsAPI 미준비");
         if (constructedRef.current) {
           setDebug((d) => d + " | already constructed(skip)");
@@ -114,9 +126,14 @@ function DocxView({ file }) {
           },
         };
 
+        console.log("el.id:", el.id);
+        console.log("cfg:", cfg);
+
         editorRef.current = new window.DocsAPI.DocEditor(el.id, cfg);
+        console.log("editorRef.current: ", editorRef.current)
         constructedRef.current = true;
         setStatus("idle");
+        console.log("status: ", status);
       } catch (e) {
         console.error("[DocxView] init error:", e);
         setDebug(`init error: ${e?.message || e}`);
@@ -126,10 +143,14 @@ function DocxView({ file }) {
 
     return () => {
       cancelled = true;
+      console.log()
       try { editorRef.current?.destroyEditor?.(); } catch {}
       constructedRef.current = false;
     };
   }, [file, ready]);
+
+  console.log("hostRef: ", hostRef);
+  console.log("hostRef.current: ", hostRef.current);
 
   if (status === "loading") {
     return (
@@ -201,6 +222,8 @@ export default function Editor() {
   const { selectedFile } = useFileStore();
   const file = useMemo(() => selectedFile || null, [selectedFile]);
   const kind = pickKind(file);
+
+  console.log("file: ", file)
 
   if (!file) return <Pad>왼쪽에서 파일을 선택하세요.</Pad>;
   if (file.type === "folder") return <Pad>폴더가 아니라 파일을 선택해 주세요.</Pad>;
