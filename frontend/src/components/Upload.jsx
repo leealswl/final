@@ -1,7 +1,6 @@
-import useUpload from '@/hooks/useUpload'
-import { useFileStore } from '@/store/useFileStore'
-// 지금은 filesToNodes가 store 파일에 있으니 아래처럼 import 경로 맞춰줘
-import { filesToNodes } from '@/store/useFileStore' 
+import useUpload from '../hooks/useUpload'
+import { useFileStore } from '../store/useFileStore'
+import { filesToNodes } from '../utils/fileToNodes' 
 import { useNavigate } from 'react-router-dom'
 
 export default function Upload() {
@@ -29,7 +28,7 @@ export default function Upload() {
     selectNode(nodes[0].id)
 
     // 4) (옵션) 에디터 페이지로 라우팅
-    navigate('/editor')
+    navigate('/edit')
 
     e.target.value = ''
   }
