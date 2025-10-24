@@ -32,6 +32,7 @@ public class OnlyOfficeController {
     @PostMapping("/config")
     public ResponseEntity<?> buildConfig(@RequestBody Map<String, Object> body) {
         String url = (String) body.get("url");     // 예: http://127.0.0.1:8081/uploads/userId/1/1/abc.docx
+        System.out.println("url: " + url);
         String title = (String) body.getOrDefault("title", "document.docx");
         if (url == null || url.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "url is required"));

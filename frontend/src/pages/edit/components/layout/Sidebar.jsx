@@ -57,6 +57,7 @@ export default function Sidebar() {
   const fileInputRef = useRef(null);
   const onClickUpload = () => fileInputRef.current?.click();
   const onChangeUpload = async (e) => {
+    console.log("useUpload 작동");
     const files = e.target.files;
     if (!files?.length) return;
     if (!projectId || !userId) { alert('컨텍스트가 없습니다.'); e.target.value = ''; return; }
