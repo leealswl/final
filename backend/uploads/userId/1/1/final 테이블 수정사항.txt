@@ -1,0 +1,109 @@
+------------------------------------------------------------
+-- [DROP SECTIONS]
+------------------------------------------------------------
+
+-- 외래키 관계 때문에 documents → projects → users 순으로 삭제
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE documents CASCADE CONSTRAINTS';
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE projects CASCADE CONSTRAINTS';
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE users CASCADE CONSTRAINTS';
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE != -942 THEN RAISE; END IF;
+END;
+/
+
+-- 시퀀스 삭제 (존재하지 않으면 무시)
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE user_seq';
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE != -2289 THEN RAISE; END IF;
+END;
+/
+
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE project_seq';
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE != -2289 THEN RAISE; END IF;
+END;
+/
+
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE document_seq';
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE != -2289 THEN RAISE; END IF;
+END;
+/
+
+------------------------------------------------------------
+-- [CREATE SECTIONS]
+------------------------------------------------------------
+
+CREATE TABLE users (
+  idx         NUMBER PRIMARY KEY,
+  user_id     VARCHAR2(50) UNIQUE NOT NULL,
+  user_pw     VARCHAR2(50) NOT NULL,
+  user_name   VARCHAR2(50) NOT NULL,
+  role_level  NUMBER DEFAULT 1,
+  created_at  DATE DEFAULT SYSDATE,
+  updated_at  DATE DEFAULT SYSDATE
+);
+
+CREATE SEQUENCE user_seq;
+
+-------------------------------------------------------------
+
+CREATE TABLE projects (
+  project_idx   NUMBER PRIMARY KEY,
+  user_idx      NUMBER NOT NULL,
+  project_name  VARCHAR2(50) NOT NULL,
+  created_at    DATE DEFAULT SYSDATE,
+  updated_at    DATE DEFAULT SYSDATE,
+  
+  CONSTRAINT fk_projects_user
+    FOREIGN KEY (user_idx)
+    REFERENCES users (idx)
+    ON DELETE CASCADE
+);
+
+CREATE SEQUENCE project_seq;
+
+-------------------------------------------------------------
+
+CREATE TABLE documents (
+  document_idx NUMBER PRIMARY KEY,
+  project_idx  NUMBER NOT NULL,
+  folder       NUMBER NOT NULL,
+  file_name    VARCHAR2(50) NOT NULL,
+  file_path    VARCHAR2(255) NOT NULL,
+  created_at   DATE DEFAULT SYSDATE,
+  
+  CONSTRAINT fk_documents_project
+    FOREIGN KEY (project_idx)
+    REFERENCES projects (project_idx)
+    ON DELETE CASCADE
+);
+
+CREATE SEQUENCE document_seq;
+
+--------------------------------------------------------
+CREATE TABLE analysis_result (
+	
+);

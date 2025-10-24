@@ -28,6 +28,7 @@ export default function useLoad() {
       const tryPost = async (url) => {
         try {
           const r = await api.post(url, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+          console.log(r.data);
           return r.data
         } catch (err) {
           const msg = err?.response?.data?.message || err?.response?.data?.error || err?.message || 'Upload failed'
