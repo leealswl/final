@@ -1,16 +1,7 @@
-// src/components/Sidebar/Sidebar.jsx
-import React, { useMemo, useRef, useState } from "react";
+ import React, { useMemo, useRef, useState } from "react";
 import {
-  Box,
-  Stack,
-  Typography,
-  Button,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
+  Box, Stack, Typography, Button, IconButton,
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField,
 } from "@mui/material";
 import { SimpleTreeView, TreeItem } from "@mui/x-tree-view";
 import UploadIcon from "@mui/icons-material/Upload";
@@ -25,9 +16,7 @@ import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 import { useFileStore } from "../../../../store/useFileStore";
 import useUpload from "../../../../hooks/useUpload";
 import { filesToNodes } from "../../../../utils/fileToNodes";
-import { useNavigate } from "react-router-dom";
 
-/* Icons */
 const FileIcon = ({ mime = "", name = "" }) => {
   const lower = (name || "").toLowerCase();
   if (mime.includes("pdf") || lower.endsWith(".pdf")) return <PictureAsPdfIcon fontSize="small" sx={{ mr: 1 }} />;
@@ -37,7 +26,6 @@ const FileIcon = ({ mime = "", name = "" }) => {
   return <InsertDriveFileIcon fontSize="small" sx={{ mr: 1 }} />;
 };
 
-/* Helpers */
 function findNode(nodes, id) {
   for (const n of nodes) {
     if (n.id === id) return n;
@@ -49,16 +37,15 @@ function findNode(nodes, id) {
   return null;
 }
 const resolveRootId = (selectedNode, tree) =>
-  selectedNode?.type === "folder" && /^root-\d{2}$/.test(selectedNode.id) ? selectedNode.id : (tree?.[0]?.id ?? "root-01");
+  selectedNode?.type === "folder" && /^root-\d{2}$/.test(selectedNode.id)
+    ? selectedNode.id
+    : (tree?.[0]?.id ?? "root-01");
 
 export default function Sidebar() {
   const { tree, selectedNodeId, selectNode, addUploadedFileNodes, renameNode } = useFileStore();
+  const projectId = useFileStore(s => s.currentProjectId);
+  const userId    = useFileStore(s => s.currentUserId);
   const { uploadAsync, isUploading } = useUpload();
-  const navigate = useNavigate();
-
-  // TODO: 실제 값으로 주입(라우터/컨텍스트 등). 데모 기본값:
-  const projectId = 1;          // ✅ 반드시 DB에 존재하는 projects.project_idx
-  const userId = "userId";      // ✅ 저장 경로와 일치하는 식별자
 
   const [expandedItems, setExpandedItems] = useState(() => (tree || []).map(n => String(n.id)));
   const selectedNode = useMemo(
@@ -66,30 +53,29 @@ export default function Sidebar() {
     [tree, selectedNodeId]
   );
 
-  /* Upload */
+  // 업로드
   const fileInputRef = useRef(null);
   const onClickUpload = () => fileInputRef.current?.click();
   const onChangeUpload = async (e) => {
     const files = e.target.files;
     if (!files?.length) return;
+    if (!projectId || !userId) { alert('컨텍스트가 없습니다.'); e.target.value = ''; return; }
 
     const rootId = resolveRootId(selectedNode, tree);
     try {
-      await uploadAsync({ files, rootId, projectId, userId });
+      await uploadAsync({ files, rootId }); // projectId/userId는 훅 내부에서 스토어로
       const nodes = filesToNodes({ files, rootId, projectId, userId });
       addUploadedFileNodes(rootId, nodes);
       setExpandedItems(prev => Array.from(new Set([...prev, String(rootId)])));
       selectNode(nodes[0].id);
-      navigate("/editor");
     } catch (err) {
       alert(`업로드 실패: ${err?.message || err}`);
-      // console.error(err);
     } finally {
       e.target.value = "";
     }
   };
 
-  /* Rename */
+  // 이름 변경
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState(null);
   const [renameValue, setRenameValue] = useState("");
@@ -100,16 +86,10 @@ export default function Sidebar() {
     setRenameOpen(false);
   };
 
-  /* Render */
   const renderNode = (node) => {
     const isFolder = node.type === "folder";
     const label = (
-      <Stack
-        direction="row"
-        alignItems="center"
-        spacing={0.5}
-        sx={{ pr: 1, "&:hover .rename-btn": { opacity: 1 } }}
-      >
+      <Stack direction="row" alignItems="center" spacing={0.5} sx={{ pr: 1, "&:hover .rename-btn": { opacity: 1 } }}>
         {isFolder ? (
           <FolderIcon fontSize="small" sx={{ mr: 1, color: "#6b7280" }} />
         ) : (
@@ -175,8 +155,7 @@ export default function Sidebar() {
         <DialogTitle>이름 변경</DialogTitle>
         <DialogContent>
           <TextField
-            autoFocus
-            fullWidth
+            autoFocus fullWidth
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") confirmRename(); }}
