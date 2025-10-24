@@ -39,7 +39,7 @@
         </update>
 
         <select id="getProject" resultMap="projectMap">
-            select project_idx, user_idx, project_name, created_at, updated_at, idx, user_id
+            select projects.project_idx, projects.user_idx, projects.project_name, projects.created_at, projects.updated_at, users.idx, users.user_id
             from projects
             left join users
             on projects.user_idx = users.idx

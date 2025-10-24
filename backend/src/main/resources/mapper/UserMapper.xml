@@ -9,14 +9,18 @@
         <id property="idx" column="idx"/>
         <result property="userId" column="user_id"/>
         <result property="userPw" column="user_pw"/>
+        <result property="userName" column="user_name"/>
+        <result property="roleLevel" column="role_level"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
         <insert id="insertUser">
             <selectKey keyProperty="idx" order="BEFORE" resultType="long">
                 select user_seq.nextval from dual
             </selectKey>
-            insert into users (idx, user_id, user_pw)
-            values (#{idx}, #{userId}, #{userPw})
+            insert into users (idx, user_id, user_pw, user_name)
+            values (#{idx}, #{userId}, #{userPw}, #{userName})
         </insert>
 
         <select id="getUser" resultMap="userMap">
