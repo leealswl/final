@@ -2,10 +2,9 @@ package com.example.backend.onlyoffice;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,11 +18,9 @@ import com.auth0.jwt.algorithms.Algorithm;
 public class OnlyOfficeController {
 
     private final OnlyOfficeProps props;
-    private final FileService files;
 
-    public OnlyOfficeController(OnlyOfficeProps props, FileService files) {
+    public OnlyOfficeController(OnlyOfficeProps props) {
         this.props = props;
-        this.files = files;
     }
 
     /**
@@ -31,38 +28,31 @@ public class OnlyOfficeController {
      * - 문서서버(local.json) 설정: token.enable.browser=true, inBody=false
      * - JWT는 "루트 클레임" 방식으로 서명 (payload에 넣지 않음)
      */
-    @GetMapping("/config/{fileId}")
-    public ResponseEntity<?> getConfig(@PathVariable String fileId) {
-        // 1) 파일 메타 조회
-        FileMeta f = files.getById(fileId);
-        if (f == null) return ResponseEntity.notFound().build();
+        // 프론트가 { url, title }로 요청
+    @PostMapping("/config")
+    public ResponseEntity<?> buildConfig(@RequestBody Map<String, Object> body) {
+        String url = (String) body.get("url");     // 예: http://127.0.0.1:8081/uploads/userId/1/1/abc.docx
+        String title = (String) body.getOrDefault("title", "document.docx");
+        if (url == null || url.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "url is required"));
+        }
 
-        // 2) 문서서버가 직접 다운로드할 URL (127.0.0.1 권장)
-        final String fileUrl = props.getPublicBase() + "/uploads/" + f.storageKey;
+        // 문서 캐시 구분용 키
+        String key = UUID.randomUUID().toString();
 
-        // 3) 문서 캐시 구분용 키(변경 시 새로고침 유도)
-        final String key = f.id + "-" + System.currentTimeMillis();
-
-        // 4) document 블록
         Map<String, Object> doc = new HashMap<>();
-        doc.put("title", f.name);
-        doc.put("url", fileUrl);
+        doc.put("title", title);
+        doc.put("url", url);
         doc.put("fileType", "docx");
         doc.put("key", key);
-        doc.put("permissions", Map.of(
-                "edit", true,
-                "download", true,
-                "print", true
-        ));
+        doc.put("permissions", Map.of("edit", true, "download", true, "print", true));
 
-        // 5) editorConfig 블록
         Map<String, Object> editorCfg = new HashMap<>();
-        editorCfg.put("callbackUrl", props.getCallbackUrl());
+        editorCfg.put("callbackUrl", props.getCallbackUrl()); // 필요 없으면 null/생략
         editorCfg.put("customization", Map.of("autosave", true));
         editorCfg.put("mode", "edit");
         editorCfg.put("lang", "ko");
 
-        // 6) 최종 config
         Map<String, Object> config = new HashMap<>();
         config.put("document", doc);
         config.put("documentType", "word");
@@ -71,7 +61,7 @@ public class OnlyOfficeController {
         config.put("width", "100%");
         config.put("height", "100%");
 
-        // 7) ✅ 브라우저 모드용 JWT (루트 클레임으로 서명)
+        // 7) 브라우저 모드용 JWT (루트 클레임으로 서명)
         String token = JWT.create()
                 .withClaim("document", doc)
                 .withClaim("documentType", "word")
