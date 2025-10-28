@@ -39,7 +39,7 @@ export default function Layout() {
   const [rightOpen, setRightOpen] = useState(false);
 
   return (
-    <Box sx={{ height: "100dvh", bgcolor: "#ffffff" }}>
+    <Box sx={{ height: "100vh", bgcolor: "#ffffff" }}>
       {/* 상단 AppBar (라이트) */}
       <AppBar
         position="static"
@@ -99,6 +99,7 @@ export default function Layout() {
           display: "flex",
           overflow: "hidden",
           bgcolor: "#ffffff",
+          minHeight: 0,
         }}
       >
         {/* Sidebar: md 이상 고정, md 미만 Drawer */}
@@ -131,9 +132,12 @@ export default function Layout() {
           sx={{
             flex: 1,
             minWidth: 0,
+            minHeight: 0,
+            height: "100%",
             bgcolor: "#ffffff",
             overflow: "hidden",
             position: "relative",
+            
           }}
         >
           <Editor />
