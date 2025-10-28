@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect} from "react";
 import {
   Box, Stack, Typography, Button, IconButton,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField,
@@ -17,8 +17,6 @@ import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 
 import { useFileStore } from "../../../../store/useFileStore";
-import useUpload from "../../../../hooks/useUpload";
-import { filesToNodes } from "../../../../utils/fileToNodes";
 import Upload from "../../../../components/Upload";
 
 // === util ===
@@ -50,10 +48,10 @@ const resolveRootId = (selectedNode, tree) =>
 const isRootId = (id) => /^root-(01|02)$/.test(String(id));
 
 export default function Sidebar() {
-  const { tree, selectedNodeId, selectNode, addUploadedFileNodes, renameNode, deleteNode } = useFileStore();
-  const projectId = useFileStore(s => s.currentProjectId);
-  const userId    = useFileStore(s => s.currentUserId);
-  const { uploadAsync, isUploading } = useUpload();
+  const { tree, selectedNodeId, selectNode, renameNode, deleteNode } = useFileStore();
+  //const projectId = useFileStore(s => s.currentProjectId);
+  //const userId    = useFileStore(s => s.currentUserId);
+  //const { uploadAsync, isUploading } = useUpload();
 
   const [expandedItems, setExpandedItems] = useState(() => (tree || []).map(n => String(n.id)));
   const selectedNode = useMemo(
@@ -62,27 +60,28 @@ export default function Sidebar() {
   );
 
   // -------- 업로드 --------
-  const fileInputRef = useRef(null);
-  const onClickUpload = () => fileInputRef.current?.click();
-  const onChangeUpload = async (e) => {
-    const files = e.target.files;
-    if (!files?.length) return;
-    if (!projectId || !userId) { alert('컨텍스트가 없습니다.'); e.target.value = ''; return; }
+  // const fileInputRef = useRef(null);
+  // const onClickUpload = () => fileInputRef.current?.click();
+  // const onChangeUpload = async (e) => {
+  //   const files = e.target.files;
+  //   if (!files?.length) return;
+  //   if (!projectId || !userId) { alert('컨텍스트가 없습니다.'); e.target.value = ''; return; }
 
-    const rootId = resolveRootId(selectedNode, tree);
-    try {
-      await uploadAsync({ files, rootId });
-      const nodes = filesToNodes({ files, rootId, projectId, userId });
-      addUploadedFileNodes(rootId, nodes);
-      setExpandedItems(prev => Array.from(new Set([...prev, String(rootId)])));
-      selectNode(nodes[0].id);
-    } catch (err) {
-      alert(`업로드 실패: ${err?.message || err}`);
-    } finally {
-      e.target.value = "";
-    }
-  };
-
+  //   const rootId = resolveRootId(selectedNode, tree);
+  //   try {
+  //     await uploadAsync({ files, rootId });
+  //     const nodes = filesToNodes({ files, rootId, projectId, userId });
+  //     addUploadedFileNodes(rootId, nodes);
+  //     setExpandedItems(prev => Array.from(new Set([...prev, String(rootId)])));
+  //     selectNode(nodes[0].id);
+  //   } catch (err) {
+  //     alert(`업로드 실패: ${err?.message || err}`);
+  //   } finally {
+  //     e.target.value = "";
+  //   }
+  // };
+  const rootId = useMemo(() => resolveRootId(selectedNode, tree), [selectedNode, tree]); // ✅ Upload에 전달
+  
   // -------- 이름 변경 --------
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState(null);
@@ -190,17 +189,18 @@ export default function Sidebar() {
     <Box sx={{ height: "100%", p: 1, overflow: "auto", bgcolor: "background.paper" }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1, pb: 1 }}>
         <Typography variant="subtitle2" sx={{ color: "#374151" }}>프로젝트 관리</Typography>
-        <Button size="small" startIcon={<UploadIcon />} onClick={onClickUpload} disabled={isUploading}>
+        {/* <Button size="small" startIcon={<UploadIcon />} onClick={onClickUpload} disabled={isUploading}>
           업로드
-        </Button>
-        <input
+        </Button> */}
+        <Upload rootId={rootId} />
+        {/* <input
           ref={fileInputRef}
           type="file"
           hidden
           multiple
           accept=".md,.txt,.pdf,.docx,.hwp,.hwpx,.xlsx,.pptx"
           onChange={onChangeUpload}
-        />
+        /> */}
       </Stack>
 
       <SimpleTreeView
