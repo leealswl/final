@@ -17,6 +17,7 @@ backend/target/
 backend/.mvn/
 *.iml
 backend/src/main/resources/application.yml
+backend/uploads/
 
 *.local.yml
 *.secret.yml
