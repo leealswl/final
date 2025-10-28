@@ -19,8 +19,12 @@ function App() {
   return (
       <Routes>
         <Route path="/" element={<Homepage />} />
-        <Route path="/edit" element={<Editpage />} />
-        <Route path="/edit/:id" element={<Editpage />} />
+        <Route path='edit'>
+          <Route index element={<Editpage />} />
+          <Route path=':id' element={<Editpage />} />
+        </Route>
+        {/* <Route path="/edit" element={<Editpage />} />
+        <Route path="/edit/:id" element={<Editpage />} /> */}
         <Route path="/login" element={<Login />} />
     </Routes>
   );
