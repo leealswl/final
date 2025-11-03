@@ -140,6 +140,7 @@ export default function Layout() {
             
           }}
         >
+          {/* <Editor /> */}
           <Editor />
         </Box>
 
