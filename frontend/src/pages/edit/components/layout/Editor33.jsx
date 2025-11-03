@@ -3,6 +3,8 @@ import { Box } from "@mui/material";
 import { useFileStore } from "../../../../store/useFileStore";
 import api from "../../../../utils/api";
 
+// 필드 선택해서 해당 필드 값 변경
+
 // 공용 UI
 function Pad({ children }) {
   return <Box sx={{ p: 2, color: "text.secondary" }}>{children}</Box>;
