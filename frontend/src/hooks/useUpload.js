@@ -5,6 +5,7 @@ import { useFileStore } from '../store/useFileStore'
 
 const toFolderNum = (rootId) => (rootId === 'root-01' ? 1 : rootId === 'root-02' ? 2 : 3)
 
+
 export default function useLoad() {
   const projectId = useFileStore(s => s.currentProjectId)
   const userId    = useFileStore(s => s.currentUserId)
@@ -36,6 +37,7 @@ export default function useLoad() {
           throw new Error(msg)
         }
       }
+      
       try { return await tryPost('/api/analysis') }
       catch { return await tryPost('/api/analysis/') }
     },
