@@ -23,8 +23,6 @@ function App() {
           <Route index element={<Editpage />} />
           <Route path=':id' element={<Editpage />} />
         </Route>
-        {/* <Route path="/edit" element={<Editpage />} />
-        <Route path="/edit/:id" element={<Editpage />} /> */}
         <Route path="/login" element={<Login />} />
     </Routes>
   );
