@@ -53,7 +53,7 @@ function DocxHost({ active, file, onConnectorReady }) {
   const ready = useOnlyOfficeReady();
 
   const destroy = useCallback(() => {
-    try { editorRef.current?.destroyEditor?.(); } catch {}
+    try { editorRef.current?.destroyEditor?.(); } catch (e) {console.log(e.Error)}
     editorRef.current = null;
   }, []);
 
