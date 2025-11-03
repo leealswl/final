@@ -70,6 +70,7 @@ function DocxHost({ active, file, onConnectorReady }) {
         if (!el) throw new Error("host element missing");
         if (!el.id) el.id = `oo-${Math.random().toString(36).slice(2)}`;
 
+        console.log(file.path)
         const { data } = await api.post("/onlyoffice/config", {
           url: `http://127.0.0.1:8081${file.path}`,
           title: file.name,
