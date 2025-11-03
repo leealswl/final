@@ -1,6 +1,6 @@
 import React from 'react'
-import {Button,  Grid, Stack, Box} from "@mui/material";
-import logo from './앨리스.png'
+import {Button,  Grid, Stack, Box, Typography} from "@mui/material";
+import logo from '../img/nav_logo.png'
 
 const Navbar = () => {
 
@@ -13,7 +13,7 @@ const Navbar = () => {
   }
 
   return (
-    <Grid container pt={3} pb={3} borderBottom={1} borderColor={'black'} ml={15} mr={15}>
+    <Grid container pt={3} mx={30}>
 
       <Grid size={1} display="flex" justifyContent="center" alignItems="center">
         <Box
@@ -21,12 +21,14 @@ const Navbar = () => {
           src={logo}
           alt="logo"
           sx={{
+            mr: '10px',
             width: 30,
             height: "auto",
-            borderRadius: 2,
-            boxShadow: 3,
+            // borderRadius: 2,
+            // boxShadow: 3,
           }}
     />
+    <Typography fontSize={24} fontWeight={'bold'}>Paladoc</Typography>
       </Grid>
       <Grid size={9} display="flex" justifyContent="center" alignItems="center">
         <Stack direction="row" spacing={3}>
