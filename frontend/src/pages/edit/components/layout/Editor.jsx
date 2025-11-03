@@ -3,6 +3,12 @@ import { Box, CircularProgress, TextField } from "@mui/material";
 import { useFileStore } from "../../../../store/useFileStore";
 import api from "../../../../utils/api";
 
+// DS가 부를 전역 함수는 파일 최상단(컴포넌트 밖)에서 한 번만
+if (typeof window !== "undefined") {
+  window.onDocReady = function () {
+    console.log("[OO] DS doc ready");
+  };
+}
 
 // 파일 최상단 근처에 추가
 const toAbs = (p) => (p?.startsWith('http') ? p : `http://127.0.0.1:8081${p}`);
@@ -81,7 +87,9 @@ function DocxHost({ active, file }) {
     (async () => {
       try {
         // 이전 에디터 정리
-        destroy();
+        try { editorRef.current?.destroyEditor?.(); } catch {}
+        editorRef.current = null;
+        //destroy();
 
         const el = hostRef.current;
         if (!el) throw new Error("host element missing");
@@ -104,20 +112,59 @@ function DocxHost({ active, file }) {
           width: "100%",
           height: "100%",
           events: {
-            onAppReady()    { console.log("[OO] onAppReady"); },
-            onDocumentReady(){ console.log("[OO] onDocumentReady"); },
-            onError(e)      { console.error("[OO] onError:", e); },
+            onAppReady(){ 
+              console.log("[OO] onAppReady"); },
+            onDocumentReady(){
+              console.log("[OO] onDocumentReady");
+              if (typeof window.onDocReady === "function") {
+                window.onDocReady();
+              }
+              // ✅ 문서가 준비된 '이 타이밍'에 커넥터를 만든다
+              try {
+                const conn = ed.createConnector();
+                window.editorBridge = {
+                  editor: ed,
+                  conn,
+                  insert(text) {
+                    try {
+                      console.log("[editorBridge.insert] called with:", text);
+                      this.conn.executeMethod("PasteText", [text]);
+                      this.conn.executeMethod("PasteText", ["\n"]);
+                      console.log("[OO] insert via connector OK");
+                    } catch (e) {
+                      console.error("[OO] insert error:", e);
+                    }
+                  },
+                };
+                console.log("[OO] editorBridge ready");
+              } catch (e) {
+                console.error("[OO] connector create failed:", e);
+              }
+            },
+            onError(e){ 
+              console.error("[OO] onError:", e); },
           },
         };
-
-        editorRef.current = new window.DocsAPI.DocEditor(el.id, cfg);
+        console.log("[OO] cfg.document.fileType =", cfg?.document?.fileType);     // 'docx' 기대
+        console.log("[OO] cfg.documentType =", cfg?.documentType);                // 'word' 기대
+        console.log("[OO] cfg.editorConfig.mode =", cfg?.editorConfig?.mode);     // 'edit' 기대
+        console.log("[OO] cfg.document.permissions.edit =", cfg?.document?.permissions?.edit); // true 기대
+        
+        //new edit 
+        const ed = new window.DocsAPI.DocEditor(el.id, cfg);
+        editorRef.current = ed;  
         lastKeyRef.current = currentKey;
-      } catch (e) {
-        console.error("[DocxHost] init error:", e);
-      }
-    })();
-
-    return () => { cancelled = true; };
+        } catch (e) {
+          console.error("[DocxHost] init error:", e);
+        }
+      })();
+    // ✅ 클린업은 여기 (useEffect의 반환값)
+    return () => { 
+      cancelled = true;
+      try { editorRef.current?.destroyEditor?.(); } catch {}
+      editorRef.current = null;
+      delete window.editorBridge; 
+      };
   }, [ready, active, file?.id, file?.path, destroy]);
 
   // Editor 전체가 언마운트될 때만 완전 파괴
@@ -135,115 +182,6 @@ function DocxHost({ active, file }) {
     />
   );
 }
-
-// function DocxView({ file }) {
-//   const hostRef = React.useRef(null);
-//   const editorRef = React.useRef(null);
-//   const constructedRef = React.useRef(false);
-//   const [status, setStatus] = useState("idle"); // idle | loading | error
-//   const [debug, setDebug] = useState("");
-//   const ready = useOnlyOfficeReady();
-
-//   useEffect(() => {
-//     if (!file || !ready) return;
-
-//     let cancelled = false;
-
-//     const waitForSize = (el, tries = 40) =>
-//       new Promise((resolve, reject) => {
-//         const tick = () => {
-//           if (cancelled) return;
-//           if (!el) return reject(new Error("host element null"));
-//           const r = el.getBoundingClientRect();
-//           const cs = getComputedStyle(el);
-//           if (r.width >= 10 && r.height >= 10 && cs.display !== "none" && cs.visibility !== "hidden")
-//             return resolve(true);
-//           if (tries-- <= 0) return reject(new Error(`host size zero: ${r.width}x${r.height}`));
-//           setTimeout(tick, 50);
-//         };
-//         tick();
-//       });
-
-//     const initEditor = async () => {
-//       try {
-//         setStatus("loading");
-
-//         // hostRef.current가 존재할 때까지 기다림
-//         const el = hostRef.current;
-//         if (!el) throw new Error("hostRef.current is null");
-//         await waitForSize(el);
-
-//         const hostId = `onlyoffice-${(file.id || file.path || 'noid')}`;
-//         if (!el.id) el.id = hostId;
-
-//         // 백엔드 config 요청
-//         const absoluteUrl = `http://127.0.0.1:8081${file.path}`;
-//         setDebug("config 요청…");
-//         const { data } = await api.post("/onlyoffice/config", {
-//           url: absoluteUrl,
-//           title: file.name,
-//         });
-//         const { config, token } = data;
-
-//         if (!window.DocsAPI?.DocEditor) throw new Error("DocsAPI 미준비");
-//         if (constructedRef.current) {
-//           setDebug((d) => d + " | already constructed(skip)");
-//           setStatus("idle");
-//           return;
-//         }
-
-//         const cfg = {
-//           ...config,
-//           token,
-//           width: "100%",
-//           height: "100%",
-//           events: {
-//             onAppReady() { console.log("[OO] onAppReady"); },
-//             onDocumentReady() { console.log("[OO] onDocumentReady"); },
-//             onError(e) {
-//               console.error("[OO] onError:", e, e?.data ? JSON.stringify(e.data) : "");
-//             },
-//           },
-//         };
-
-//         editorRef.current = new window.DocsAPI.DocEditor(el.id, cfg);
-//         constructedRef.current = true;
-//         setStatus("idle");
-//       } catch (e) {
-//         console.error("[DocxView] init error:", e);
-//         setDebug(`init error: ${e?.message || e}`);
-//         setStatus("error");
-//       }
-//     };
-
-//     // DOM이 렌더링될 때까지 다음 tick에서 실행
-//     const id = setTimeout(() => initEditor(), 0);
-
-//     return () => {
-//       cancelled = true;
-//       try { editorRef.current?.destroyEditor?.(); } catch {}
-//         editorRef.current = null;
-//       constructedRef.current = false;
-//       clearTimeout(id);
-//     };
-//   }, [ready, file?.id, file?.path]);
-
-//   if (status === "loading") {
-//     return (
-//       <Center>
-//         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-//           <CircularProgress size={20} /> <span>OnlyOffice 로딩 중…</span>
-//         </div>
-//       </Center>
-//     );
-//   }
-//   if (status === "error") {
-//     return <Pad>OnlyOffice 초기화 실패: {debug}</Pad>;
-//   }
-
-//   return <Box ref={hostRef} style={{ width: '100%', height: '600px' }} />;
-// }
-
 
 /* 텍스트 뷰 (md/txt) — file.path에서 직접 읽기 (읽기 전용) */
 function TextView({ file }) {

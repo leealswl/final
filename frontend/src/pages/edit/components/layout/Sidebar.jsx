@@ -107,7 +107,7 @@ export default function Sidebar() {
     setDeleteTarget(null);
   };
 
-  // 키보드 Delete/Backspace
+  // 키보드 Delete
   useEffect(() => {
     const onKey = (e) => {
       if ((e.key === "Delete") && selectedNodeId) {

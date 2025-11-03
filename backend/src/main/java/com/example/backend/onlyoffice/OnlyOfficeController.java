@@ -48,19 +48,23 @@ public class OnlyOfficeController {
         // 문서 캐시 구분용 키
         String key = UUID.randomUUID().toString();
 
+        // document
         Map<String, Object> doc = new HashMap<>();
         doc.put("title", title);
         doc.put("url", url);
         doc.put("fileType", fileType);
         doc.put("key", key);
         doc.put("permissions", Map.of("edit", true, "download", true, "print", true));
-
+        
+        // editorConfig
         Map<String, Object> editorCfg = new HashMap<>();
         editorCfg.put("callbackUrl", props.getCallbackUrl()); // 필요 없으면 null/생략
         editorCfg.put("customization", Map.of("autosave", true));
         editorCfg.put("mode", "edit");
         editorCfg.put("lang", "ko");
 
+
+        //// 최종 config
         Map<String, Object> config = new HashMap<>();
         config.put("document", doc);
         config.put("documentType", documentType);
@@ -68,6 +72,7 @@ public class OnlyOfficeController {
         config.put("type", "desktop");
         config.put("width", "100%");
         config.put("height", "100%");
+        System.out.println("[OO] final config: " + config);
 
         // 7) 브라우저 모드용 JWT (루트 클레임으로 서명)
         String token = JWT.create()
@@ -96,18 +101,18 @@ public class OnlyOfficeController {
     }
 
         private static String toDocumentType(String ext) {
-          switch (ext) {
-          // 워드류
-          case "doc": case "docx": case "odt": case "rtf": case "txt":
-          case "pdf": case "md": case "hwp": case "hwpx":
-              return "word";
-          // 스프레드시트
-          case "xls": case "xlsx": case "ods": case "csv":
-              return "cell";
-          // 프레젠테이션
-          case "ppt": case "pptx": case "odp":
-              return "slide";
-          default:
+            switch (ext) {
+            // 워드류
+            case "doc": case "docx": case "odt": case "rtf": case "txt":
+            case "pdf": case "md": case "hwp": case "hwpx":
+                return "word";
+            // 스프레드시트
+            case "xls": case "xlsx": case "ods": case "csv":
+                return "cell";
+            // 프레젠테이션
+            case "ppt": case "pptx": case "odp":
+                return "slide";
+            default:
               return "word"; // 모르는 확장자는 word로
         }
     }
