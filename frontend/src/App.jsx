@@ -19,11 +19,13 @@ function App() {
   return (
       <Routes>
         <Route path="/" element={<Homepage />} />
+        <Route path="/login" element={<Login />} />
+        
         <Route path='edit'>
           <Route index element={<Editpage />} />
           <Route path=':id' element={<Editpage />} />
         </Route>
-        <Route path="/login" element={<Login />} />
+        
     </Routes>
   );
 }
