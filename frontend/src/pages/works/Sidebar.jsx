@@ -5,7 +5,7 @@ import {
   Menu, MenuItem,
 } from "@mui/material";
 import { SimpleTreeView, TreeItem } from "@mui/x-tree-view";
-import UploadIcon from "@mui/icons-material/Upload";
+
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
@@ -16,8 +16,8 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
 
-import { useFileStore } from "../../../../store/useFileStore";
-import Upload from "../../../../components/Upload";
+import { useFileStore } from "../../store/useFileStore";
+import Upload from "../../components/Upload";
 
 // === util ===
 const FileIcon = ({ mime = "", name = "" }) => {
@@ -59,27 +59,6 @@ export default function Sidebar() {
     [tree, selectedNodeId]
   );
 
-  // -------- 업로드 --------
-  // const fileInputRef = useRef(null);
-  // const onClickUpload = () => fileInputRef.current?.click();
-  // const onChangeUpload = async (e) => {
-  //   const files = e.target.files;
-  //   if (!files?.length) return;
-  //   if (!projectId || !userId) { alert('컨텍스트가 없습니다.'); e.target.value = ''; return; }
-
-  //   const rootId = resolveRootId(selectedNode, tree);
-  //   try {
-  //     await uploadAsync({ files, rootId });
-  //     const nodes = filesToNodes({ files, rootId, projectId, userId });
-  //     addUploadedFileNodes(rootId, nodes);
-  //     setExpandedItems(prev => Array.from(new Set([...prev, String(rootId)])));
-  //     selectNode(nodes[0].id);
-  //   } catch (err) {
-  //     alert(`업로드 실패: ${err?.message || err}`);
-  //   } finally {
-  //     e.target.value = "";
-  //   }
-  // };
   const rootId = useMemo(() => resolveRootId(selectedNode, tree), [selectedNode, tree]); // ✅ Upload에 전달
   
   // -------- 이름 변경 --------
