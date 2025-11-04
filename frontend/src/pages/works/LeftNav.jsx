@@ -4,18 +4,27 @@ import InsightsOutlinedIcon from "@mui/icons-material/InsightsOutlined";   // �
 import EditNoteOutlinedIcon from "@mui/icons-material/EditNoteOutlined";   // 생성
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined"; // 검증
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined"; 
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate,useParams } from "react-router-dom";
 
 const ITEMS = [
-    { key: "analyze", label: "분석", path: "/edit", Icon: InsightsOutlinedIcon },
-    { key: "create",  label: "생성", path: "/edit",  Icon: EditNoteOutlinedIcon },
-    { key: "edit",    label: "편집", path: "/edit",  Icon: EditOutlinedIcon },
-    { key: "verify",  label: "검증", path: "/edit",  Icon: FactCheckOutlinedIcon },
+    { key: "analyze", label: "분석",  Icon: InsightsOutlinedIcon },
+    { key: "create",  label: "생성",  Icon: EditNoteOutlinedIcon },
+    { key: "edit",    label: "편집",  Icon: EditOutlinedIcon },
+    { key: "verify",  label: "검증",  Icon: FactCheckOutlinedIcon },
     ];
 
-    export default function LeftNav({ width = 64 }) {
+export default function LeftNav({ width = 64 }) {
     const nav = useNavigate();
     const { pathname } = useLocation();
+    const { docId } = useParams(); // 편집 모드에서만 의미 있음
+
+      // key -> 목적지 경로
+    const toPath = (key) => {
+    if (key === "edit") return `/works/edit${docId ? `/${docId}` : ""}`;
+    return `/works/${key}`;
+    };
+    // key -> 선택 여부
+    const isSelected = (key) => pathname.startsWith(`/works/${key}`);
 
     return (
         <Box
@@ -37,7 +46,7 @@ const ITEMS = [
             return (
             <Tooltip key={key} title={label} placement="right">
                 <Box
-                onClick={() => nav(path)}
+                onClick={() => nav(toPath(key))}
                 sx={{
                     width: "100%",
                     display: "grid",

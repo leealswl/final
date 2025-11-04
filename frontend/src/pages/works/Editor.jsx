@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Box, CircularProgress, TextField } from "@mui/material";
-import { useFileStore } from "../../../../store/useFileStore";
-import api from "../../../../utils/api";
+import { useFileStore } from "../../store/useFileStore";
+import api from "../../utils/api";
 
 // DS가 부를 전역 함수는 파일 최상단(컴포넌트 밖)에서 한 번만
 if (typeof window !== "undefined") {
