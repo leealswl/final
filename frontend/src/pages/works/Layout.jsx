@@ -98,7 +98,7 @@ export default function Layout() {
                 position: "absolute",
                 right: 8,
                 top: 16,
-                zIndex: 2,
+                zIndex: 0,
                 bgcolor: "#fff",
                 border: "1px solid #e5e7eb",
                 boxShadow: "0 1px 3px rgba(0,0,0,.06)",
