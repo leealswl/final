@@ -33,8 +33,9 @@ public class AnalysisController {
     @GetMapping("/path")
     public String test() {
         Path uploadPath = Paths.get("uploads/");
+        
         System.out.println(uploadPath);
-        return "test";
+        return uploadPath.toString();
     }
     
 
