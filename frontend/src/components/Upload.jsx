@@ -29,7 +29,7 @@ export default function Upload({ rootId }) {
       selectNode(nodes[0].id)
 
       // 4) (옵션) 에디터 페이지로 라우팅
-      navigate('/edit')
+      navigate('edit')
 
     } catch (err) {
       alert(`업로드 실패: ${err?.message || err}`);

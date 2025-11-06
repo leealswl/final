@@ -1,8 +1,12 @@
 import './App.css'
-import Editpage from './pages/edit/Editpage'
 import Homepage from './pages/home/Homepage'
 import {Route, Routes} from 'react-router-dom'
 import Login from './pages/login/Login';
+import Layout from './pages/works/Layout';
+import AnalyzeView from './pages/works/views/AnalyzeView';
+import CreateView from './pages/works/views/CreateView';
+import EditView from './pages/works/views/EditView';
+import VerifyView from './pages/works/views/VerifyView';
 import { useEffect } from 'react';
 import { useFileStore } from './store/useFileStore';
 
@@ -21,11 +25,16 @@ function App() {
   return (
       <Routes>
         <Route path="/" element={<Homepage />} />
-        <Route path='edit'>
-          <Route index element={<Editpage />} />
-          <Route path=':id' element={<Editpage />} />
-        </Route>
         <Route path="/login" element={<Login />} />
+
+        <Route path="/works" element={<Layout />}>
+          <Route path="analyze" element={<AnalyzeView />} />
+          <Route path="create"  element={<CreateView />} />
+          <Route path="edit"    element={<EditView />} />
+          <Route path="edit/:docId" element={<EditView />} />
+          <Route path="verify"  element={<VerifyView />} />
+        </Route>
+        
     </Routes>
   );
 }
