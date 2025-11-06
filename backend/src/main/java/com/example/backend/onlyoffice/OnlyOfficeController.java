@@ -33,6 +33,18 @@ public class OnlyOfficeController {
     public ResponseEntity<?> buildConfig(@RequestBody Map<String, Object> body) {
         String url = (String) body.get("url");     // 예: http://127.0.0.1:8081/uploads/userId/1/1/abc.docx
         System.out.println("url: " + url);
+        
+        // mac용 onlyoffice dev 서버 테스트 시
+        // System.out.println("Original url: " + url);
+
+        // // Docker 컨테이너에서 실행 중인 OnlyOffice가 호스트 머신의 Spring Boot에 접근하려면
+        // // 127.0.0.1 또는 localhost를 host.docker.internal로 변경
+        // if (url != null) {
+        //     url = url.replace("127.0.0.1", "host.docker.internal")
+        //              .replace("localhost", "host.docker.internal");
+        //     System.out.println("Converted url for Docker: " + url);
+        // }
+
         String title = (String) body.getOrDefault("title", "document.docx");
         if (url == null || url.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "url is required"));
