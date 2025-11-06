@@ -120,25 +120,49 @@ function DocxHost({ active, file }) {
                 window.onDocReady();
               }
               // ✅ 문서가 준비된 '이 타이밍'에 커넥터를 만든다
+              // 주의: createConnector는 ONLYOFFICE Developer Edition의 유료 기능입니다
+              // 무료 버전이나 HWP 파일에서는 작동하지 않을 수 있습니다
               try {
-                const conn = ed.createConnector();
-                window.editorBridge = {
-                  editor: ed,
-                  conn,
-                  insert(text) {
-                    try {
-                      console.log("[editorBridge.insert] called with:", text);
-                      this.conn.executeMethod("PasteText", [text]);
-                      this.conn.executeMethod("PasteText", ["\n"]);
-                      console.log("[OO] insert via connector OK");
-                    } catch (e) {
-                      console.error("[OO] insert error:", e);
-                    }
-                  },
-                };
-                console.log("[OO] editorBridge ready");
+                // mac용 확인
+                // if (ed && typeof ed.createConnector === 'function') {
+                  const conn = ed.createConnector();
+                  window.editorBridge = {
+                    editor: ed,
+                    conn,
+                    insert(text) {
+                      try {
+                        console.log("[editorBridge.insert] called with:", text);
+                        this.conn.executeMethod("PasteText", [text]);
+                        this.conn.executeMethod("PasteText", ["\n"]);
+                        console.log("[OO] insert via connector OK");
+                      } catch (e) {
+                        console.error("[OO] insert error:", e);
+                      }
+                    },
+                  };
+                  console.log("[OO] editorBridge ready");
+                // } else {
+                //   // createConnector를 사용할 수 없는 경우 기본 에디터만 제공
+                //   console.info("[OO] createConnector not available (requires Developer Edition or not supported for this file type)");
+                //   window.editorBridge = {
+                //     editor: ed,
+                //     conn: null,
+                //     insert(text) {
+                //       console.warn("[OO] Text insertion not available without connector");
+                //     }
+                //   };
+                // }
               } catch (e) {
+                // 에러가 발생해도 에디터는 정상 작동
                 console.error("[OO] connector create failed:", e);
+                // console.warn("[OO] connector create failed (this is normal for free edition or HWP files):", e.message);
+                // window.editorBridge = {
+                //   editor: ed,
+                //   conn: null,
+                //   insert(text) {
+                //     console.warn("[OO] Text insertion not available without connector");
+                //   }
+                // };
               }
             },
             onError(e){ 

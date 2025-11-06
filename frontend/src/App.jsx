@@ -14,6 +14,8 @@ function App() {
   useEffect(() => {
     // TODO: 실제 로그인/선택값으로 설정
     setCtx({ projectId: 1, userId: 'userId' });
+    // 임시 하드코딩 분석에이전트 관련
+    // setCtx({ projectId: 1, userId: '1' });
   }, [setCtx]);
 
   return (

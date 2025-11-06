@@ -68,6 +68,9 @@ public class AnalysisController {
         @RequestParam("projectidx") Long projectidx,
         @RequestParam("userid") String userid) {
             System.out.println("analysis controller 작동 시작");
+            // System.out.println("Received userid: " + userid);
+            // System.out.println("Received projectidx: " + projectidx);
+            // System.out.println("Received folders: " + folders);
 
         try {
             // 1단계: DB에 파일 정보 저장 (documentService)
