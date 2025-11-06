@@ -124,6 +124,7 @@ export default function Layout() {
           )} */}
                 </Box>
 
+<<<<<<< HEAD
                 {/* 오른쪽 어시스턴트 — 열고/닫기 토글만 지원 */}
                 <Box
                     component="aside"
@@ -171,6 +172,42 @@ export default function Layout() {
                     </IconButton>
                 </Box>
             </Box>
+=======
+        {/* 오른쪽 어시스턴트 — 열고/닫기 토글만 지원 */}
+        <Box
+          component="aside"
+          sx={{
+            width: assistOpen ? ASSIST_W : 0,
+            minWidth: assistOpen ? ASSIST_W : 0,
+            transition: "width .25s ease",
+            bgcolor: "#fafafa",
+            borderLeft: assistOpen ? "1px solid #e5e7eb" : "none",
+            // overflow: "hidden",
+            position: "relative",
+          }}
+          onTransitionEnd={fireResize}
+        >
+          {assistOpen && <Assistant />}
+
+          {/* 패널 안쪽 왼쪽 가장자리: "접기" 핸들(›) */}
+          <IconButton
+            size="small"
+            onClick={() => setAssistOpen(false)}
+            aria-label="어시스턴트 접기"
+            sx={{
+              position: "absolute",
+              left: -16,
+              top: 16,
+              zIndex: 1,
+              bgcolor: "#fff",
+              border: "1px solid #e5e7eb",
+              boxShadow: "0 1px 3px rgba(0,0,0,.06)",
+              "&:hover": { bgcolor: "#fff" },
+            }}
+          >
+            <ChevronRightIcon />
+          </IconButton>
+>>>>>>> 5daed87 (merged)
         </Box>
     );
 }
