@@ -19,12 +19,16 @@ app = FastAPI()
 async def analyze(
     files: List[UploadFile] = File(...),
     folders: List[str] = Form(...),
-    userId: str = Form(...)
+    userid: str = Form(...)
 ):
-    print("fastapi server 시작")
-    for f in files:
-        contents = await f.read()
-        print(f.filename, len(contents))
+    # 파일이 잘 넘어왔는지 확인하는것. 
+    # print("fastapi server 시작")
+    # for f in files:
+    #     contents = await f.read()
+    #     print(f.filename, len(contents))
 
-    print(folders, userId)
+    # print(folders, userid)
+    
+    
+    
     return {"status": "success", "processedFiles": len(files)}
