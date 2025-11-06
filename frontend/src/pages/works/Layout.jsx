@@ -1,70 +1,66 @@
-import React, { useState } from "react";
-import {
-  Box,
-  Paper,
-  IconButton
-} from "@mui/material";
+import React, { useState } from 'react';
+import { Box, Paper, IconButton } from '@mui/material';
 
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
-import LeftNav from "./LeftNav";
-import Sidebar from "./Sidebar";
-import Assistant from "./Assistant";
+import LeftNav from './LeftNav';
+import Sidebar from './Sidebar';
+import Assistant from './Assistant';
 
-import { Outlet } from "react-router-dom";
+import { Outlet } from 'react-router-dom';
 
 export default function Layout() {
-  const NAV_W = 64;     // 왼쪽 얇은 네비 레일
-  const SIDEBAR_W = 280; // 프로젝트 트리
-  const ASSIST_W  = 360; // 우측 어시스턴트 (열렸을 때)
+    const NAV_W = 64; // 왼쪽 얇은 네비 레일
+    const SIDEBAR_W = 280; // 프로젝트 트리
+    const ASSIST_W = 360; // 우측 어시스턴트 (열렸을 때)
 
-  // 데스크톱 우측 패널 열림 상태
-  const [assistOpen, setAssistOpen] = useState(true);
+    // 데스크톱 우측 패널 열림 상태
+    const [assistOpen, setAssistOpen] = useState(true);
 
     // 패널 열고닫을 때 에디터가 즉시 리사이즈되도록 resize 이벤트 발행
-  const fireResize = () => window.dispatchEvent(new Event("resize"));
+    const fireResize = () => window.dispatchEvent(new Event('resize'));
 
-  return (
-    <Box sx={{ height: "100vh", bgcolor: "#ffffff" }}>
-      {/* 메인 3분할/Drawer 영역 */}
-      <Box
-        sx={{
-          height: "100dvh",
-          display: "flex",
-          overflow: "hidden",
-          bgcolor: "#ffffff",
-          minHeight: 0,
-        }}
-      >
-        {/* 왼쪽 네비 레일 (분석/생성/편집/검증) */}
-      <Box
-        component="nav"
-        sx={{
-          width: NAV_W,
-          minWidth: NAV_W,
-          borderRight: "1px solid #e5e7eb",
-          bgcolor: "#fff",
-        }}
-      >
-        <LeftNav width={NAV_W} />
-      </Box>
+    return (
+        <Box sx={{ height: '100vh', bgcolor: '#ffffff' }}>
+            {/* 메인 3분할/Drawer 영역 */}
+            <Box
+                sx={{
+                    height: '100dvh',
+                    display: 'flex',
+                    overflow: 'hidden',
+                    bgcolor: '#ffffff',
+                    minHeight: 0,
+                }}
+            >
+                {/* 왼쪽 네비 레일 (분석/생성/편집/검증) */}
+                <Box
+                    component="nav"
+                    sx={{
+                        width: NAV_W,
+                        minWidth: NAV_W,
+                        borderRight: '1px solid #e5e7eb',
+                        bgcolor: '#fff',
+                    }}
+                >
+                    <LeftNav width={NAV_W} />
+                </Box>
 
-        {/* 프로젝트 사이드바 */}
-      <Paper
-        square
-        elevation={0}
-        sx={{
-          width: SIDEBAR_W,
-          bgcolor: "#fafafa",
-          borderRight: "1px solid #e5e7eb",
-          overflow: "hidden",
-        }}
-      >
-        <Sidebar />
-      </Paper>
-        
+                {/* 프로젝트 사이드바 */}
+                <Paper
+                    square
+                    elevation={0}
+                    sx={{
+                        width: SIDEBAR_W,
+                        bgcolor: '#fafafa',
+                        borderRight: '1px solid #e5e7eb',
+                        overflow: 'hidden',
+                    }}
+                >
+                    <Sidebar />
+                </Paper>
 
+<<<<<<< HEAD
         {/* Editor: 항상 중앙 */}
         <Box
           sx={{
@@ -87,6 +83,24 @@ export default function Layout() {
 >>>>>>> a5497fa (layout modify2):frontend/src/pages/works/Layout.jsx
         {/* 어시스턴트가 닫혀 있을 때만, 에디터 오른쪽 상단에 "열기" 핸들(‹) */}
           {!assistOpen && (
+=======
+                {/* Editor: 항상 중앙 */}
+                <Box
+                    sx={{
+                        flex: 1,
+                        minWidth: 0,
+                        minHeight: 0,
+                        height: '100%',
+                        bgcolor: '#ffffff',
+                        overflow: 'hidden',
+                        position: 'relative',
+                    }}
+                >
+                    <Outlet />
+                    {/* <Editor /> */}
+                    {/* 어시스턴트가 닫혀 있을 때만, 에디터 오른쪽 상단에 "열기" 핸들(‹) */}
+                    {/* {!assistOpen && (
+>>>>>>> 4adbe84 (works page 수정)
             <IconButton
               onClick={() => {
                 setAssistOpen(true);
@@ -107,45 +121,56 @@ export default function Layout() {
             >
               <ChevronLeftIcon />
             </IconButton>
-          )}
-        </Box>
+          )} */}
+                </Box>
 
-        {/* 오른쪽 어시스턴트 — 열고/닫기 토글만 지원 */}
-        <Box
-          component="aside"
-          sx={{
-            width: assistOpen ? ASSIST_W : 0,
-            minWidth: assistOpen ? ASSIST_W : 0,
-            transition: "width .25s ease",
-            bgcolor: "#fafafa",
-            borderLeft: assistOpen ? "1px solid #e5e7eb" : "none",
-            overflow: "hidden",
-            position: "relative",
-          }}
-          onTransitionEnd={fireResize}
-        >
-          {assistOpen && <Assistant />}
+                {/* 오른쪽 어시스턴트 — 열고/닫기 토글만 지원 */}
+                <Box
+                    component="aside"
+                    sx={{
+                        width: assistOpen ? ASSIST_W : 0,
+                        minWidth: assistOpen ? ASSIST_W : 0,
+                        transition: 'width .25s ease',
+                        bgcolor: '#fafafa',
+                        borderLeft: assistOpen ? '1px solid #e5e7eb' : 'none',
+                        // overflow: "hidden",
+                        position: 'relative',
+                    }}
+                    onTransitionEnd={fireResize}
+                >
+                    <Assistant />
 
-          {/* 패널 안쪽 왼쪽 가장자리: "접기" 핸들(›) */}
-          <IconButton
-            size="small"
-            onClick={() => setAssistOpen(false)}
-            aria-label="어시스턴트 접기"
-            sx={{
-              position: "absolute",
-              left: -16, // 에디터 쪽으로 살짝 겹치게
-              top: 16,
-              zIndex: 1,
-              bgcolor: "#fff",
-              border: "1px solid #e5e7eb",
-              boxShadow: "0 1px 3px rgba(0,0,0,.06)",
-              "&:hover": { bgcolor: "#fff" },
-            }}
-          >
-            <ChevronRightIcon />
-          </IconButton>
+                    {/* 패널 안쪽 왼쪽 가장자리: "접기" 핸들(›) */}
+                    <IconButton
+                        size="small"
+                        onClick={() => {
+                            setAssistOpen((prev) => {
+                                const next = !prev;
+                                if (next) {
+                                    // 창이 열릴 때만 fireResize 실행
+                                    requestAnimationFrame(fireResize);
+                                }
+                                return next;
+                            });
+                        }}
+                        aria-label="어시스턴트 접기"
+                        sx={{
+                            position: 'absolute',
+                            ...(assistOpen
+                                ? { left: -16, right: undefined } // 열린 상태
+                                : { left: undefined, right: 8 }), // 닫힌 상태
+                            top: 16,
+                            zIndex: 1,
+                            bgcolor: '#fff',
+                            border: '1px solid #e5e7eb',
+                            boxShadow: '0 1px 3px rgba(0,0,0,.06)',
+                            '&:hover': { bgcolor: '#fff' },
+                        }}
+                    >
+                        {assistOpen ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+                    </IconButton>
+                </Box>
+            </Box>
         </Box>
-      </Box>
-    </Box>
-  );
+    );
 }
