@@ -36,6 +36,7 @@ export default function useUpload() {
           throw new Error(msg)
         }
       }
+      
       try { return await tryPost('/api/analysis') }
       catch { return await tryPost('/api/analysis/') }
     },
