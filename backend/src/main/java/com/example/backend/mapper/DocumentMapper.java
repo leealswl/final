@@ -11,3 +11,4 @@ public interface DocumentMapper {
     public int insertDocument(Document document);
     
 }
+
