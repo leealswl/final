@@ -75,28 +75,28 @@ export default function Layout() {
                     <Outlet />
                     {/* <Editor /> */}
                     {/* 어시스턴트가 닫혀 있을 때만, 에디터 오른쪽 상단에 "열기" 핸들(‹) */}
-                    {/* {!assistOpen && (
-            <IconButton
-              onClick={() => {
-                setAssistOpen(true);
-                // 열자마자 한 프레임 뒤에 리사이즈 신호
-                requestAnimationFrame(fireResize);
-              }}
-              aria-label="어시스턴트 열기"
-              sx={{
-                position: "absolute",
-                right: 8,
-                top: 16,
-                zIndex: 0,
-                bgcolor: "#fff",
-                border: "1px solid #e5e7eb",
-                boxShadow: "0 1px 3px rgba(0,0,0,.06)",
-                "&:hover": { bgcolor: "#fff" },
-              }}
-            >
-              <ChevronLeftIcon />
-            </IconButton>
-          )} */}
+                    {!assistOpen && (
+                    <IconButton
+                      onClick={() => {
+                        setAssistOpen(true);
+                        // 열자마자 한 프레임 뒤에 리사이즈 신호
+                        requestAnimationFrame(fireResize);
+                      }}
+                      aria-label="어시스턴트 열기"
+                      sx={{
+                        position: "absolute",
+                        right: 8,
+                        top: 16,
+                        zIndex: 0,
+                        bgcolor: "#fff",
+                        border: "1px solid #e5e7eb",
+                        boxShadow: "0 1px 3px rgba(0,0,0,.06)",
+                        "&:hover": { bgcolor: "#fff" },
+                      }}
+                    >
+                      <ChevronLeftIcon />
+                    </IconButton>
+                  )}
                 </Box>
 
         {/* 오른쪽 어시스턴트 — 열고/닫기 토글만 지원 */}
@@ -124,7 +124,7 @@ export default function Layout() {
               position: "absolute",
               left: -16,
               top: 16,
-              zIndex: 1,
+              zIndex: 3,
               bgcolor: "#fff",
               border: "1px solid #e5e7eb",
               boxShadow: "0 1px 3px rgba(0,0,0,.06)",
@@ -134,5 +134,7 @@ export default function Layout() {
             <ChevronRightIcon />
           </IconButton>
         </Box>
+      </Box>
+      </Box>
     );
 }
