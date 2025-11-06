@@ -11,7 +11,7 @@
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
-    <select>
+    <!-- <select>
     </select>
 
     <update>
@@ -21,7 +21,7 @@
     </insert>
 
     <delete>
-    </delete>
+    </delete> -->
 
 
 </mapper>

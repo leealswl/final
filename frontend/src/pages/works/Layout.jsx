@@ -114,7 +114,7 @@ export default function Layout() {
             transition: "width .25s ease",
             bgcolor: "#fafafa",
             borderLeft: assistOpen ? "1px solid #e5e7eb" : "none",
-            overflow: "hidden",
+            // overflow: "hidden",
             position: "relative",
           }}
           onTransitionEnd={fireResize}
@@ -128,7 +128,7 @@ export default function Layout() {
             aria-label="어시스턴트 접기"
             sx={{
               position: "absolute",
-              left: -16, // 에디터 쪽으로 살짝 겹치게
+              left: -16,
               top: 16,
               zIndex: 1,
               bgcolor: "#fff",
