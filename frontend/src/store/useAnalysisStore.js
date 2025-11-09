@@ -10,8 +10,13 @@ export const useAnalysisStore = create(
   persist(
     (set) => ({
       analysisResult: null,
+      userInputData: null,
+
       setAnalysisResult: (result) => set({ analysisResult: result }),
-      clearAnalysisResult: () => set({ analysisResult: null })
+      clearAnalysisResult: () => set({ analysisResult: null }),
+
+      setUserInputData: (data) => set({ userInputData: data }),
+      clearUserInputData: () => set({ userInputData: null })
     }),
     {
       name: 'analysis-result-store',

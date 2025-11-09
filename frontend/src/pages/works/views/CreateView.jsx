@@ -16,6 +16,8 @@ import { useAnalysisStore } from '../../../store/useAnalysisStore'
 const CreateView = () => {
   const navigate = useNavigate()
   const analysisResult = useAnalysisStore(state => state.analysisResult)
+  // 2025-11-09 suyeon: 사용자 입력 데이터를 저장하여 생성 에이전트로 전달하기 위함
+  const setUserInputData = useAnalysisStore(state => state.setUserInputData)
   const userForm = analysisResult?.data?.user_form
   const tableOfContents = analysisResult?.data?.table_of_contents || userForm?.table_of_contents
   const tocSections = tableOfContents?.sections || []
@@ -72,6 +74,37 @@ const CreateView = () => {
 
   const handleReset = () => {
     setFormValues(initialValues)
+  }
+
+  // 2025-11-09 suyeon: 초안 생성 버튼 클릭 시 데이터를 저장하고 생성 페이지로 이동
+  const handleGenerateDraft = () => {
+    // 1. 필수 필드 검증
+    const requiredFields = formFields.filter(f => f.required)
+    const missingFields = requiredFields.filter(f => {
+      const key = f.field_id || f.field_name
+      return !formValues[key] || formValues[key].trim() === ''
+    })
+
+    if (missingFields.length > 0) {
+      alert(`필수 항목을 입력해주세요: ${missingFields.map(f => f.field_name).join(', ')}`)
+      return
+    }
+
+    // 2. 생성 에이전트로 전달할 데이터 구조화
+    const generateData = {
+      type: useTocForm ? 'toc_based' : 'template_based',
+      formValues,
+      formFields,
+      tableOfContents: useTocForm ? tableOfContents : null,
+      userForm: !useTocForm ? userForm : null,
+      timestamp: new Date().toISOString()
+    }
+
+    // 3. 스토어에 저장
+    setUserInputData(generateData)
+
+    // 4. 생성 페이지로 이동
+    navigate('/works/generate')
   }
 
   if (!analysisResult) {
@@ -371,6 +404,46 @@ const CreateView = () => {
             🔒 작성한 데이터는 아직 서버에 저장되지 않았습니다. 임시 저장 버튼을 활용하여 초안을 확인하고,
             필요 시 차후 API 연동을 통해 제출 프로세스를 연결하세요.
           </Typography>
+        </Paper>
+
+        {/* 2025-11-09 suyeon: 초안 생성 버튼 추가 - 사용자가 입력 완료 후 생성 에이전트로 이동 */}
+        <Paper
+          elevation={2}
+          sx={{
+            p: 4,
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white'
+          }}
+        >
+          <Stack spacing={2}>
+            <Typography fontSize="1.4rem" fontFamily="Isamanru-Bold">
+              📄 제안서 초안 생성하기
+            </Typography>
+            <Typography fontSize="0.95rem" color="rgba(255,255,255,0.9)">
+              입력하신 정보를 바탕으로 AI가 제안서 초안을 자동으로 생성합니다.
+            </Typography>
+            <Box>
+              <Button
+                variant="contained"
+                size="large"
+                onClick={handleGenerateDraft}
+                sx={{
+                  backgroundColor: 'white',
+                  color: '#667eea',
+                  fontWeight: 700,
+                  fontSize: '1.1rem',
+                  px: 5,
+                  py: 1.5,
+                  '&:hover': {
+                    backgroundColor: '#f0f0f0'
+                  }
+                }}
+              >
+                초안 생성
+              </Button>
+            </Box>
+          </Stack>
         </Paper>
       </Stack>
     </Box>
