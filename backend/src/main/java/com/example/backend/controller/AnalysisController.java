@@ -220,6 +220,16 @@ public class AnalysisController {
 
             System.out.println("✅ 파일 로드 완료: " + files.size() + "개");
 
+            // 2025-11-09 수연 추가: 파일이 하나도 없으면 에러 반환
+            if (files.isEmpty()) {
+                System.err.println("❌ 로드된 파일이 없음");
+                return ResponseEntity.badRequest()
+                        .body(Map.of(
+                            "status", "error",
+                            "message", "파일 경로 정보가 없습니다. 파일을 다시 업로드해주세요."
+                        ));
+            }
+
             // 3. FastAPI로 파일 전송하여 분석 실행
             Map<String, Object> fastApiResult = fastApi.sendFilesToFastAPI(files, folders, userId, projectId);
 
@@ -252,6 +262,12 @@ public class AnalysisController {
      */
     private MultipartFile loadFileAsMultipart(String filePath, String fileName) {
         try {
+            // 2025-11-09 수연 추가: filePath가 null이면 에러 방지
+            if (filePath == null || filePath.isEmpty()) {
+                System.err.println("⚠️ 파일 경로가 null 또는 비어있음: " + fileName);
+                return null;
+            }
+
             Path path = Paths.get(filePath);
 
             if (!Files.exists(path)) {
