@@ -18,17 +18,34 @@ export default function Upload({ rootId }) {
     if (!projectId || !userId) { alert('컨텍스트가 없습니다.'); e.target.value = ''; return; }
 
      try {
-      // 1) 서버 업로드
-      await uploadAsync({ files, rootId, userId: String(userId) })
+      // 1) 서버 업로드 (2025-11-09 수연 수정: 파일 정보 받기)
+      const response = await uploadAsync({ files, rootId, userId: String(userId) })
 
-      // 2) 트리에 표시할 노드 만들고 추가
-      const nodes = filesToNodes({ files, rootId, projectId, userId: String(userId)})
+      // 2) Backend에서 반환한 파일 정보를 트리 노드로 변환
+      // response.files 구조: [{ id, name, path, folder, size }, ...]
+      let nodes
+      if (response?.files && response.files.length > 0) {
+        // Backend가 파일 정보를 반환했을 때
+        nodes = response.files.map(fileInfo => ({
+          id: `file-${fileInfo.id}`, // file-123 형태
+          type: 'file',
+          name: fileInfo.name,
+          path: fileInfo.path, // 2025-11-09 수연: 파일 경로 저장
+          size: fileInfo.size,
+          children: undefined
+        }))
+      } else {
+        // Fallback: 기존 방식 (파일 정보가 없을 때)
+        nodes = filesToNodes({ files, rootId, projectId, userId: String(userId)})
+      }
+
+      // 3) 트리에 노드 추가
       addNodes(rootId, nodes)
 
-      // 3) 첫 파일 선택 → 에디터가 즉시 표시
+      // 4) 첫 파일 선택 → 에디터가 즉시 표시
       selectNode(nodes[0].id)
 
-      // 4) (옵션) 에디터 페이지로 라우팅
+      // 5) (옵션) 에디터 페이지로 라우팅
       navigate('edit')
 
     } catch (err) {

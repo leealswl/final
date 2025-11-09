@@ -4,6 +4,7 @@ import {Route, Routes} from 'react-router-dom'
 import Login from './pages/login/Login';
 import Layout from './pages/works/Layout';
 import AnalyzeView from './pages/works/views/AnalyzeView';
+import AnalyzeDashboard from './pages/works/views/AnalyzeDashboard';
 import CreateView from './pages/works/views/CreateView';
 import EditView from './pages/works/views/EditView';
 import VerifyView from './pages/works/views/VerifyView';
@@ -29,12 +30,14 @@ function App() {
 
         <Route path="/works" element={<Layout />}>
           <Route path="analyze" element={<AnalyzeView />} />
+          {/* 2025-11-09 수연 추가: 분석 대시보드 라우트 */}
+          <Route path="analyze/dashboard" element={<AnalyzeDashboard />} />
           <Route path="create"  element={<CreateView />} />
           <Route path="edit"    element={<EditView />} />
           <Route path="edit/:docId" element={<EditView />} />
           <Route path="verify"  element={<VerifyView />} />
         </Route>
-        
+
     </Routes>
   );
 }

@@ -124,7 +124,7 @@ function DocxHost({ active, file }) {
               // 무료 버전이나 HWP 파일에서는 작동하지 않을 수 있습니다
               try {
                 // mac용 확인
-                // if (ed && typeof ed.createConnector === 'function') {
+                if (ed && typeof ed.createConnector === 'function') {
                   const conn = ed.createConnector();
                   window.editorBridge = {
                     editor: ed,
@@ -141,32 +141,37 @@ function DocxHost({ active, file }) {
                     },
                   };
                   console.log("[OO] editorBridge ready");
-                // } else {
-                //   // createConnector를 사용할 수 없는 경우 기본 에디터만 제공
-                //   console.info("[OO] createConnector not available (requires Developer Edition or not supported for this file type)");
-                //   window.editorBridge = {
-                //     editor: ed,
-                //     conn: null,
-                //     insert(text) {
-                //       console.warn("[OO] Text insertion not available without connector");
-                //     }
-                //   };
-                // }
+                } else {
+                  // createConnector를 사용할 수 없는 경우 기본 에디터만 제공
+                  console.info("[OO] createConnector not available (requires Developer Edition or not supported for this file type)");
+                  window.editorBridge = {
+                    editor: ed,
+                    conn: null,
+                    // eslint-disable-next-line no-unused-vars
+                    insert(text) {
+                      console.warn("[OO] Text insertion not available without connector");
+                    }
+                  };
+                }
               } catch (e) {
                 // 에러가 발생해도 에디터는 정상 작동
-                console.error("[OO] connector create failed:", e);
-                // console.warn("[OO] connector create failed (this is normal for free edition or HWP files):", e.message);
-                // window.editorBridge = {
-                //   editor: ed,
-                //   conn: null,
-                //   insert(text) {
-                //     console.warn("[OO] Text insertion not available without connector");
-                //   }
-                // };
+                console.warn("[OO] connector create failed (this is normal for free edition or HWP files):", e.message);
+                window.editorBridge = {
+                  editor: ed,
+                  conn: null,
+                  // eslint-disable-next-line no-unused-vars
+                  insert(text) {
+                    console.warn("[OO] Text insertion not available without connector");
+                  }
+                };
               }
             },
-            onError(e){ 
-              console.error("[OO] onError:", e); },
+            onError(e){
+              console.error("[OO] onError:", e);
+              console.error("[OO] errorCode:", e?.errorCode);
+              console.error("[OO] errorDescription:", e?.errorDescription);
+              console.error("[OO] full error object:", JSON.stringify(e, null, 2));
+            },
           },
         };
         console.log("[OO] cfg.document.fileType =", cfg?.document?.fileType);     // 'docx' 기대
