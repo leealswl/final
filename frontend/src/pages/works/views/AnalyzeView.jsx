@@ -2,6 +2,7 @@ import { Box, Button, Grid, Stack, Typography, CircularProgress } from '@mui/mat
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useFileStore } from '../../../store/useFileStore'
+import { useAnalysisStore } from '../../../store/useAnalysisStore'
 import api from '../../../utils/api'
 import 문서아이콘 from './icons/문서 아이콘.png'
 import 폴더아이콘 from './icons/폴더 아이콘.png'
@@ -9,6 +10,7 @@ import 폴더아이콘 from './icons/폴더 아이콘.png'
 const AnalyzeView = () => {
   const navigate = useNavigate()
   const { tree, currentProjectId, currentUserId } = useFileStore()
+  const setAnalysisResult = useAnalysisStore(state => state.setAnalysisResult)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -75,6 +77,9 @@ const AnalyzeView = () => {
       const response = await api.post('/api/analysis/start', payload)
 
       console.log('✅ 분석 완료:', response.data)
+
+      // 전역 스토어에 결과 저장 (Dashboard, Create 뷰에서 공유)
+      setAnalysisResult(response.data)
 
       // 4. 분석 완료 후 대시보드로 이동
       // TODO: 분석 결과를 state로 전달하거나 store에 저장

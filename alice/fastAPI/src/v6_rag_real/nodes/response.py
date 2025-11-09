@@ -59,6 +59,7 @@ def build_response(state: BatchState) -> BatchState:
         'features_summary': {
             'total_count': len(all_features),
         },
+        'features': all_features,
 
         'attachment_templates': attachment_templates,  # ✨ MVP1
         'table_of_contents': table_of_contents,  # ✨ NEW: 목차 구조

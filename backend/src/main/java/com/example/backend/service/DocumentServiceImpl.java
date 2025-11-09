@@ -34,11 +34,14 @@ public class DocumentServiceImpl implements DocumentService{
         System.out.println("document service 작동 시작");
         System.out.println("uploadDir: " + uploadDir);
         int totalInserted = 0;
+        Path baseUploadPath = Paths.get(uploadDir).toAbsolutePath();
+        System.out.println("resolved upload path: " + baseUploadPath);
+
         for (int i = 0; i < files.size(); i++) {
             MultipartFile file = files.get(i);
             Long folderName = folders.get(i);
 
-            Path uploadPath = Paths.get(uploadDir, userid, String.valueOf(projectIdx), String.valueOf(folderName));
+            Path uploadPath = baseUploadPath.resolve(Paths.get(userid, String.valueOf(projectIdx), String.valueOf(folderName)));
             System.out.println("uploadPath: " + uploadPath);
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
@@ -73,11 +76,14 @@ public class DocumentServiceImpl implements DocumentService{
 
         List<Map<String, Object>> savedFiles = new ArrayList<>();
 
+        Path baseUploadPath = Paths.get(uploadDir).toAbsolutePath();
+        System.out.println("resolved upload path: " + baseUploadPath);
+
         for (int i = 0; i < files.size(); i++) {
             MultipartFile file = files.get(i);
             Long folderName = folders.get(i);
 
-            Path uploadPath = Paths.get(uploadDir, userid, String.valueOf(projectIdx), String.valueOf(folderName));
+            Path uploadPath = baseUploadPath.resolve(Paths.get(userid, String.valueOf(projectIdx), String.valueOf(folderName)));
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }

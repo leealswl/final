@@ -116,7 +116,7 @@ public class FastAPIService {
                 .body(BodyInserters.fromMultipartData(builder.build()))
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
-                .block(Duration.ofSeconds(60)); // 최대 60초 대기 (AI 분석 시간 고려)
+                .block(); // WebClient 생성 시 설정한 timeoutSeconds를 그대로 사용
 
             System.out.println("fastapi 작동 완료");
             return result;

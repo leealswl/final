@@ -5,6 +5,7 @@
 
 import re
 import json
+import unicodedata
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from openai import OpenAI
@@ -48,16 +49,38 @@ def _find_proposal_template(templates: List[Dict]) -> Optional[Dict]:
     if not valid_templates:
         return None
 
-    # 우선순위에 따라 찾기
-    priority_keywords = ['제안서', '계획서', '신청서', '양식']
+    # 우선순위/가중치 계산
+    def template_priority(template: Dict) -> float:
+        file_name = template.get('file_name', '')
+        score = template.get('confidence_score', 0.0)
 
-    for keyword in priority_keywords:
-        for template in valid_templates:
-            if keyword in template['file_name']:
-                return template
+        # 파일명 키워드 가중치
+        keyword_weights = {
+            '계획서': 1.0,
+            '제안서': 0.8,
+            '신청서': 0.6,
+            '양식': 0.2
+        }
+        for keyword, weight in keyword_weights.items():
+            if keyword in file_name:
+                score += weight
 
-    # 우선순위 키워드가 없으면 첫 번째 양식 반환
-    return valid_templates[0]
+        # 첨부 번호가 2 (붙임2)면 추가 가중치
+        attachment_num = template.get('attachment_number')
+        if attachment_num == 2:
+            score += 0.3
+
+        return score
+
+    # 최고 점수 템플릿 선택
+    best_template = max(valid_templates, key=template_priority)
+
+    # 계획서가 포함된 템플릿이 있으면 최우선 반환
+    for template in valid_templates:
+        if '계획서' in template.get('file_name', ''):
+            return template
+
+    return best_template
 
 
 def extract_toc_from_template(state: BatchState) -> BatchState:
@@ -454,8 +477,11 @@ def _extract_toc_from_template_with_llm(state: BatchState, template: Dict) -> Ba
     documents = state.get('documents', [])
     template_doc = None
 
+    template_file_name = unicodedata.normalize('NFC', template['file_name'])
+
     for doc in documents:
-        if doc['file_name'] == template['file_name']:
+        doc_file_name = unicodedata.normalize('NFC', doc.get('file_name', ''))
+        if doc_file_name == template_file_name:
             template_doc = doc
             break
 

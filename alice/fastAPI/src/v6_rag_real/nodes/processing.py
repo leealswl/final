@@ -529,7 +529,8 @@ def save_to_csv(state: BatchState) -> BatchState:
 
     저장 파일:
     1. ANALYSIS_RESULT_{timestamp}.csv - Feature 추출 결과 (RAG + LLM 분석)
-    2. table_of_contents_{timestamp}.json - 목차 정보 (JSON)
+    2. ANALYSIS_RESULT_{timestamp}.json - Feature 추출 결과 (JSON)
+    3. table_of_contents_{timestamp}.json - 목차 정보 (JSON)
     """
     
     print(f"\n{'='*60}")
@@ -550,8 +551,27 @@ def save_to_csv(state: BatchState) -> BatchState:
         # 1. ANALYSIS_RESULT.csv (Feature 추출 결과만)
         # ========================================
         analysis_data = []
-        for feature in state['extracted_features']:
+        analysis_json = []
+        for idx, feature in enumerate(state['extracted_features'], start=1):
+            result_id = idx
+            analysis_json.append({
+                'result_id': result_id,
+                'project_idx': project_idx,
+                'feature_code': feature['feature_code'],
+                'feature_name': feature['feature_name'],
+                'title': feature.get('title', ''),
+                'summary': feature.get('summary', ''),
+                'full_content': feature.get('full_content', ''),
+                'key_points': feature.get('key_points', []),
+                'vector_similarity': float(feature.get('vector_similarity', 0.0)),
+                'chunks_from_announcement': int(feature.get('chunks_from_announcement', 0)),
+                'chunks_from_attachments': int(feature.get('chunks_from_attachments', 0)),
+                'referenced_attachments': feature.get('referenced_attachments', []),
+                'extracted_at': feature.get('extracted_at', datetime.now().isoformat())
+            })
+
             analysis_data.append({
+                'result_id': result_id,
                 'project_idx': project_idx,
                 'feature_code': feature['feature_code'],
                 'feature_name': feature['feature_name'],
@@ -572,9 +592,19 @@ def save_to_csv(state: BatchState) -> BatchState:
         output_paths['csv'] = str(csv_path)
         print(f"\n  ✅ ANALYSIS_RESULT.csv: {len(analysis_data)}행")
         print(f"     → {csv_path.name}")
+
+        # ========================================
+        # 2. ANALYSIS_RESULT.json (Feature 추출 결과)
+        # ========================================
+        json_result_path = output_folder / f"ANALYSIS_RESULT_{project_idx}_{timestamp}.json"
+        with open(json_result_path, 'w', encoding='utf-8') as f:
+            json.dump(analysis_json, f, ensure_ascii=False, indent=2)
+        output_paths['analysis_json'] = str(json_result_path)
+        print(f"\n  ✅ ANALYSIS_RESULT.json: {len(analysis_json)}개 항목")
+        print(f"     → {json_result_path.name}")
         
         # ========================================
-        # 2. table_of_contents.json (목차 정보)
+        # 3. table_of_contents.json (목차 정보)
         # ========================================
         toc = state.get('table_of_contents')
         if toc:

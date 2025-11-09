@@ -1,0 +1,35 @@
+{
+  "source": "default",
+  "extraction_method": "fallback",
+  "inference_confidence": 0.3,
+  "sections": [
+    {
+      "number": "1",
+      "title": "연구개발 과제의 개요",
+      "required": true
+    },
+    {
+      "number": "2",
+      "title": "연구개발 목표 및 내용",
+      "required": true
+    },
+    {
+      "number": "3",
+      "title": "연구개발 추진체계 및 일정",
+      "required": true
+    },
+    {
+      "number": "4",
+      "title": "연구개발 성과 활용방안",
+      "required": true
+    },
+    {
+      "number": "5",
+      "title": "소요예산",
+      "required": true
+    }
+  ],
+  "total_sections": 5,
+  "extracted_at": "2025-11-09T21:16:09.503271",
+  "note": "목차 추출 실패로 기본 템플릿 사용"
+}
