@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.backend.FastAPI.FastAPIService;
+import com.example.backend.service.AnalysisService;
 import com.example.backend.service.DocumentService;
 
 /**
@@ -96,6 +97,9 @@ public class AnalysisController {
 
     @Autowired
     DocumentService documentService;
+
+    @Autowired
+    AnalysisService analysisService; // 2025-11-09 suyeon 추가: Oracle DB 저장용 서비스
 
     /**
      * 업로드 경로 테스트용 엔드포인트
@@ -249,6 +253,57 @@ public class AnalysisController {
                     .body(Map.of(
                         "status", "error",
                         "message", "분석 중 오류가 발생했습니다: " + e.getMessage()
+                    ));
+        }
+    }
+
+    /**
+     * 2025-11-09 suyeon 추가: FastAPI 분석 결과를 받아서 Oracle DB에 저장하는 API
+     *
+     * FastAPI가 CSV/JSON 파일을 생성한 후 이 API를 호출하여 DB에 저장
+     * 이렇게 하면 개발 환경(macOS/Windows/Linux)에 관계없이 모든 팀원이 동일하게 작동
+     *
+     * @param analysisData FastAPI에서 전송한 분석 결과 데이터
+     * @return 저장 성공 여부
+     */
+    @PostMapping("/save-result")
+    public ResponseEntity<Map<String, Object>> saveAnalysisResult(@RequestBody Map<String, Object> analysisData) {
+        System.out.println("💾 FastAPI로부터 분석 결과 수신");
+
+        try {
+            // 2025-11-09 suyeon: FastAPI로부터 받은 데이터 파싱
+            Long projectIdx = ((Number) analysisData.get("project_idx")).longValue();
+            String userId = (String) analysisData.get("user_id");
+
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> features = (List<Map<String, Object>>) analysisData.get("extracted_features");
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> tableOfContents = (Map<String, Object>) analysisData.get("table_of_contents");
+
+            System.out.println("📊 프로젝트 ID: " + projectIdx);
+            System.out.println("📊 Features: " + (features != null ? features.size() : 0) + "개");
+            System.out.println("📊 목차: " + (tableOfContents != null ? "있음" : "없음"));
+
+            // 2025-11-09 suyeon: AnalysisService를 통해 Oracle DB에 저장
+            Map<String, Object> saveResult = analysisService.saveAnalysisResult(
+                projectIdx, userId, features, tableOfContents
+            );
+
+            return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "message", "분석 결과가 Oracle DB에 저장되었습니다.",
+                "saved_features", saveResult.get("features_count"),
+                "saved_toc", (boolean) saveResult.get("toc_saved") ? "yes" : "no"
+            ));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("❌ DB 저장 실패: " + e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body(Map.of(
+                        "status", "error",
+                        "message", "DB 저장 실패: " + e.getMessage()
                     ));
         }
     }

@@ -15,12 +15,13 @@
 FastAPI는 `alice/fastAPI` 디렉터리에서 실행합니다.
 
 1. (선택 사항) 가상환경이 있다면 활성화합니다.
-   ```bash
-   cd /Users/suyeonjo/alice_consultant_agent_real/final/alice/fastAPI
-   source venv/bin/activate  # 가상환경을 사용 중일 때만
-   ```
 
+   ```bash
+   cd /Users/suyeonjo/alice_consultant_agent_real/final/alice
+   source .venv/bin/activate  # 가상환경을 사용 중일 때만
+   ```
 2. 서버 실행
+
    ```bash
    cd /Users/suyeonjo/alice_consultant_agent_real/final/alice/fastAPI/src
    python3 -m uvicorn fastAPI_v6_integrated:app --reload --host 0.0.0.0 --port 8001
@@ -51,12 +52,13 @@ cd /Users/suyeonjo/alice_consultant_agent_real/final/backend
 프론트엔드는 Vite 기반 React 프로젝트입니다.
 
 1. 최초 1회 의존성 설치
+
    ```bash
    cd /Users/suyeonjo/alice_consultant_agent_real/final/frontend
    npm install
    ```
-
 2. 개발 서버 실행
+
    ```bash
    cd /Users/suyeonjo/alice_consultant_agent_real/final/frontend
    npm run dev

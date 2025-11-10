@@ -112,27 +112,10 @@ async def analyze_documents(
         #   {"bytes": b"XLSX binary...", "filename": "붙임2.xlsx", "folder": 2}
         # ]
 
-        # ✨ 저장 모드 결정: 환경변수 기반
-        storage_mode = os.getenv('STORAGE_MODE', 'csv')  # 기본값: csv (개발)
-        oracle_config = None
-
-        # 프로덕션 환경: Oracle DB 설정
-        if storage_mode == 'oracle':
-            oracle_config = {
-                'user': os.getenv('ORACLE_USER'),
-                'password': os.getenv('ORACLE_PASSWORD'),
-                'dsn': os.getenv('ORACLE_DSN')  # 예: localhost:1521/ORCL
-            }
-            print(f"🔵 Oracle 저장 모드 활성화: {oracle_config['dsn']}")
-        else:
-            print(f"🟢 CSV 저장 모드 (개발)")
-
         state = {
             "files": saved_files,
             "user_id": userid,
             "project_idx": projectidx,
-            "storage_mode": storage_mode,          # ✨ 'csv' or 'oracle'
-            "oracle_config": oracle_config,        # ✨ Oracle 설정 (프로덕션)
             "documents": [],
             "all_chunks": [],
             "all_embeddings": None,

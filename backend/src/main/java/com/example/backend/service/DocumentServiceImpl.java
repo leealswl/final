@@ -93,12 +93,18 @@ public class DocumentServiceImpl implements DocumentService{
 
             System.out.println("[SAVE] " + filePath.toAbsolutePath());
 
+            // 2025-11-09 suyeon 수정: 절대 경로 대신 /uploads 기준 상대 경로 생성
+            // 이유: OnlyOffice 및 Frontend가 /uploads/... 형태로 접근하므로 통일
+            String relativePath = String.format("/uploads/%s/%d/%d/%s",
+                userid, projectIdx, folderName, file.getOriginalFilename());
+
             // DB에 저장
             Document document = new Document();
             document.setProjectIdx(projectIdx);
             document.setFolder(String.valueOf(folderName));
             document.setFileName(file.getOriginalFilename());
-            document.setFilePath(filePath.toString());
+            // document.setFilePath(filePath.toString()); // 기존: 절대 경로 저장
+            document.setFilePath(relativePath); // 수정: 상대 경로 저장
 
             documentMapper.insertDocument(document);
 
@@ -106,7 +112,8 @@ public class DocumentServiceImpl implements DocumentService{
             Map<String, Object> fileInfo = new HashMap<>();
             fileInfo.put("id", document.getDocumentIdx()); // DB에서 생성된 ID
             fileInfo.put("name", file.getOriginalFilename());
-            fileInfo.put("path", filePath.toString()); // 파일 경로
+            // fileInfo.put("path", filePath.toString()); // 기존: 절대 경로 반환
+            fileInfo.put("path", relativePath); // 수정: 상대 경로 반환
             fileInfo.put("folder", folderName);
             fileInfo.put("size", file.getSize());
 

@@ -1,8 +1,11 @@
 """
 응답 생성 노드
 ✅ MVP1: form_source 결정 및 사용자 폼 데이터 생성
+✅ 2025-11-09 suyeon: Backend API 호출하여 Oracle DB 저장
 """
 
+import os
+import requests
 from ..state_types import BatchState
 
 
@@ -89,5 +92,44 @@ def build_response(state: BatchState) -> BatchState:
     if table_of_contents:
         print(f"    - 목차 섹션: {table_of_contents.get('total_sections', 0)}개")
         print(f"    - 목차 출처: {table_of_contents.get('source', 'unknown')}")
+
+    # ========================================
+    # 2025-11-09 suyeon: Backend API 호출하여 Oracle DB 저장
+    # ========================================
+    backend_url = os.getenv('BACKEND_URL', 'http://localhost:8080')
+    save_to_backend = os.getenv('SAVE_TO_BACKEND', 'true').lower() == 'true'
+
+    if save_to_backend:
+        try:
+            print(f"\n  🔗 Backend API 호출 중: {backend_url}/api/analysis/save-result")
+
+            # Backend로 전송할 데이터 구조화
+            backend_payload = {
+                'project_idx': state['project_idx'],
+                'user_id': state['user_id'],
+                'extracted_features': all_features,
+                'table_of_contents': table_of_contents
+            }
+
+            response = requests.post(
+                f"{backend_url}/api/analysis/save-result",
+                json=backend_payload,
+                timeout=30
+            )
+
+            if response.status_code == 200:
+                print(f"  ✅ Backend 저장 성공: {response.json().get('message', 'OK')}")
+                state['backend_save_status'] = 'success'
+            else:
+                print(f"  ⚠️ Backend 저장 실패: {response.status_code} - {response.text}")
+                state['backend_save_status'] = 'failed'
+                state['errors'].append(f"Backend 저장 실패: {response.status_code}")
+
+        except requests.exceptions.RequestException as e:
+            print(f"  ❌ Backend API 호출 실패: {str(e)}")
+            state['backend_save_status'] = 'error'
+            state['errors'].append(f"Backend API 호출 오류: {str(e)}")
+    else:
+        print(f"\n  ⏭️ Backend 저장 스킵 (SAVE_TO_BACKEND=false)")
 
     return state

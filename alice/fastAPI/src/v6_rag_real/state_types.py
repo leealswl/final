@@ -18,10 +18,6 @@ class BatchState(TypedDict):
     user_id: str
     project_idx: int
 
-    # ========== 설정 ==========
-    storage_mode: Literal["csv", "oracle", "both"]
-    oracle_config: Optional[Dict]
-
     # ========== 문서 처리 ==========
     documents: List[Dict[str, Any]]  # 각 파일의 메타데이터 및 추출 결과
 
@@ -48,8 +44,7 @@ class BatchState(TypedDict):
     table_of_contents: Optional[Dict[str, Any]]  # 제안서 목차 구조
 
     # ========== 출력 ==========
-    csv_paths: Optional[Dict[str, str]]
-    oracle_ids: Optional[Dict[str, Any]]
+    csv_paths: Optional[Dict[str, str]]  # CSV 저장 경로 (개발/테스트용)
     response_data: Dict[str, Any]  # FastAPI 응답용 데이터
 
     # ========== 메타 ==========

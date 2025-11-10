@@ -32,10 +32,8 @@ def create_batch_graph():
     # 🔖 MVP2: match_cross_references 노드 제거 (현재 미사용, MVP2에서 재구현 예정)
     # graph.add_node("match_cross_references", nodes.match_cross_references)
 
-    # ✨ 저장 노드: CSV (개발) vs Oracle (프로덕션)
-    # storage_mode는 state에서 전달받음 (fastAPI_v6_integrated.py에서 설정)
+    # ✨ 저장 노드: CSV (개발/테스트용)
     graph.add_node("save_to_csv", nodes.save_to_csv)
-    graph.add_node("save_to_oracle", nodes.save_to_oracle)
     graph.add_node("build_response", nodes.build_response)
 
     # 엣지 추가 (순차 실행)
@@ -56,33 +54,12 @@ def create_batch_graph():
         }
     )
 
-    # ✨ 저장 라우팅: storage_mode에 따라 CSV 또는 Oracle 선택
-    def route_storage(state: BatchState) -> str:
-        """storage_mode에 따라 저장 방식 결정"""
-        storage_mode = state.get('storage_mode', 'csv')  # 기본값: csv (개발)
-        return 'save_to_oracle' if storage_mode == 'oracle' else 'save_to_csv'
+    # 두 목차 추출 노드 모두 save_to_csv로 연결
+    graph.add_edge("extract_toc_from_template", "save_to_csv")
+    graph.add_edge("extract_toc_from_announcement_and_attachments", "save_to_csv")
 
-    # 두 목차 추출 노드 모두 저장 라우터로 연결
-    graph.add_conditional_edges(
-        "extract_toc_from_template",
-        route_storage,
-        {
-            "save_to_csv": "save_to_csv",
-            "save_to_oracle": "save_to_oracle"
-        }
-    )
-    graph.add_conditional_edges(
-        "extract_toc_from_announcement_and_attachments",
-        route_storage,
-        {
-            "save_to_csv": "save_to_csv",
-            "save_to_oracle": "save_to_oracle"
-        }
-    )
-
-    # 두 저장 노드 모두 build_response로 연결
+    # save_to_csv → build_response → END
     graph.add_edge("save_to_csv", "build_response")
-    graph.add_edge("save_to_oracle", "build_response")
     graph.add_edge("build_response", END)
 
     # 컴파일
@@ -109,9 +86,7 @@ def create_batch_graph():
     print(f"  7. 조건부 라우팅 ⚡ TOC_ROUTER")
     print(f"     ├─ extract_toc_from_template (양식 O) ✨ MVP1")
     print(f"     └─ extract_toc_from_announcement_and_attachments (양식 X, 공고+첨부) ✨ MVP1")
-    print(f"  8. 조건부 라우팅 ⚡ STORAGE_ROUTER")
-    print(f"     ├─ save_to_csv (개발/테스트)")
-    print(f"     └─ save_to_oracle (프로덕션) ✨ NEW")
-    print(f"  9. build_response (최종 응답 생성) ✨ MVP1")
+    print(f"  8. save_to_csv (개발/테스트 - CSV 로컬 저장)")
+    print(f"  9. build_response (최종 응답 생성 + Backend API 호출) ✨ MVP1")
 
     return batch_app

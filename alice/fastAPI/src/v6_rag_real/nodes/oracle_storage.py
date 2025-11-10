@@ -1,19 +1,31 @@
 """
 Oracle DB 저장 노드
 실제 서비스 환경에서 분석 결과를 DB에 저장
+
+2025-11-09 suyeon: cx_Oracle과 oracledb 모두 지원 (Oracle 11g XE 호환성)
 """
 
 import json
 from datetime import datetime
 from typing import Dict, Any
 
-# Oracle 드라이버 (설치 필요: pip install cx_Oracle)
+# Oracle 드라이버 (cx_Oracle 우선, 없으면 oracledb 사용)
+ORACLE_AVAILABLE = False
+oracle_driver = None
+
 try:
     import cx_Oracle
+    oracle_driver = cx_Oracle
     ORACLE_AVAILABLE = True
+    print("✅ cx_Oracle 사용 (Oracle 11g 호환)")
 except ImportError:
-    ORACLE_AVAILABLE = False
-    print("⚠️ cx_Oracle 미설치: pip install cx_Oracle")
+    try:
+        import oracledb
+        oracle_driver = oracledb
+        ORACLE_AVAILABLE = True
+        print("✅ oracledb 사용")
+    except ImportError:
+        print("⚠️ Oracle 드라이버 미설치: pip install cx_Oracle 또는 pip install oracledb")
 
 from ..state_types import BatchState
 
@@ -54,10 +66,11 @@ def save_to_oracle(state: BatchState) -> BatchState:
         # 1. Oracle 연결
         # ========================================
         print(f"\n  🔌 Oracle 연결 중...")
-        conn = cx_Oracle.connect(
-            oracle_config['user'],
-            oracle_config['password'],
-            oracle_config['dsn']
+        # 2025-11-09 suyeon: cx_Oracle 또는 oracledb 사용
+        conn = oracle_driver.connect(
+            user=oracle_config['user'],
+            password=oracle_config['password'],
+            dsn=oracle_config['dsn']
         )
         cursor = conn.cursor()
         print(f"    ✓ 연결 성공")
@@ -173,8 +186,13 @@ def save_to_oracle(state: BatchState) -> BatchState:
         print(f"    - Features: {inserted_features}개")
         print(f"    - TOC: {'저장됨' if toc_saved else '없음'}")
 
-    except cx_Oracle.DatabaseError as e:
-        error_msg = f"Oracle DB 에러: {str(e)}"
+    except Exception as e:
+        # cx_Oracle.DatabaseError 또는 oracledb.DatabaseError 모두 처리
+        if 'DatabaseError' in str(type(e)):
+            error_msg = f"Oracle DB 에러: {str(e)}"
+        else:
+            error_msg = f"Oracle 저장 실패: {str(e)}"
+
         print(f"\n  ❌ {error_msg}")
         state['errors'].append(error_msg)
         state['status'] = 'oracle_error'
@@ -186,11 +204,5 @@ def save_to_oracle(state: BatchState) -> BatchState:
             conn.close()
         except:
             pass
-
-    except Exception as e:
-        error_msg = f"Oracle 저장 실패: {str(e)}"
-        print(f"\n  ❌ {error_msg}")
-        state['errors'].append(error_msg)
-        state['status'] = 'oracle_error'
 
     return state

@@ -11,17 +11,95 @@
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
-    <!-- <select>
-    </select>
+    <!-- 2025-11-09 suyeon 추가: AnalysisResult 테이블 매핑 -->
+    <resultMap id="analysisResultMap" type="AnalysisResult">
+        <id property="resultIdx" column="result_idx"/>
+        <result property="projectIdx" column="project_idx"/>
+        <result property="featureCode" column="feature_code"/>
+        <result property="featureName" column="feature_name"/>
+        <result property="title" column="title"/>
+        <result property="summary" column="summary"/>
+        <result property="fullContent" column="full_content"/>
+        <result property="keyPoints" column="key_points"/>
+        <result property="vectorSimilarity" column="vector_similarity"/>
+        <result property="chunksFromAnnouncement" column="chunks_from_announcement"/>
+        <result property="chunksFromAttachments" column="chunks_from_attachments"/>
+        <result property="referencedAttachments" column="referenced_attachments"/>
+        <result property="extractedAt" column="extracted_at"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
 
-    <update>
-    </update>
+    <!-- 2025-11-09 suyeon 추가: TableOfContents 테이블 매핑 -->
+    <resultMap id="tableOfContentsMap" type="TableOfContents">
+        <id property="tocIdx" column="toc_idx"/>
+        <result property="projectIdx" column="project_idx"/>
+        <result property="source" column="source"/>
+        <result property="totalSections" column="total_sections"/>
+        <result property="tocData" column="toc_data"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
 
-    <insert>
+    <!--
+        2025-11-09 suyeon 추가: ANALYSIS_RESULT 테이블에 Feature 저장
+        FastAPI 분석 결과를 Oracle DB에 저장
+    -->
+    <insert id="insertAnalysisResult">
+        <selectKey keyProperty="resultIdx" order="BEFORE" resultType="long">
+            select analysis_result_seq.nextval from dual
+        </selectKey>
+        insert into analysis_result (
+            result_idx,
+            project_idx,
+            feature_code,
+            feature_name,
+            title,
+            summary,
+            full_content,
+            key_points,
+            vector_similarity,
+            chunks_from_announcement,
+            chunks_from_attachments,
+            referenced_attachments,
+            extracted_at
+        ) values (
+            #{resultIdx},
+            #{projectIdx},
+            #{featureCode},
+            #{featureName},
+            #{title},
+            #{summary},
+            #{fullContent},
+            #{keyPoints},
+            #{vectorSimilarity},
+            #{chunksFromAnnouncement},
+            #{chunksFromAttachments},
+            #{referencedAttachments},
+            TO_TIMESTAMP(#{extractedAt}, 'YYYY-MM-DD"T"HH24:MI:SS')
+        )
     </insert>
 
-    <delete>
-    </delete> -->
+    <!--
+        2025-11-09 suyeon 추가: TABLE_OF_CONTENTS 테이블에 목차 저장
+        공고문 목차 정보를 Oracle DB에 저장
+    -->
+    <insert id="insertTableOfContents">
+        <selectKey keyProperty="tocIdx" order="BEFORE" resultType="long">
+            select toc_seq.nextval from dual
+        </selectKey>
+        insert into table_of_contents (
+            toc_idx,
+            project_idx,
+            source,
+            total_sections,
+            toc_data
+        ) values (
+            #{tocIdx},
+            #{projectIdx},
+            #{source},
+            #{totalSections},
+            #{tocData}
+        )
+    </insert>
 
 
 </mapper>

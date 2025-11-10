@@ -17,7 +17,6 @@ from .toc_extraction import (
     extract_toc_from_template,
     extract_toc_from_announcement_and_attachments
 )
-from .oracle_storage import save_to_oracle  # ✨ 프로덕션 Oracle DB 저장
 from .response import build_response
 
 __all__ = [
@@ -32,6 +31,5 @@ __all__ = [
     'route_toc_extraction',
     'extract_toc_from_template',
     'extract_toc_from_announcement_and_attachments',
-    'save_to_oracle',  # ✨ 프로덕션 저장
     'build_response',
 ]
