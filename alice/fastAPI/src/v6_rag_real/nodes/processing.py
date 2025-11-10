@@ -23,7 +23,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
 from ..state_types import BatchState
-from ..config import FEATURES, VECTOR_DB_DIR, CSV_OUTPUT_DIR
+from ..config import FEATURES, CSV_OUTPUT_DIR
 from ..utils import detect_section_headers, chunk_by_sections
 
 # OpenAI 클라이언트 초기화

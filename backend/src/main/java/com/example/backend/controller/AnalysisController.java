@@ -323,10 +323,28 @@ public class AnalysisController {
                 return null;
             }
 
-            Path path = Paths.get(filePath);
+            // 2025-11-10 수연 수정: 상대 경로(/uploads/...)를 절대 경로로 변환
+            // DB에는 /uploads/userId/1/1/file.pdf 형태로 저장되어 있음
+            String absolutePath;
+            if (filePath.startsWith("/uploads/")) {
+                // /uploads/ 제거하고 backend/uploads/와 결합
+                String relativePart = filePath.substring("/uploads/".length());
+                absolutePath = "backend/uploads/" + relativePart;
+            } else if (filePath.startsWith("uploads/")) {
+                // uploads/로 시작하면 backend/ 추가
+                absolutePath = "backend/" + filePath;
+            } else {
+                // 이미 절대 경로이거나 다른 형식
+                absolutePath = filePath;
+            }
+
+            Path path = Paths.get(absolutePath);
+
+            System.out.println("  📂 경로 변환: " + filePath + " → " + absolutePath);
 
             if (!Files.exists(path)) {
-                System.err.println("⚠️ 파일이 존재하지 않음: " + filePath);
+                System.err.println("⚠️ 파일이 존재하지 않음: " + absolutePath);
+                System.err.println("   (원본 경로: " + filePath + ")");
                 return null;
             }
 

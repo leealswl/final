@@ -8,11 +8,9 @@ from pathlib import Path
 # 경로 설정
 # ========================================
 BASE_DIR = Path(__file__).parent.parent
-VECTOR_DB_DIR = BASE_DIR / "vector_db"
 CSV_OUTPUT_DIR = BASE_DIR / "parsed_results" / "v6_rag"
 
 # 디렉토리 생성
-VECTOR_DB_DIR.mkdir(parents=True, exist_ok=True)
 CSV_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ========================================
