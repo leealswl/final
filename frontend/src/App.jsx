@@ -29,7 +29,6 @@ function App() {
             <Route path="/" element={<Homepage />} />
             <Route path="/login" element={<Login />} />
 
-<<<<<<< HEAD
         <Route path="/works" element={<Layout />}>
           <Route path="analyze" element={<AnalyzeView />} />
           {/* 2025-11-09 수연 추가: 분석 대시보드 라우트 */}
@@ -44,18 +43,6 @@ function App() {
 
     </Routes>
   );
-=======
-            <Route path="/works" element={<Layout />}>
-                <Route path="analyze" element={<AnalyzeView />} />
-                <Route path="analyze/:analyzeId" element={<AnalyzeSession />} />
-                <Route path="create" element={<CreateView />} />
-                <Route path="edit" element={<EditView />} />
-                <Route path="edit/:docId" element={<EditView />} />
-                <Route path="verify" element={<VerifyView />} />
-            </Route>
-        </Routes>
-    );
->>>>>>> dev
 }
 
 export default App;

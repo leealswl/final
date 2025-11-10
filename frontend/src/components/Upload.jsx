@@ -17,7 +17,6 @@
 //     if (!files?.length) return
 //     if (!projectId || !userId) { alert('컨텍스트가 없습니다.'); e.target.value = ''; return; }
 
-<<<<<<< HEAD
      try {
       // 1) 서버 업로드 (2025-11-09 수연 수정: 파일 정보 받기)
       const response = await uploadAsync({ files, rootId, userId: String(userId) })
@@ -48,21 +47,6 @@
 
       // 5) (옵션) 에디터 페이지로 라우팅
       navigate('edit')
-=======
-//      try {
-//       // 1) 서버 업로드
-//       await uploadAsync({ files, rootId, userId: String(userId) })
-
-//       // 2) 트리에 표시할 노드 만들고 추가
-//       const nodes = filesToNodes({ files, rootId, projectId, userId: String(userId)})
-//       addNodes(rootId, nodes)
-
-//       // 3) 첫 파일 선택 → 에디터가 즉시 표시
-//       selectNode(nodes[0].id)
-
-//       // 4) (옵션) 에디터 페이지로 라우팅
-//       navigate('edit')
->>>>>>> dev
 
 //     } catch (err) {
 //       alert(`업로드 실패: ${err?.message || err}`);
