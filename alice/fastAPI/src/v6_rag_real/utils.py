@@ -4,6 +4,7 @@
 
 import re
 from typing import Optional, List, Dict, Any
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 
 # ========================================
@@ -61,13 +62,35 @@ def detect_section_headers(text: str) -> List[Dict[str, Any]]:
     headers = []
     lines = text.split('\n')
 
-    # 패턴: "1. ", "가. ", "1) ", "(1) " 등
+    # [2025-01-10 suyeon] 패턴 확장 + 우선순위 최적화
+    # 변경 이유:
+    # 1. 패턴 우선순위 명확화: 구체적 패턴(대괄호, 로마숫자) → 일반적 패턴(숫자)
+    # 2. 로마숫자 패턴 강화: 잘못된 조합 방지 (IIIII → 최대 4글자 제한)
+    # 3. 한글 범위 명시: 가~하로 제한 (정부 공고문 표준)
+    # 근거: 실제 공고문 분석 결과 다양한 번호 매김 방식 사용 확인
     patterns = [
-        (r'^([0-9]+)\.\s+(.+)$', 1),           # 1. 제목
-        (r'^([가-힣])\.\s+(.+)$', 2),          # 가. 제목
-        (r'^([0-9]+)\)\s+(.+)$', 2),           # 1) 제목
-        (r'^\(([0-9]+)\)\s+(.+)$', 3),         # (1) 제목
+        # 레벨 1: 대제목 (구체적 패턴 우선)
+        (r'^【([^】]+)】\s*(.+)$', 1),                      # 【공고】 제목
+        (r'^\[([^\]]+)\]\s*(.+)$', 1),                     # [별첨] 제목
+        (r'^([IVX]{1,4})\.\s+(.+)$', 1),                   # I. ~ XIV. (영문 로마숫자, 최대 14)
+        (r'^([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ])\.\s+(.+)$', 1),              # Ⅰ. ~ Ⅹ. (한글 로마숫자, 최대 10)
+        (r'^([0-9]{1,2})\.\s+(.+)$', 1),                   # 1. ~ 99. 제목
+
+        # 레벨 2: 중제목
+        (r'^([가-하])\.\s+(.+)$', 2),                      # 가. ~ 하. (8개 제한)
+        (r'^([가-하])\)\s+(.+)$', 2),                      # 가) ~ 하)
+        (r'^([0-9]{1,2})\)\s+(.+)$', 2),                   # 1) ~ 99)
+        (r'^[■●○]\s+(.+)$', 2),                            # 불릿 포인트
+
+        # 레벨 3: 소제목
+        (r'^\(([0-9]{1,2})\)\s+(.+)$', 3),                 # (1) ~ (99)
+        (r'^\(([가-하])\)\s+(.+)$', 3),                    # (가) ~ (하)
+        (r'^[▪▫]\s+(.+)$', 3),                             # 작은 불릿
     ]
+
+    # [2025-01-10 suyeon] 최소 제목 길이 상수 추가
+    # 이유: "1. " (제목 없음) 같은 빈 헤더 방지
+    MIN_TITLE_LENGTH = 2
 
     for i, line in enumerate(lines):
         line = line.strip()
@@ -77,9 +100,23 @@ def detect_section_headers(text: str) -> List[Dict[str, Any]]:
         for pattern, level in patterns:
             match = re.match(pattern, line)
             if match:
+                # [2025-01-10 suyeon] 제목 추출 로직 개선
+                # 이유: 불릿 포인트(■●○) 패턴은 그룹이 1개만 있어서 group(2) 호출 시 에러 발생
+                # 해결: 매칭 그룹 수에 따라 제목 추출 방식 분기
+                if len(match.groups()) == 2:
+                    title = match.group(2).strip()
+                else:
+                    title = match.group(1).strip()
+
+                # [2025-01-10 suyeon] 빈 제목 검증 추가
+                # 이유: "1. " (제목 없음) 같은 경우 섹션 헤더로 인식하면 안됨
+                # 근거: 최소 2글자 이상의 의미있는 제목만 섹션으로 간주
+                if len(title) < MIN_TITLE_LENGTH:
+                    continue
+
                 headers.append({
                     'level': level,
-                    'title': match.group(2).strip(),
+                    'title': title,
                     'position': i,
                     'raw': line
                 })
@@ -90,7 +127,17 @@ def detect_section_headers(text: str) -> List[Dict[str, Any]]:
 
 def chunk_by_sections(text: str, page_num: int, max_chunk_size: int = 1000, overlap_size: int = 200) -> List[Dict[str, Any]]:
     """
-    텍스트를 섹션 기반으로 청킹 (오버랩 포함)
+    [2025-01-10 suyeon] Recursive 청킹 + 섹션 감지 하이브리드
+
+    변경 이유:
+    - 기존 180줄 수동 청킹 로직이 과도하게 복잡하고 버그 리스크 높음
+    - LangChain RecursiveCharacterTextSplitter는 검증된 라이브러리로 안정적
+    - 섹션 감지 기능은 유지하여 출처 추적 가능
+
+    장점:
+    - 코드 복잡도 대폭 감소 (180줄 → 60줄)
+    - 유지보수 용이
+    - 날짜/약어 오분리 문제를 separator 우선순위로 자연스럽게 해결
 
     Args:
         text: 청킹할 텍스트
@@ -101,212 +148,80 @@ def chunk_by_sections(text: str, page_num: int, max_chunk_size: int = 1000, over
     Returns:
         청크 리스트 [{"text": "...", "section": "...", "page": ..., "is_sectioned": bool}]
     """
+    # Recursive Splitter 초기화
+    # separator 우선순위: 단락 > 줄바꿈 > 문장 > 단어
+    # → 날짜(2024.12.31), 약어(Ph.D.)는 자연스럽게 보존됨
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=max_chunk_size,
+        chunk_overlap=overlap_size,
+        separators=[
+            "\n\n",    # 단락 (가장 안전)
+            "\n",      # 줄바꿈
+            ". ",      # 문장 끝
+            "? ",
+            "! ",
+            " ",       # 단어
+            ""         # 최후의 수단
+        ],
+        length_function=len,
+    )
+
     # 섹션 헤더 감지
     headers = detect_section_headers(text)
-
     chunks = []
 
     if not headers:
-        # 섹션이 없으면 문장 단위로 청킹 (오버랩 포함)
-        # 문장 분리 (., !, ? 기준)
-        sentences = re.split(r'([.!?]\s+)', text)
-        # 구분자를 문장에 다시 붙임
-        full_sentences = []
-        for i in range(0, len(sentences) - 1, 2):
-            if i + 1 < len(sentences):
-                full_sentences.append(sentences[i] + sentences[i + 1])
-            else:
-                full_sentences.append(sentences[i])
-        if len(sentences) % 2 == 1:
-            full_sentences.append(sentences[-1])
-
-        current_chunk = []
-        current_length = 0
-        previous_overlap = ""
-
-        for sentence in full_sentences:
-            sentence = sentence.strip()
-            if not sentence:
-                continue
-
-            sentence_length = len(sentence)
-
-            if current_length + sentence_length > max_chunk_size and current_chunk:
-                # 현재 청크 저장
-                chunk_text = ' '.join(current_chunk).strip()
-                if chunk_text:
-                    chunks.append({
-                        'text': chunk_text,
-                        'section': f'페이지 {page_num}',
-                        'page': page_num,
-                        'is_sectioned': False
-                    })
-
-                    # 오버랩 준비: 마지막 몇 문장 저장
-                    overlap_text = chunk_text[-overlap_size:] if len(chunk_text) > overlap_size else chunk_text
-                    # 문장 경계에서 자르기
-                    overlap_start = overlap_text.rfind('. ')
-                    if overlap_start > 0:
-                        previous_overlap = overlap_text[overlap_start + 2:]
-                    else:
-                        previous_overlap = overlap_text
-
-                # 새 청크 시작 (오버랩 포함)
-                if previous_overlap and previous_overlap not in sentence:
-                    current_chunk = [previous_overlap, sentence]
-                    current_length = len(previous_overlap) + sentence_length
-                else:
-                    current_chunk = [sentence]
-                    current_length = sentence_length
-            else:
-                current_chunk.append(sentence)
-                current_length += sentence_length
-
-        # 마지막 청크
-        if current_chunk:
-            chunk_text = ' '.join(current_chunk).strip()
-            if chunk_text:
-                chunks.append({
-                    'text': chunk_text,
-                    'section': f'페이지 {page_num}',
-                    'page': page_num,
-                    'is_sectioned': False
-                })
-
+        # 섹션이 없으면 Recursive로 청킹
+        text_chunks = splitter.split_text(text)
+        for idx, chunk_text in enumerate(text_chunks):
+            chunks.append({
+                'text': chunk_text,
+                'section': f'페이지 {page_num}',
+                'page': page_num,
+                'is_sectioned': False
+            })
     else:
-        # 섹션 기반 청킹
+        # 섹션별로 Recursive 청킹 적용
         lines = text.split('\n')
 
-        # 각 섹션별로 청크 생성
         for i, header in enumerate(headers):
             section_title = header['title']
             start_pos = header['position']
             end_pos = headers[i + 1]['position'] if i + 1 < len(headers) else len(lines)
 
-            # 섹션 내용 추출
-            section_lines = lines[start_pos:end_pos]
+            # [2025-01-10 suyeon] 헤더 제외 로직 추가
+            # 변경 이유:
+            # 1. 정보 중복 방지: 헤더는 section_label에 이미 저장되므로 텍스트에서 제외
+            # 2. 임베딩 품질 향상: 순수 내용만 임베딩하여 RAG 검색 정확도 향상
+            # 3. 토큰 효율: OpenAI API 비용 절감 (중복 텍스트 제거)
+            # 근거: 헤더는 메타데이터로만 관리하고, 청크 텍스트는 순수 내용만 포함
+
+            # 섹션 내용 추출 (헤더 다음 줄부터 시작)
+            section_lines = lines[start_pos + 1:end_pos]
             section_text = '\n'.join(section_lines).strip()
 
-            # 섹션이 너무 크면 분할 (오버랩 포함)
-            if len(section_text) > max_chunk_size:
-                # 큰 섹션을 문장 단위로 분할 (오버랩 포함)
-                sentences = re.split(r'([.!?]\s+)', section_text)
-                full_sentences = []
-                for j in range(0, len(sentences) - 1, 2):
-                    if j + 1 < len(sentences):
-                        full_sentences.append(sentences[j] + sentences[j + 1])
-                    else:
-                        full_sentences.append(sentences[j])
-                if len(sentences) % 2 == 1:
-                    full_sentences.append(sentences[-1])
+            if not section_text:
+                continue
 
-                sub_chunks = []
-                current_sub = []
-                current_length = 0
-                previous_overlap = ""
+            # 섹션을 Recursive로 청킹
+            section_chunks = splitter.split_text(section_text)
 
-                for sentence in full_sentences:
-                    sentence = sentence.strip()
-                    if not sentence:
-                        continue
+            for idx, chunk_text in enumerate(section_chunks):
+                # 섹션이 분할된 경우 part 번호 추가
+                if len(section_chunks) > 1:
+                    section_label = f'{section_title} (part {idx+1})'
+                else:
+                    section_label = section_title
 
-                    sentence_length = len(sentence)
+                chunks.append({
+                    'text': chunk_text,
+                    'section': section_label,
+                    'page': page_num,
+                    'is_sectioned': True
+                })
 
-                    if current_length + sentence_length > max_chunk_size and current_sub:
-                        sub_text = ' '.join(current_sub).strip()
-                        if sub_text:
-                            sub_chunks.append(sub_text)
-
-                            # 오버랩 준비
-                            overlap_text = sub_text[-overlap_size:] if len(sub_text) > overlap_size else sub_text
-                            overlap_start = overlap_text.rfind('. ')
-                            if overlap_start > 0:
-                                previous_overlap = overlap_text[overlap_start + 2:]
-                            else:
-                                previous_overlap = overlap_text
-
-                        # 새 청크 시작 (오버랩 포함)
-                        if previous_overlap and previous_overlap not in sentence:
-                            current_sub = [previous_overlap, sentence]
-                            current_length = len(previous_overlap) + sentence_length
-                        else:
-                            current_sub = [sentence]
-                            current_length = sentence_length
-                    else:
-                        current_sub.append(sentence)
-                        current_length += sentence_length
-
-                if current_sub:
-                    sub_text = ' '.join(current_sub).strip()
-                    if sub_text:
-                        sub_chunks.append(sub_text)
-
-                # 각 서브 청크를 추가
-                for idx, sub_text in enumerate(sub_chunks):
-                    chunks.append({
-                        'text': sub_text,
-                        'section': f'{section_title} (part {idx+1})',
-                        'page': page_num,
-                        'is_sectioned': True
-                    })
-            else:
-                # 섹션이 적당한 크기면 그대로 청크로
-                if section_text:
-                    chunks.append({
-                        'text': section_text,
-                        'section': section_title,
-                        'page': page_num,
-                        'is_sectioned': True
-                    })
-
-    # 빈 청크 제거
-    chunks = [c for c in chunks if c['text'].strip()]
+    # 빈 청크 제거 + 최소 길이 체크
+    MIN_CHUNK_LENGTH = 50
+    chunks = [c for c in chunks if len(c['text'].strip()) >= MIN_CHUNK_LENGTH]
 
     return chunks
-
-
-def clean_text(text: str) -> str:
-    """
-    텍스트 정제
-
-    Args:
-        text: 원본 텍스트
-
-    Returns:
-        정제된 텍스트
-    """
-    # 연속된 공백 제거
-    text = re.sub(r'\s+', ' ', text)
-
-    # 특수문자 제거 (일부 보존)
-    # text = re.sub(r'[^\w\s가-힣.,!?()[\]{}\-:]', '', text)
-
-    return text.strip()
-
-
-def merge_short_chunks(chunks: List[str], min_length: int = 100) -> List[str]:
-    """
-    짧은 청크를 병합
-
-    Args:
-        chunks: 원본 청크 리스트
-        min_length: 최소 청크 길이
-
-    Returns:
-        병합된 청크 리스트
-    """
-    merged = []
-    buffer = ""
-
-    for chunk in chunks:
-        if len(buffer) + len(chunk) < min_length:
-            buffer += " " + chunk
-        else:
-            if buffer:
-                merged.append(buffer.strip())
-            buffer = chunk
-
-    if buffer:
-        merged.append(buffer.strip())
-
-    return merged

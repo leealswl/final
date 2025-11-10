@@ -8,7 +8,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 
 const ITEMS = [
-    { key: 'analyze', label: '홈', Icon: HomeOutlinedIcon },
+    { key: 'home', label: '홈', Icon: HomeOutlinedIcon },
     { key: 'analyze', label: '분석', Icon: InsightsOutlinedIcon },
     { key: 'create', label: '생성', Icon: EditNoteOutlinedIcon },
     { key: 'edit', label: '편집', Icon: EditOutlinedIcon },

@@ -22,4 +22,18 @@ public interface AnalysisMapper {
      * @return 삽입된 행 수
      */
     int insertTableOfContents(TableOfContents tableOfContents);
+
+    /**
+     * 2025-11-10 suyeon 추가: 프로젝트별 분석 결과 삭제 (재분석 대비)
+     * @param projectIdx 프로젝트 ID
+     * @return 삭제된 행 수
+     */
+    int deleteAnalysisResultByProject(Long projectIdx);
+
+    /**
+     * 2025-11-10 suyeon 추가: 프로젝트별 목차 데이터 삭제 (재분석 대비)
+     * @param projectIdx 프로젝트 ID
+     * @return 삭제된 행 수
+     */
+    int deleteTableOfContentsByProject(Long projectIdx);
 }

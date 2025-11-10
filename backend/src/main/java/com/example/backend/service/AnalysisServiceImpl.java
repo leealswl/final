@@ -49,6 +49,14 @@ public class AnalysisServiceImpl implements AnalysisService {
 
         try {
             // ========================================
+            // 0. 재분석 대비: 기존 데이터 삭제
+            // ========================================
+            System.out.println("  🗑️  기존 분석 결과 삭제 중 (projectIdx=" + projectIdx + ")");
+            int deletedFeatures = analysisMapper.deleteAnalysisResultByProject(projectIdx);
+            int deletedToc = analysisMapper.deleteTableOfContentsByProject(projectIdx);
+            System.out.println("  ✅ 삭제 완료: Features " + deletedFeatures + "개, TOC " + deletedToc + "개");
+
+            // ========================================
             // 1. ANALYSIS_RESULT 테이블에 Features 저장
             // ========================================
             if (features != null && !features.isEmpty()) {

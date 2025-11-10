@@ -35,7 +35,10 @@ class BatchState(TypedDict):
     extracted_features: List[Dict[str, Any]]  # 추출된 모든 Feature
 
     # ========== 참조 관계 (🔖 MVP2: 분석 대시보드) ==========
-    cross_references: List[Dict[str, Any]]  # 공고 ↔ 첨부 참조 정보 (근거 추적용)
+    # [2025-01-10 suyeon] cross_references 필드 주석 처리
+    # 삭제 이유: match_cross_references() 함수 삭제로 데이터 생성 안됨
+    # MVP2 재구현 시 새로운 구조로 추가 예정
+    # cross_references: List[Dict[str, Any]]  # 공고 ↔ 첨부 참조 정보 (근거 추적용)
 
     # ========== 첨부 템플릿 (✅ MVP1: 사용자 입력 폼) ==========
     attachment_templates: List[Dict[str, Any]]  # 첨부 문서 양식 정보 (폼 생성용)

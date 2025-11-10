@@ -40,13 +40,10 @@
     </resultMap>
 
     <!--
-        2025-11-09 suyeon 추가: ANALYSIS_RESULT 테이블에 Feature 저장
+        2025-11-10 suyeon 수정: 단순 INSERT 방식 (서비스에서 DELETE 후 호출)
         FastAPI 분석 결과를 Oracle DB에 저장
     -->
     <insert id="insertAnalysisResult">
-        <selectKey keyProperty="resultIdx" order="BEFORE" resultType="long">
-            select analysis_result_seq.nextval from dual
-        </selectKey>
         insert into analysis_result (
             result_idx,
             project_idx,
@@ -62,7 +59,7 @@
             referenced_attachments,
             extracted_at
         ) values (
-            #{resultIdx},
+            analysis_result_seq.nextval,
             #{projectIdx},
             #{featureCode},
             #{featureName},
@@ -79,13 +76,18 @@
     </insert>
 
     <!--
-        2025-11-09 suyeon 추가: TABLE_OF_CONTENTS 테이블에 목차 저장
+        2025-11-10 suyeon 추가: 재분석 시 기존 분석 결과 삭제 (MERGE 방식으로 대체됨, 필요시만 사용)
+    -->
+    <delete id="deleteAnalysisResultByProject">
+        delete from analysis_result
+        where project_idx = #{projectIdx}
+    </delete>
+
+    <!--
+        2025-11-10 suyeon 수정: 단순 INSERT 방식 (서비스에서 DELETE 후 호출)
         공고문 목차 정보를 Oracle DB에 저장
     -->
     <insert id="insertTableOfContents">
-        <selectKey keyProperty="tocIdx" order="BEFORE" resultType="long">
-            select toc_seq.nextval from dual
-        </selectKey>
         insert into table_of_contents (
             toc_idx,
             project_idx,
@@ -93,13 +95,21 @@
             total_sections,
             toc_data
         ) values (
-            #{tocIdx},
+            toc_seq.nextval,
             #{projectIdx},
             #{source},
             #{totalSections},
             #{tocData}
         )
     </insert>
+
+    <!--
+        2025-11-10 suyeon 추가: 재분석 시 기존 목차 데이터 삭제 (MERGE 방식으로 대체됨, 필요시만 사용)
+    -->
+    <delete id="deleteTableOfContentsByProject">
+        delete from table_of_contents
+        where project_idx = #{projectIdx}
+    </delete>
 
 
 </mapper>
