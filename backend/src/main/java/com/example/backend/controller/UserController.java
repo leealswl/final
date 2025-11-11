@@ -38,6 +38,12 @@ public class UserController {
         return new ResponseEntity<>(userService.getUser(user), HttpStatus.OK);
     }
 
+        @PostMapping("/logout")
+    public ResponseEntity<String> userLogout() {
+        
+        return new ResponseEntity<String>("Logout Success", HttpStatus.OK);
+    }
+
     @DeleteMapping("/delete")
     public ResponseEntity<String> deleteUser(@RequestBody User user) {
         int deleteCount = userService.deletetUser(user);
