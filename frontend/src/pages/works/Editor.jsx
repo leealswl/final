@@ -62,7 +62,11 @@ export default function Editor() {
   const file = useMemo(() => selectedFile || null, [selectedFile]);
   const kind = pickKind(file);
 
-  const { documentId, setDocumentId, content: docContent } = useDocumentStore();
+  const {
+    setDocumentId,
+    content: docContent,
+    setContent: setDocumentContent,
+  } = useDocumentStore();
 
   const [initialContent, setInitialContent] = useState("<p></p>");
   const [loading, setLoading] = useState(false);
@@ -71,6 +75,7 @@ export default function Editor() {
   useEffect(() => {
     if (!file || file.type === "folder") {
       setInitialContent("<p></p>");
+      setDocumentContent(null);
       setLoading(false);
       setLoadError(null);
       return;
@@ -79,7 +84,9 @@ export default function Editor() {
     setDocumentId(file.id);
 
     if (file.meta?.isDraft) {
-      setInitialContent(docContent || "<p></p>");
+      const draftContent = docContent || "<p></p>";
+      setInitialContent(draftContent);
+      setDocumentContent(draftContent);
       setLoading(false);
       setLoadError(null);
       return;
@@ -87,6 +94,7 @@ export default function Editor() {
 
     if (kind === "pdf" || kind === "unknown") {
       setInitialContent("<p></p>");
+      setDocumentContent(null);
       setLoading(false);
       setLoadError(null);
       return;
@@ -94,6 +102,7 @@ export default function Editor() {
 
     if (!file.path || kind === "office") {
       setInitialContent("<p></p>");
+      setDocumentContent(null);
       setLoading(false);
       setLoadError(null);
       return;
@@ -108,12 +117,17 @@ export default function Editor() {
     .then(async (res) => {
       if (!res.ok) throw new Error(res.statusText || "JSON 파일을 불러오지 못했습니다.");
       const jsonData = await res.json(); // JSON 파싱
-      if (!cancelled) setInitialContent(jsonData);
+      if (!cancelled) {
+        setInitialContent(jsonData);
+        setDocumentContent(jsonData);
+      }
     })
     .catch((error) => {
       console.warn("[Editor] JSON 로드 실패", error);
       if (!cancelled) {
-        setInitialContent({ type: "doc", content: [] });
+        const emptyDoc = { type: "doc", content: [] };
+        setInitialContent(emptyDoc);
+        setDocumentContent(emptyDoc);
         setLoadError("JSON 파일 로드를 실패했습니다. 빈 문서로 시작합니다.");
       }
     })
@@ -133,12 +147,18 @@ export default function Editor() {
       .then(async (res) => {
         if (!res.ok) throw new Error(res.statusText || "파일을 불러오지 못했습니다.");
         const txt = await res.text();
-        if (!cancelled) setInitialContent(textToHtml(txt));
+        if (!cancelled) {
+          const html = textToHtml(txt);
+          setInitialContent(html);
+          setDocumentContent(html);
+        }
       })
       .catch((error) => {
         console.warn("[Editor] 콘텐츠 로드 실패", error);
         if (!cancelled) {
-          setInitialContent("<p></p>");
+          const emptyHtml = "<p></p>";
+          setInitialContent(emptyHtml);
+          setDocumentContent(emptyHtml);
           setLoadError("파일 내용을 불러오지 못했습니다. 빈 문서로 시작합니다.");
         }
       })
@@ -149,7 +169,8 @@ export default function Editor() {
     return () => {
       cancelled = true;
     };
-  }, [file, kind, docContent, setDocumentId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file, kind, setDocumentId, setDocumentContent]);
 
   if (!file) return <Pad>왼쪽에서 파일을 선택하세요.</Pad>;
   if (file.type === "folder") return <Pad>폴더가 아니라 파일을 선택해 주세요.</Pad>;
@@ -185,7 +206,7 @@ export default function Editor() {
         <TiptapEditor
           initialContent={initialContent}
           contentKey={file.id}
-          onContentChange={(html) => setInitialContent(html)}
+          onContentChange={setDocumentContent}
           readOnly={false}
         />
       </Box>
