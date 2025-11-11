@@ -2,13 +2,11 @@ import React from 'react';
 import { Button, Grid, Stack, Box, Typography, CircularProgress } from '@mui/material';
 import logo from '../img/nav_logo.png';
 import { useAuthStore } from '../../../store/useAuthStore';
-import useSignOut from '../../../hooks/userSignOut';
-import { useNavigate } from 'react-router';
+import LogoutButton from '../../../components/LogoutButton';
 
 const Navbar = () => {
     const user = useAuthStore((s) => s.user);
-    const redirectTo = location.state?.from || '/'; // 이전 페이지 or 홈
-    const navigate = useNavigate();
+    console.log(user);
 
     const edit = () => {
         window.location.href = '/works';
@@ -17,10 +15,6 @@ const Navbar = () => {
     const login = () => {
         window.location.href = '/login';
     };
-
-    const { mutate: signOut, isPending } = useSignOut({
-        onSuccess: () => navigate(redirectTo, { replace: true }),
-    });
 
     return (
         <Grid container pt={3} mx={30}>
@@ -65,29 +59,7 @@ const Navbar = () => {
                     {user ? (
                         <>
                             <Typography>{user.userName}님</Typography>
-                            <Button
-                                variant="outlined"
-                                onClick={() => signOut()}
-                                disabled={isPending}
-                                sx={{
-                                    color: 'black',
-                                    borderColor: 'black',
-                                    // fontWeight: 'bold',
-                                    '&:hover': {
-                                        borderColor: 'black',
-                                        backgroundColor: '#f5f5f5',
-                                    },
-                                }}
-                            >
-                                {isPending ? (
-                                    <>
-                                        <CircularProgress size={18} sx={{ mr: 1 }} />
-                                        로그아웃 중...
-                                    </>
-                                ) : (
-                                    'LOG OUT'
-                                )}
-                            </Button>
+                            <LogoutButton after="/"></LogoutButton>
                         </>
                     ) : (
                         <>

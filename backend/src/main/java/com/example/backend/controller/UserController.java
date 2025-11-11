@@ -34,8 +34,10 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<User> getUser(@RequestBody User user) {
-        System.out.println("login user: " + userService.getUser(user));
-        return new ResponseEntity<>(userService.getUser(user), HttpStatus.OK);
+        User loginUser = userService.getUser(user);
+        System.out.println("login user: " + loginUser);
+        
+        return new ResponseEntity<>(loginUser, HttpStatus.OK);
     }
 
         @PostMapping("/logout")
