@@ -8,9 +8,9 @@ const Navbar = () => {
     const user = useAuthStore((s) => s.user);
     console.log(user);
 
-    const edit = () => {
-        window.location.href = '/works';
-    };
+  const edit =() => {
+    window.location.href="/works"
+  }
 
     const login = () => {
         window.location.href = '/login';
