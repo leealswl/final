@@ -7,11 +7,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
-public class WebConfig {
-        // CORS 설정 (프론트 주소 정확히!)
+public class WebConfig implements WebMvcConfigurer {
+
+    // 1. CORS 설정
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
@@ -24,5 +26,13 @@ public class WebConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    // 2. 정적 리소스 매핑
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // /uploads/** 요청 → backend/uploads/ 폴더
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:backend/uploads/");
     }
 }
