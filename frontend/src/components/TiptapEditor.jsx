@@ -18,9 +18,7 @@ import Image from "@tiptap/extension-image";
 import { mergeAttributes } from "@tiptap/core";
 
 import Toolbar from "./editor/Toolbar";
-import TableToolbar from "./editor/TableToolbar";
 import ImageNodeView from "./editor/nodes/ImageNodeView";
-import TableContextMenu from "./editor/TableContextMenu";
 
 // ---------------------- Custom Extensions ----------------------
 const headingLevels = [1, 2, 3];
@@ -60,15 +58,12 @@ const CustomImage = Image.extend({
   addNodeView() {
     return ReactNodeViewRenderer(ImageNodeView);
   },
-  configure({ inline }) {
-    return this.extend({ inline }).configure({
-      allowBase64: true,
-      inline: false,
-      selectable: true,
-      draggable: false,
-      HTMLAttributes: { class: "paladoc-image" },
-    });
-  },
+}).configure({
+  allowBase64: true,
+  inline: false,
+  selectable: true,
+  draggable: false,
+  HTMLAttributes: { class: "paladoc-image" },
 });
 
 // ---------------------- Default Extensions ----------------------
@@ -112,10 +107,8 @@ export default function TiptapEditor({
   readOnly = false,
 }) {
   const [snackbar, setSnackbar] = useState(null);
-  const [tableMenu, setTableMenu] = useState(null);
   const hydrateKeyRef = useRef(null);
   const headingsRef = useRef([]);
-  const [tableSelection, setTableSelection] = useState(null);
 
   const extensions = useMemo(() => defaultExtensions, []);
 
@@ -180,7 +173,9 @@ export default function TiptapEditor({
               dom.setAttribute("data-heading-id", id);
               dom.setAttribute("id", id);
             }
-          } catch {}
+      } catch {
+        /* JSON 변환 실패 시 HTML 그대로 유지 */
+      }
         }
       });
 
@@ -207,8 +202,6 @@ export default function TiptapEditor({
       <Box className="editor-wrapper">
         <EditorContent editor={editor} />
       </Box>
-      {tableSelection ? <TableToolbar editor={editor} selection={tableSelection} /> : null}
-      <TableContextMenu anchor={tableMenu} onClose={() => setTableMenu(null)} editor={editor} />
       <Snackbar
         open={Boolean(snackbar)}
         autoHideDuration={3000}

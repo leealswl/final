@@ -20,13 +20,14 @@ const CreateView = () => {
   const setUserInputData = useAnalysisStore(state => state.setUserInputData)
   const userForm = analysisResult?.data?.user_form
   const tableOfContents = analysisResult?.data?.table_of_contents || userForm?.table_of_contents
-  const tocSections = tableOfContents?.sections || []
+  const tocSections = useMemo(
+    () => tableOfContents?.sections ?? [],
+    [tableOfContents]
+  )
   // 목차가 있는데 섹션이 1개 이하이면 간단 응답 폼으로 처리
   const useTocForm = tocSections.length > 1
 
   const isTemplateBased = userForm?.type === 'template_based'
-  const isTocBased = userForm?.type === 'toc_based'
-
   const formFields = useMemo(() => {
     if (useTocForm) {
       return tocSections.map(section => ({
@@ -449,51 +450,5 @@ const CreateView = () => {
     </Box>
   )
 }
-  <>
-      <Box sx={{ flex: 1, minHeight: 0, display: "grid", placeItems: "center", px: 4 }}>
-        <Stack spacing={4} alignItems="center" sx={{ maxWidth: 520, textAlign: "center" }}>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <DescriptionIcon color="primary" fontSize="large" />
-            <Typography variant="subtitle1" fontWeight={600}>
-              1. 생성 정보를 입력하고 초안을 만드세요.
-            </Typography>
-          </Stack>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <EditNoteIcon color="primary" fontSize="large" />
-            <Typography variant="subtitle1" fontWeight={600}>
-              2. 생성이 완료되면 편집 페이지에서 문서를 다듬습니다.
-            </Typography>
-          </Stack>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <RocketLaunchIcon color="primary" fontSize="large" />
-            <Typography variant="subtitle1" fontWeight={600}>
-              3. 편집된 결과를 저장하고 제출 흐름으로 진행하세요.
-            </Typography>
-          </Stack>
 
-          <Typography variant="body2" color="text.secondary">
-            좌측 목차와 우측 AI 도우미는 초안 생성 후 자동으로 채워집니다. 지금은 새 초안을 만들어 편집 단계로 이동해 보세요.
-          </Typography>
-
-          <Button
-            variant="contained"
-            size="large"
-            onClick={handleCreateDraft}
-            disabled={creating}
-            sx={{ px: 4, py: 1.5 }}
-          >
-            {creating ? "초안 준비 중..." : "새 초안 생성하고 편집으로 이동"}
-          </Button>
-        </Stack>
-      </Box>
-
-      <Snackbar open={Boolean(snackbar)} autoHideDuration={2500} onClose={() => setSnackbar(null)}>
-        {snackbar ? (
-          <Alert severity={snackbar.severity} onClose={() => setSnackbar(null)} sx={{ width: "100%" }}>
-            {snackbar.message}
-          </Alert>
-        ) : null}
-      </Snackbar>
-    </Box>
-  );
-}
+export default CreateView
