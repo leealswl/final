@@ -1,195 +1,65 @@
-// import useUpload from '../hooks/useUpload'
-// import { useFileStore } from '../store/useFileStore'
-// import { filesToNodes } from '../utils/fileToNodes'
-// import { useNavigate } from 'react-router-dom'
-// import { Button } from "@mui/material";
+import useUpload from '../hooks/useUpload'
+import { useFileStore } from '../store/useFileStore'
+import { filesToNodes } from '../utils/fileToNodes' 
+import { useNavigate } from 'react-router-dom'
+import { Button } from "@mui/material";
 
-// export default function Upload({ rootId }) {
-//   const { uploadAsync, isUploading } = useUpload()
-//   const addNodes   = useFileStore(s => s.addUploadedFileNodes)
-//   const selectNode = useFileStore(s => s.selectNode)
-//   const navigate   = useNavigate()
-//   const projectId = useFileStore(s => s.currentProjectId)
-//   const userId    = useFileStore(s => s.currentUserId)
+export default function Upload({ rootId }) {
+  const { uploadAsync, isUploading } = useUpload()
+  const addNodes   = useFileStore(s => s.addUploadedFileNodes)
+  const selectNode = useFileStore(s => s.selectNode)
+  const navigate   = useNavigate()
+  const projectId = useFileStore(s => s.currentProjectId)
+  const userId    = useFileStore(s => s.currentUserId)
 
-//   const onChange = async (e) => {
-//     const files = e.target.files
-//     if (!files?.length) return
-//     if (!projectId || !userId) { alert('컨텍스트가 없습니다.'); e.target.value = ''; return; }
+  const onChange = async (e) => {
+    const files = e.target.files
+    if (!files?.length) return
+    if (!projectId || !userId) { alert('컨텍스트가 없습니다.'); e.target.value = ''; return; }
 
-//      try {
-//       // 1) 서버 업로드
-//       await uploadAsync({ files, rootId, userId: String(userId) })
+     try {
+      // 1) 서버 업로드
+      await uploadAsync({ files, rootId, userId: String(userId) })
 
-//       // 2) 트리에 표시할 노드 만들고 추가
-//       const nodes = filesToNodes({ files, rootId, projectId, userId: String(userId)})
-//       addNodes(rootId, nodes)
+      // 2) 트리에 표시할 노드 만들고 추가
+      const nodes = filesToNodes({ files, rootId, projectId, userId: String(userId)})
+      addNodes(rootId, nodes)
 
-//       // 3) 첫 파일 선택 → 에디터가 즉시 표시
-//       selectNode(nodes[0].id)
+      // 3) 첫 파일 선택 → 에디터가 즉시 표시
+      selectNode(nodes[0].id)
 
-//       // 4) (옵션) 에디터 페이지로 라우팅
-//       navigate('edit')
+      // 4) (옵션) 에디터 페이지로 라우팅
+      navigate('edit')
 
-//     } catch (err) {
-//       alert(`업로드 실패: ${err?.message || err}`);
-//     } finally {
-//       e.target.value = '';
-//     }
-//   };
+    } catch (err) {
+      alert(`업로드 실패: ${err?.message || err}`);
+    } finally {
+      e.target.value = '';
+    }
+  };
 
-//   return (
-//     <Button
-//       size="small"
-//       variant="outlined"
-//       disabled={isUploading}
-//       component="label" // ✅ 버튼 클릭으로 파일 선택
-//       startIcon={/* 원하면 아이콘 넣기 */ undefined}
-//     >
-//       파일 업로드
-//       <input
-//         type="file"
-//         hidden
-//         multiple
-//         accept=".md,.txt,.pdf,.docx,.hwp,.hwpx,.xlsx,.pptx"
-//         onChange={onChange}
-//       />
-//     </Button>
-//   )
-// }
+  return (
+    <Button
+      size="small"
+      variant="outlined"
+      disabled={isUploading}
+      component="label" // ✅ 버튼 클릭으로 파일 선택
+      startIcon={/* 원하면 아이콘 넣기 */ undefined}
+    >
+      파일 업로드
+      <input
+        type="file"
+        hidden
+        multiple
+        accept=".md,.txt,.pdf,.docx,.hwp,.hwpx,.xlsx,.pptx"
+        onChange={onChange}
+      />
+    </Button>
+  )
+}
 
 // useUpload 훅으로 FormData 만들어 /api/analysis 업로드
 // 업로드가 성공하면 filesToNodes로 UI 트리용 노드 메타데이터 생성
 // addUploadedFileNodes(rootId, nodes)로 사이드바 트리에 즉시 반영
 // 방금 올린 첫 파일을 selectNode로 선택 → 에디터가 바로 표시
 // /edit로 이동
-
-// 📄 Upload.jsx
-// import React, { useRef } from 'react';
-// import useUpload from '../hooks/useUpload';
-// import { useFileStore } from '../store/useFileStore';
-// import { filesToNodes } from '../utils/fileToNodes';
-// import { useNavigate } from 'react-router-dom';
-// import { Button } from '@mui/material';
-
-// export default function Upload({ rootId, asButton = true, onUploadComplete }) {
-//     const fileInputRef = useRef(null);
-//     const { uploadAsync, isUploading } = useUpload();
-//     const addNodes = useFileStore((s) => s.addUploadedFileNodes);
-//     const selectNode = useFileStore((s) => s.selectNode);
-//     const projectId = useFileStore((s) => s.currentProjectId);
-//     const userId = useFileStore((s) => s.currentUserId);
-//     const navigate = useNavigate();
-
-//     const onChange = async (e) => {
-//         const files = e.target.files;
-//         if (!files?.length) return;
-//         if (!projectId || !userId) {
-//             alert('컨텍스트가 없습니다.');
-//             e.target.value = '';
-//             return;
-//         }
-
-//         try {
-//             await uploadAsync({ files, rootId, userId: String(userId) });
-//             const nodes = filesToNodes({ files, rootId, projectId, userId: String(userId) });
-//             addNodes(rootId, nodes);
-//             selectNode(nodes[0].id);
-//             navigate('edit');
-//             onUploadComplete?.(nodes);
-//         } catch (err) {
-//             alert(`업로드 실패: ${err?.message || err}`);
-//         } finally {
-//             e.target.value = '';
-//         }
-//     };
-
-//     // ✅ 외부에서도 이 함수를 불러 input 클릭 가능
-//     const handleClick = () => {
-//         fileInputRef.current?.click();
-//     };
-
-//     return (
-//         <>
-//             {/* 숨겨진 파일 선택창 */}
-//             <input type="file" ref={fileInputRef} hidden multiple accept=".md,.txt,.pdf,.docx,.hwp,.hwpx,.xlsx,.pptx" onChange={onChange} />
-
-//             {/* asButton이 true면 내부에서 버튼 렌더링 */}
-//             {asButton && (
-//                 <Button size="small" variant="outlined" disabled={isUploading} onClick={handleClick}>
-//                     파일 업로드
-//                 </Button>
-//             )}
-//         </>
-//     );
-// }
-
-// 파일: components/Upload.jsx
-import React, { useRef, forwardRef, useImperativeHandle } from 'react';
-import useUpload from '../hooks/useUpload';
-import { useFileStore } from '../store/useFileStore';
-import { filesToNodes } from '../utils/fileToNodes';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@mui/material';
-
-// forwardRef로 감싸고 내부 input 클릭을 외부로 노출
-const Upload = forwardRef(function Upload({ rootId, asButton = true, onUploadComplete }, ref) {
-    const fileInputRef = useRef(null);
-    const { uploadAsync, isUploading } = useUpload();
-    const addNodes = useFileStore((s) => s.addUploadedFileNodes);
-    const selectNode = useFileStore((s) => s.selectNode);
-    const projectId = useFileStore((s) => s.currentProjectId);
-    const userId = useFileStore((s) => s.currentUserId);
-    const navigate = useNavigate();
-
-    // 외부에서 사용할 수 있도록 API 노출
-    useImperativeHandle(
-        ref,
-        () => ({
-            // 외부에서 uploadRef.current.click() 호출 가능
-            click: () => {
-                fileInputRef.current?.click();
-            },
-            // 필요하면 input 엘리먼트 자체도 반환
-            getInput: () => fileInputRef.current,
-        }),
-        [],
-    );
-
-    const onChange = async (e) => {
-        const files = e.target.files;
-        if (!files?.length) return;
-        if (!projectId || !userId) {
-            alert('컨텍스트가 없습니다.');
-            e.target.value = '';
-            return;
-        }
-
-        try {
-            await uploadAsync({ files, rootId, userId: String(userId) });
-            const nodes = filesToNodes({ files, rootId, projectId, userId: String(userId) });
-            addNodes(rootId, nodes);
-            selectNode(nodes[0].id);
-            navigate('/works/edit');
-            onUploadComplete?.(nodes);
-        } catch (err) {
-            alert(`업로드 실패: ${err?.message || err}`);
-        } finally {
-            e.target.value = '';
-        }
-    };
-
-    return (
-        <>
-            <input type="file" ref={fileInputRef} hidden multiple accept=".md,.txt,.pdf,.docx,.hwp,.hwpx,.xlsx,.pptx,.zip,.rar" onChange={onChange} />
-
-            {asButton && (
-                <Button size="small" variant="outlined" disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
-                    파일 업로드
-                </Button>
-            )}
-        </>
-    );
-});
-
-export default Upload;

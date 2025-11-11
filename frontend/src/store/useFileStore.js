@@ -106,6 +106,19 @@ export const useFileStore = create(
     set({ selectedNodeId: id, selectedFile: n?.type === 'file' ? n : null });
   },
 
+  getById: (id) => findNode(get().tree, id),
+
+  setSelectedFile: (file) => {
+    if (!file) {
+      set({ selectedFile: null, selectedNodeId: null });
+      return;
+    }
+    set({
+      selectedFile: file,
+      selectedNodeId: file.id ?? null,
+    });
+  },
+
   deleteSelected: () => {
         const id = get().selectedNodeId || get().selectedFile?.id;
         if (id) get().deleteNode(id);
