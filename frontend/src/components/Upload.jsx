@@ -65,15 +65,11 @@ const Upload = forwardRef(function Upload({ rootId, asButton = true, onUploadCom
 
             // 4) 첫 파일 선택 → 에디터가 즉시 표시
             selectNode(nodes[0].id);
-<<<<<<< HEAD
 
             // 5) 에디터 페이지로 라우팅
             navigate('/works/edit');
 
             // 6) 콜백 호출
-=======
-            // navigate('/works/edit');
->>>>>>> dev
             onUploadComplete?.(nodes);
         } catch (err) {
             alert(`업로드 실패: ${err?.message || err}`);

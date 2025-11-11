@@ -6,7 +6,6 @@ import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined"; // �
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined"; 
 import { useLocation, useNavigate,useParams } from "react-router-dom";
 
-<<<<<<< HEAD
 const ITEMS = [             
     { key: 'home', label: '홈', Icon: HomeOutlinedIcon },
     { key: 'analyze', label: '분석', Icon: InsightsOutlinedIcon },
@@ -14,14 +13,6 @@ const ITEMS = [
     { key: 'edit', label: '편집', Icon: EditOutlinedIcon },
     { key: 'verify', label: '검증', Icon: FactCheckOutlinedIcon },
 ];
-=======
-const ITEMS = [
-    { key: "analyze", label: "분석",  Icon: InsightsOutlinedIcon },
-    { key: "create",  label: "생성",  Icon: EditNoteOutlinedIcon },
-    { key: "edit",    label: "편집",  Icon: EditOutlinedIcon },
-    { key: "verify",  label: "검증",  Icon: FactCheckOutlinedIcon },
-    ];
->>>>>>> dev
 
 export default function LeftNav({ width = 64 }) {
     const nav = useNavigate();
