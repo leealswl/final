@@ -32,24 +32,15 @@ function App() {
 
         <Route path="/works" element={<Layout />}>
           <Route path="analyze" element={<AnalyzeView />} />
-<<<<<<< HEAD
           {/* 2025-11-09 수연 추가: 분석 대시보드 라우트 */}
           <Route path="analyze/dashboard" element={<AnalyzeDashboard />} />
           <Route path="create"  element={<CreateView />} />
           {/* 2025-11-09 suyeon: 제안서 초안 생성 페이지 라우트 추가 */}
           <Route path="generate" element={<GenerateView />} />
-=======
-          <Route path="create"  element={<CreateView />} />
->>>>>>> dev
           <Route path="edit"    element={<EditView />} />
           <Route path="edit/:docId" element={<EditView />} />
           <Route path="verify"  element={<VerifyView />} />
         </Route>
-<<<<<<< HEAD
-
-=======
-        
->>>>>>> dev
     </Routes>
   );
 }
