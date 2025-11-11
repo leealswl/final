@@ -1,17 +1,24 @@
 import React from "react";
 import { Box, Tooltip, IconButton, Typography } from "@mui/material";
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import InsightsOutlinedIcon from "@mui/icons-material/InsightsOutlined";   // 분석
 import EditNoteOutlinedIcon from "@mui/icons-material/EditNoteOutlined";   // 생성
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined"; // 검증
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined"; 
 import { useLocation, useNavigate,useParams } from "react-router-dom";
+import LoginOutlinedIcon from "@mui/icons-material/LoginOutlined";
 
 const ITEMS = [
+    { key: "analyze", label: "홈",  Icon: HomeOutlinedIcon },
     { key: "analyze", label: "분석",  Icon: InsightsOutlinedIcon },
     { key: "create",  label: "생성",  Icon: EditNoteOutlinedIcon },
     { key: "edit",    label: "편집",  Icon: EditOutlinedIcon },
     { key: "verify",  label: "검증",  Icon: FactCheckOutlinedIcon },
     ];
+
+const login = [
+    {key: "login", Icon: LoginOutlinedIcon}
+]
 
 export default function LeftNav({ width = 64 }) {
     const nav = useNavigate();
@@ -41,41 +48,65 @@ export default function LeftNav({ width = 64 }) {
             gap: 0.5,
         }}
         >
-        {ITEMS.map(({ key, label, path, Icon }) => {
-            const selected = pathname.startsWith(path);
-            return (
-            <Tooltip key={key} title={label} placement="right">
-                <Box
-                onClick={() => nav(toPath(key))}
-                sx={{
-                    width: "100%",
-                    display: "grid",
-                    placeItems: "center",
-                    py: 1,
-                    cursor: "pointer",
-                    bgcolor: selected ? "rgba(99,102,241,0.08)" : "transparent",
-                    "&:hover": { bgcolor: "rgba(0,0,0,0.04)" },
-                    transition: "background-color .15s",
-                }}
-                >
-                <IconButton size="small" color={selected ? "primary" : "default"}>
-                    <Icon />
-                </IconButton>
-                <Typography
-                    variant="caption"
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5 }}>
+            {ITEMS.map(({ key, label, path, Icon }) => {
+                const selected = pathname.startsWith(path);
+                return (
+                <Tooltip key={key} title={label} placement="right">
+                    <Box
+                    onClick={() => nav(toPath(key))}
                     sx={{
-                    mt: 0.5,
-                    fontWeight: 600,
-                    color: selected ? "primary.main" : "text.secondary",
-                    lineHeight: 1.1,
+                        width: "100%",
+                        display: "grid",
+                        placeItems: "center",
+                        py: 1,
+                        cursor: "pointer",
+                        bgcolor: selected ? "rgba(99,102,241,0.08)" : "transparent",
+                        "&:hover": { bgcolor: "rgba(0,0,0,0.04)" },
+                        transition: "background-color .15s",
                     }}
-                >
-                    {label}
-                </Typography>
-                </Box>
-            </Tooltip>
-            );
-        })}
+                    >
+                    <IconButton size="small" color={ "primary"}>
+                        <Icon />
+                    </IconButton>
+                    <Typography
+                        variant="caption"
+                        sx={{
+                        mt: 0.5,
+                        fontWeight: 600,
+                        color: selected ? "primary.main" : "text.secondary",
+                        lineHeight: 1.1,
+                        }}
+                    >
+                        {label}
+                    </Typography>
+                    </Box>
+                </Tooltip>
+                );
+            })}
+        </Box>
+            <Box sx={{mt: "auto"}}>
+            {login.map(({ key, Icon }) => {
+                return (
+                <Tooltip key={key} placement="right">
+                    <Box
+                        sx={{
+                        width: "100%",
+                        display: "grid",
+                        placeItems: "center",
+                        py: 1,
+                        cursor: "pointer",
+                        bgcolor:"rgba(99,102,241,0.08)",
+                        "&:hover": { bgcolor: "rgba(0,0,0,0.04)" },
+                        transition: "background-color .15s",
+                    }}>
+                        <IconButton size="small" color={"primary"}>
+                        <Icon />
+                        </IconButton>
+                    </Box>
+                </Tooltip>
+                )})}
+            </Box >
         </Box>
     );
 }
