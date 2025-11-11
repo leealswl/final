@@ -36,6 +36,7 @@ def route_toc_extraction(state: BatchState) -> str:
         return "extract_toc_from_announcement_and_attachments"
 
 
+# 라우팅할때 양식 찾기
 def _find_proposal_template(templates: List[Dict]) -> Optional[Dict]:
     """
     제안서 양식 찾기 (우선순위: 제안서 > 계획서 > 신청서)

@@ -23,8 +23,8 @@ class BatchState(TypedDict):
 
     # ========== RAG 통합 저장소 ==========
     all_chunks: List[Dict[str, Any]]  # 모든 문서의 청크 통합
-    all_embeddings: Optional[np.ndarray]  # 통합 임베딩 (N, 384)
-    embedding_model: Any  # SentenceTransformer 모델
+    all_embeddings: Optional[np.ndarray] 
+    embedding_model: Any  
 
     # ========== VectorDB ==========
     chroma_client: Any  # ChromaDB 클라이언트

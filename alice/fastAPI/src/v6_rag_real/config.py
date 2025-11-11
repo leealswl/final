@@ -14,12 +14,6 @@ CSV_OUTPUT_DIR = BASE_DIR / "parsed_results" / "v6_rag"
 CSV_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ========================================
-# 모델 설정
-# ========================================
-EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-OPENAI_MODEL = "gpt-4o-mini"
-
-# ========================================
 # Feature 정의 (정부 R&D 공고문 기준)
 # ========================================
 FEATURES = [

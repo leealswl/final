@@ -26,13 +26,13 @@
           "number": "2.2",
           "title": "연구개발과제의 내용",
           "required": true,
-          "description": "연구개발할 지식, 기술 설명"
+          "description": "연구개발하고자 하는 지식, 기술 설명"
         },
         {
           "number": "2.3",
           "title": "연구개발과제 수행일정 및 주요 결과물",
           "required": false,
-          "description": "수행일정과 결과물 설명"
+          "description": "주요 연구개발과제 수행일정과 결과물 설명"
         }
       ]
     },
@@ -40,19 +40,19 @@
       "number": "3",
       "title": "연구개발과제의 추진전략ㆍ방법 및 추진체계",
       "required": true,
-      "description": "추진전략 및 방법 설명",
+      "description": "과제의 추진전략 및 방법 설명",
       "subsections": [
         {
           "number": "3.1",
           "title": "연구개발과제의 추진전략ㆍ방법",
           "required": true,
-          "description": "연구수행방법 설명"
+          "description": "연구수행방법에 대한 내용 포함"
         },
         {
           "number": "3.2",
           "title": "연구개발과제의 추진체계",
           "required": true,
-          "description": "추진체계 및 방법 설명"
+          "description": "추진체계, 방법, 절차 도식적으로 표현"
         }
       ]
     },
@@ -66,7 +66,7 @@
           "number": "4.1",
           "title": "연구개발성과의 활용방안",
           "required": true,
-          "description": "성과의 활용분야 및 방안 설명"
+          "description": "예상되는 연구개발성과와 활용방안 설명"
         },
         {
           "number": "4.2",
@@ -112,7 +112,7 @@
           "number": "5.2",
           "title": "지식재산권, 표준화 및 인증기준 현황",
           "required": false,
-          "description": "지식재산권 및 인증기준 현황 설명"
+          "description": "관련 현황 설명"
         },
         {
           "number": "5.3",
@@ -130,7 +130,7 @@
               "number": "5.4.1",
               "title": "사업화 전략",
               "required": false,
-              "description": "사업화 전략 설명"
+              "description": "홍보 및 판매 전략 설명"
             },
             {
               "number": "5.4.2",
@@ -154,7 +154,7 @@
               "number": "5.4.5",
               "title": "사업화에 따른 기대효과",
               "required": false,
-              "description": "사업화 기대효과 설명"
+              "description": "사업화에 따른 기대효과 설명"
             }
           ]
         }
@@ -182,11 +182,11 @@
           "number": "6.3",
           "title": "그 밖의 조치사항 이행계획",
           "required": false,
-          "description": "기타 조치사항 이행계획 설명"
+          "description": "기타 조치사항 설명"
         }
       ]
     }
   ],
   "total_sections": 6,
-  "extracted_at": "2025-11-10T16:15:12.965776"
+  "extracted_at": "2025-11-11T11:09:57.629912"
 }
