@@ -21,11 +21,5 @@ numpy==1.26.3
 # 환경 설정
 python-dotenv==1.0.0
 
-<<<<<<< HEAD
 # Oracle DB 연동은 Backend에서 처리
 # FastAPI는 HTTP API를 통해 Backend와 통신
-=======
-# Oracle DB (프로덕션 전용)
-# STORAGE_MODE=oracle일 때 필요
-cx_Oracle==8.3.0
->>>>>>> dev
