@@ -1,22 +1,25 @@
 import React, { useState } from "react";
-import { Box, Button,TextField  } from "@mui/material";
+import { Box, Button, TextField } from "@mui/material";
 
 export default function Assistant() {
   const [input, setInput] = useState("");
 
   const handleAI = async () => {
-    const text = `${input}`;
-    console.log("[Assistant] clicked. editorBridge =", window.editorBridge);
-    if (!window.editorBridge) {
-      console.warn("[Assistant] editorBridge not ready (문서가 아직 안 떴거나 에러).");
+    const text = `${input}`.trim();
+    const editor = window.tiptapEditor;
+
+    if (!editor) {
+      console.warn("[Assistant] Tiptap editor not ready.");
       return;
     }
-    try {
-      window.editorBridge.insert(text);
-      console.log("[Assistant] insert requested.");
-    } catch (e) {
-      console.error("[Assistant] insert error:", e);
+
+    if (!text) {
+      console.warn("[Assistant] 추가할 내용이 없습니다.");
+      return;
     }
+
+    editor.chain().focus().insertContent(`${text}\n`).run();
+    setInput("");
   };
 
 
@@ -32,7 +35,7 @@ export default function Assistant() {
       <Button
         variant="contained"
         onClick={handleAI}
-        disabled={!window.editorBridge?.insert}
+        disabled={!window.tiptapEditor}
       >
         문서에 넣기
       </Button>

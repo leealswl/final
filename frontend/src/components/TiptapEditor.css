@@ -1,0 +1,49 @@
+.tiptap-content {
+  min-height: calc(100vh - 200px);
+  padding: 24px;
+  font-family: "Pretendard", "Noto Sans KR", sans-serif;
+  line-height: 1.6;
+  outline: none;
+}
+
+.tiptap-content p {
+  margin: 0 0 1em;
+}
+
+.tiptap-content h1,
+.tiptap-content h2,
+.tiptap-content h3 {
+  font-weight: 700;
+  margin: 1.5em 0 0.5em;
+}
+
+.tiptap-content ul,
+.tiptap-content ol {
+  padding-left: 24px;
+  margin: 0 0 1em;
+}
+
+.tiptap-content table {
+  border-collapse: collapse;
+  margin: 16px 0;
+  width: 100%;
+}
+
+.tiptap-content table th,
+.tiptap-content table td {
+  border: 1px solid #d1d5db;
+  padding: 8px;
+  text-align: left;
+  font-size: 14px;
+}
+
+.tiptap-content table th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+}
+
+.tiptap-content:focus {
+  border: none;
+  box-shadow: inset 0 0 0 2px #1976d2;
+}
+
