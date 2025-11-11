@@ -5,7 +5,7 @@ import logo from '../img/nav_logo.png'
 const Navbar = () => {
 
   const edit =() => {
-    window.location.href="/works"
+    window.location.href="/edit"
   }
 
   const login = () => {

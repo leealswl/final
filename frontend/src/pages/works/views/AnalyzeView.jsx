@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { Box, Button, Grid, Stack, Typography, CircularProgress } from '@mui/material'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -6,6 +7,15 @@ import { useAnalysisStore } from '../../../store/useAnalysisStore'
 import api from '../../../utils/api'
 import 문서아이콘 from './icons/문서 아이콘.png'
 import 폴더아이콘 from './icons/폴더 아이콘.png'
+=======
+// 📄 AnalyzeView.jsx
+import { Box, Button, Grid, Stack, Typography } from '@mui/material';
+import React, { useRef } from 'react';
+import 문서아이콘 from './icons/문서 아이콘.png';
+import 폴더아이콘 from './icons/폴더 아이콘.png';
+import Upload from '../../../components/Upload';
+import { useNavigate } from 'react-router';
+>>>>>>> dev
 
 const AnalyzeView = () => {
   const navigate = useNavigate()
@@ -44,6 +54,7 @@ const AnalyzeView = () => {
         return
       }
 
+<<<<<<< HEAD
       console.log('📁 공고문 파일:', 공고문파일들.length, '개')
       console.log('📁 첨부 파일:', 첨부파일들.length, '개')
 
@@ -102,6 +113,36 @@ const AnalyzeView = () => {
           <Typography sx={{fontSize:'20px', fontWeight:'bold', mb: '12px'}}>1. 필수: 공고문/RFP 문서 업로드</Typography>
           <Typography sx={{color:'#1890FF', fontWeight:'bold', mb: '8px'}}>(PDF, DOCX, HWP 등)</Typography>
           <Typography sx={{color:'#8C8C8C'}} fontFamily={'Pretendard4'}>가장 핵심이 되는 제안 요청서를 먼저 업로드해주세요.</Typography>
+=======
+            <Stack alignItems="center" spacing={3}>
+                <Box height="50px">
+                    <Typography sx={{ color: '#8C8C8C' }} fontFamily="Pretendard4">
+                        지원되는 파일 형식: PDF, docx, hwp, txt, Markdown, ZIP/RAR (첨부파일)
+                    </Typography>
+                </Box>
+                <Box>
+                    <Button
+                        variant="contained"
+                        size="large"
+                        sx={{
+                            backgroundColor: '#8c8c8c',
+                            fontSize: '24px',
+                            fontWeight: 'bold',
+                            fontFamily: 'Pretendard4',
+                            '&:hover': { bgcolor: '#1660cfff' },
+                        }}
+                        onClick={analyzeStart}
+                    >
+                        분석 시작 (RFP 필수)
+                    </Button>
+                </Box>
+                <Box>
+                    <Typography sx={{ color: '#8C8C8C' }} fontFamily="Pretendard4">
+                        RFP 파일을 업로드해야 분석을 시작할 수 있습니다.
+                    </Typography>
+                </Box>
+            </Stack>
+>>>>>>> dev
         </Stack>
         <Stack sx={{cursor: 'pointer', width:'500px', height:'250px', border: '2px dashed #E8E8E8', borderRadius: '10px', backgroundColor:'white', alignItems:'center', justifyContent:'center'}}>
           <Box

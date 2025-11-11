@@ -1,65 +1,47 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Box, CircularProgress, TextField } from "@mui/material";
+import { Box, CircularProgress, Typography } from "@mui/material";
 import { useFileStore } from "../../store/useFileStore";
-import api from "../../utils/api";
+import { useDocumentStore } from "../../store/useDocumentStore";
+import TiptapEditor from "../../components/TiptapEditor";
 
-// DS가 부를 전역 함수는 파일 최상단(컴포넌트 밖)에서 한 번만
-if (typeof window !== "undefined") {
-  window.onDocReady = function () {
-    console.log("[OO] DS doc ready");
-  };
-}
+const toAbs = (p) => (p?.startsWith("http") ? p : `http://localhost:8081${p}`);
 
-// 파일 최상단 근처에 추가
-const toAbs = (p) => (p?.startsWith('http') ? p : `http://127.0.0.1:8081${p}`);
-/* 공용 UI */
 function Center({ children }) {
   return <Box sx={{ height: "100%", display: "grid", placeItems: "center" }}>{children}</Box>;
 }
+
 function Pad({ children }) {
   return <Box sx={{ p: 2, color: "text.secondary" }}>{children}</Box>;
 }
 
-/* 파일 타입 판별 */
 function pickKind(file) {
   if (!file) return "empty";
   if (file.type === "folder") return "folder";
   const name = (file.name || "").toLowerCase();
   const mime = (file.mime || "").toLowerCase();
-  //console.log("name: ", name);
   if (
-    name.endsWith(".doc") || name.endsWith(".docx") || name.endsWith(".odt") || name.endsWith(".rtf") ||
-    name.endsWith(".txt") || name.endsWith(".md") ||
+    name.endsWith(".doc") || name.endsWith(".docx") ||
+    name.endsWith(".odt") || name.endsWith(".rtf") ||
     name.endsWith(".hwp") || name.endsWith(".hwpx") ||
     name.endsWith(".xls") || name.endsWith(".xlsx") ||
     name.endsWith(".ppt") || name.endsWith(".pptx")
   ) return "office";
   if (name.endsWith(".md") || name.endsWith(".txt") || mime.startsWith("text/") || mime.includes("markdown")) return "text";
   if (name.endsWith(".pdf") || mime.includes("pdf")) return "pdf";
+  if (name.endsWith(".json")) return "json";
   return "unknown";
 }
 
-/* OnlyOffice api.js 로더 */
-function useOnlyOfficeReady() {
-  const [ready, setReady] = useState(!!window.DocsAPI);
-  useEffect(() => {
-    if (window.DocsAPI) { setReady(true); return; }
-    const src = import.meta.env.VITE_ONLYOFFICE_SRC;
-    if (!src) { console.error("VITE_ONLYOFFICE_SRC 미설정"); return; }
-    const exists = Array.from(document.scripts).some(s => s.src === src);
-    if (exists) {
-      const t = setInterval(() => { if (window.DocsAPI) { setReady(true); clearInterval(t); } }, 100);
-      return () => clearInterval(t);
-    }
-    const s = document.createElement("script");
-    s.src = src; s.async = true;
-    s.onload = () => setReady(true);
-    s.onerror = () => console.error("OnlyOffice API 로드 실패:", src);
-    document.body.appendChild(s);
-  }, []);
-  return ready || !!window.DocsAPI;
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
+<<<<<<< HEAD
 /* 파일 식별 키 (같은 파일 재선택 시 중복 생성 방지) */
 const fileKey = (f) => String(f?.id || f?.path || "");
 
@@ -210,49 +192,17 @@ function DocxHost({ active, file }) {
       }}
     />
   );
+=======
+function textToHtml(text = "") {
+  const lines = escapeHtml(text).split(/\n/g);
+  if (!lines.length) return "<p></p>";
+  return lines.map((line) => (line.trim() ? `<p>${line}</p>` : "<p><br /></p>")).join("");
+>>>>>>> dev
 }
 
-/* 텍스트 뷰 (md/txt) — file.path에서 직접 읽기 (읽기 전용) */
-function TextView({ file }) {
-  const [value, setValue] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let ignore = false;
-    (async () => {
-      try {
-        setLoading(true);
-        const res = await fetch(toAbs(file.path));
-        const txt = await res.text();
-        if (!ignore) setValue(txt);
-      } catch (e) {
-        console.error(e);
-        if (!ignore) setValue("(불러오기 실패)");
-      } finally {
-        if (!ignore) setLoading(false);
-      }
-    })();
-    return () => { ignore = true; };
-  }, [file?.path]);
-
-  if (loading) return <Center><CircularProgress size={20} /></Center>;
-  return (
-    <TextField
-      value={value}
-      onChange={() => {}}
-      fullWidth
-      multiline
-      minRows={12}
-      sx={{ "& .MuiInputBase-root": { fontFamily: "monospace" } }}
-      helperText="읽기 전용 미리보기 (서버 저장 API 없어서 수정은 비활성)"
-    />
-  );
-}
-
-/* PDF 뷰 — file.path 직접 사용 */
 function PdfView({ file }) {
   if (!file?.path) return <Pad>PDF 경로가 없습니다.</Pad>;
-    const url = toAbs(file.path);
+  const url = toAbs(file.path);
   return (
     <Box sx={{ width: "100%", height: "100%" }}>
       <iframe title="pdf" src={url} style={{ border: "none", width: "100%", height: "100%" }} />
@@ -260,46 +210,143 @@ function PdfView({ file }) {
   );
 }
 
-
-/* 메인 Editor */
 export default function Editor() {
   const { selectedFile } = useFileStore();
   const file = useMemo(() => selectedFile || null, [selectedFile]);
   const kind = pickKind(file);
-  const isOffice = kind === 'office';
+
+  const { documentId, setDocumentId, content: docContent } = useDocumentStore();
+
+  const [initialContent, setInitialContent] = useState("<p></p>");
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(null);
+
+  useEffect(() => {
+    if (!file || file.type === "folder") {
+      setInitialContent("<p></p>");
+      setLoading(false);
+      setLoadError(null);
+      return;
+    }
+
+    setDocumentId(file.id);
+
+    if (file.meta?.isDraft) {
+      setInitialContent(docContent || "<p></p>");
+      setLoading(false);
+      setLoadError(null);
+      return;
+    }
+
+    if (kind === "pdf" || kind === "unknown") {
+      setInitialContent("<p></p>");
+      setLoading(false);
+      setLoadError(null);
+      return;
+    }
+
+    if (!file.path || kind === "office") {
+      setInitialContent("<p></p>");
+      setLoading(false);
+      setLoadError(null);
+      return;
+    }
+
+    if (kind === "json") {
+  setLoading(true);
+  setLoadError(null);
+  let cancelled = false;
+
+  fetch(toAbs(file.path))
+    .then(async (res) => {
+      if (!res.ok) throw new Error(res.statusText || "JSON 파일을 불러오지 못했습니다.");
+      const jsonData = await res.json(); // JSON 파싱
+      if (!cancelled) setInitialContent(jsonData);
+    })
+    .catch((error) => {
+      console.warn("[Editor] JSON 로드 실패", error);
+      if (!cancelled) {
+        setInitialContent({ type: "doc", content: [] });
+        setLoadError("JSON 파일 로드를 실패했습니다. 빈 문서로 시작합니다.");
+      }
+    })
+    .finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+
+  return () => { cancelled = true; };
+}
 
 
-  console.log("file: ", file)
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+
+    fetch(toAbs(file.path))
+      .then(async (res) => {
+        if (!res.ok) throw new Error(res.statusText || "파일을 불러오지 못했습니다.");
+        const txt = await res.text();
+        if (!cancelled) setInitialContent(textToHtml(txt));
+      })
+      .catch((error) => {
+        console.warn("[Editor] 콘텐츠 로드 실패", error);
+        if (!cancelled) {
+          setInitialContent("<p></p>");
+          setLoadError("파일 내용을 불러오지 못했습니다. 빈 문서로 시작합니다.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [file, kind, docContent, setDocumentId]);
 
   if (!file) return <Pad>왼쪽에서 파일을 선택하세요.</Pad>;
   if (file.type === "folder") return <Pad>폴더가 아니라 파일을 선택해 주세요.</Pad>;
 
-  return (
-    <Box sx={{ width: "100%",height:"100%", minHeight: 0}}>
-      {/* ✅ 항상 DOM에 남아 있게 */}
-      <DocxHost active={isOffice} file={file} />
+  if (kind === "pdf") return <PdfView file={file} />;
 
-      {/* office가 아닐 때만 다른 뷰들 조건부 렌더 */}
-      {!isOffice && kind === "text" && <TextView file={file} />}
-      {!isOffice && kind === "pdf" && (
-        <Box sx={{ width: "100%", height: "100vh" }}>
-          <PdfView active={isOffice} file={file} />
+  if (kind === "unknown")
+    return (
+      <Pad>
+        미지원 형식입니다. (권장: DOCX / MD / TXT / PDF)
+        <Box sx={{ mt: 1, fontSize: 12 }}>
+          선택된 파일: <b>{file.name}</b> ({file.mime || "unknown"})
+        </Box>
+        {file.path && (
+          <Box sx={{ mt: 1 }}>
+            <a href={toAbs(file.path)} target="_blank" rel="noreferrer">
+              원본 열기
+            </a>
+          </Box>
+        )}
+      </Pad>
+    );
+
+  return (
+    <Box sx={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
+      {loading && <Center><CircularProgress size={24} /></Center>}
+      {!loading && loadError && (
+        <Box sx={{ px: 2, py: 1, bgcolor: "#fff4e5", color: "#8a6d3b", borderBottom: "1px solid #f0deb4" }}>
+          {loadError}
         </Box>
       )}
-
-      {!isOffice && !["text", "pdf"].includes(kind) && (
-        <Pad>
-          미지원 형식입니다. (권장: DOCX / MD / TXT / PDF)
-          <Box sx={{ mt: 1, fontSize: 12 }}>
-            선택된 파일: <b>{file.name}</b> ({file.mime || "unknown"})
-          </Box>
-          {file.path && (
-            <Box sx={{ mt: 1 }}>
-              <a href={toAbs(file.path)} target="_blank" rel="noreferrer">원본 열기</a>
-            </Box>
-          )}
-        </Pad>
-      )}
+      <Box sx={{ flex: 1, minHeight: 0 }}>
+        <TiptapEditor
+          initialContent={initialContent}
+          contentKey={file.id}
+          onContentChange={(html) => setInitialContent(html)}
+          readOnly={false}
+        />
+      </Box>
+      <Box sx={{ px: 2, py: 1, borderTop: "1px solid #e5e7eb", bgcolor: "#fafafa" }}>
+        <Typography variant="caption" color="text.secondary">
+          Heading 레벨, 목록, 표 삽입과 AI 다듬기가 지원됩니다. 변경 사항 저장 로직은 추후 연동이 필요합니다.
+        </Typography>
+      </Box>
     </Box>
   );
 }

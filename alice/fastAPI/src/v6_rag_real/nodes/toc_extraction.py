@@ -5,7 +5,10 @@
 
 import re
 import json
+<<<<<<< HEAD
 import unicodedata
+=======
+>>>>>>> dev
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from openai import OpenAI
@@ -25,7 +28,11 @@ def route_toc_extraction(state: BatchState) -> str:
 
     Returns:
         "extract_toc_from_template" - 양식 기반 추출
+<<<<<<< HEAD
         "extract_toc_from_announcement_and_attachments" - 공고 + 첨부서류 기반 추출
+=======
+        "extract_toc_from_announcement" - 공고 기반 추출
+>>>>>>> dev
     """
     templates = state.get('attachment_templates', [])
     proposal_template = _find_proposal_template(templates)
@@ -33,10 +40,16 @@ def route_toc_extraction(state: BatchState) -> str:
     if proposal_template:
         return "extract_toc_from_template"
     else:
+<<<<<<< HEAD
         return "extract_toc_from_announcement_and_attachments"
 
 
 # 라우팅할때 양식 찾기
+=======
+        return "extract_toc_from_announcement"
+
+
+>>>>>>> dev
 def _find_proposal_template(templates: List[Dict]) -> Optional[Dict]:
     """
     제안서 양식 찾기 (우선순위: 제안서 > 계획서 > 신청서)
@@ -50,6 +63,7 @@ def _find_proposal_template(templates: List[Dict]) -> Optional[Dict]:
     if not valid_templates:
         return None
 
+<<<<<<< HEAD
     # 우선순위/가중치 계산
     def template_priority(template: Dict) -> float:
         file_name = template.get('file_name', '')
@@ -82,6 +96,18 @@ def _find_proposal_template(templates: List[Dict]) -> Optional[Dict]:
             return template
 
     return best_template
+=======
+    # 우선순위에 따라 찾기
+    priority_keywords = ['제안서', '계획서', '신청서', '양식']
+
+    for keyword in priority_keywords:
+        for template in valid_templates:
+            if keyword in template['file_name']:
+                return template
+
+    # 우선순위 키워드가 없으면 첫 번째 양식 반환
+    return valid_templates[0]
+>>>>>>> dev
 
 
 def extract_toc_from_template(state: BatchState) -> BatchState:
@@ -244,6 +270,7 @@ def _parse_toc_table(table_data: List[List[str]]) -> List[Dict]:
     return sections
 
 
+<<<<<<< HEAD
 def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchState:
     """
     공고문 + 모든 첨부서류에서 목차 유추 (RAG + LLM) - LangGraph 노드
@@ -253,13 +280,26 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
     방법:
     1. 공고문에서 "제출서류" feature 찾기
     2. RAG로 모든 문서(공고+첨부)에서 관련 청크 검색
+=======
+def extract_toc_from_announcement(state: BatchState) -> BatchState:
+    """
+    공고문/첨부서류에서 목차 유추 (RAG + LLM) - LangGraph 노드
+
+    방법:
+    1. 공고문에서 "제출서류" feature 찾기
+    2. RAG로 첨부서류에서 관련 청크 검색
+>>>>>>> dev
     3. LLM으로 목차 구조 생성
 
     Returns:
         state: table_of_contents 업데이트된 BatchState
     """
     print(f"\n{'='*60}")
+<<<<<<< HEAD
     print(f"📑 공고문 + 첨부서류 기반 목차 유추")
+=======
+    print(f"📑 공고문/첨부서류 기반 목차 유추")
+>>>>>>> dev
     print(f"{'='*60}")
 
     all_features = state.get('extracted_features', [])
@@ -282,6 +322,7 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
         f.get('full_content', '') for f in submission_features
     ])
 
+<<<<<<< HEAD
     # 2️⃣ RAG로 모든 문서(공고+첨부) 검색
     try:
         query_embedding = model.encode(
@@ -309,10 +350,37 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
     except Exception as e:
         print(f"    ✗ RAG 검색 실패: {e}")
         all_chunks = []
+=======
+    # 2️⃣ RAG로 첨부서류 검색
+    try:
+        query_embedding = model.encode(
+            ["제출서류 작성항목 구성 목차 제안서 계획서"],
+            convert_to_numpy=True
+        )
+
+        results = collection.query(
+            query_embeddings=query_embedding.tolist(),
+            n_results=10,
+            where={'document_type': 'ATTACHMENT'}  # 첨부서류만 검색
+        )
+
+        attachment_chunks = []
+        if results['ids'][0]:
+            for i in range(len(results['ids'][0])):
+                attachment_chunks.append({
+                    'text': results['documents'][0][i],
+                    'file': results['metadatas'][0][i]['file_name'],
+                    'section': results['metadatas'][0][i]['section']
+                })
+    except Exception as e:
+        print(f"    ✗ RAG 검색 실패: {e}")
+        attachment_chunks = []
+>>>>>>> dev
 
     # 3️⃣ LLM으로 목차 생성
     print(f"    🤖 LLM으로 목차 구조 생성 중...")
 
+<<<<<<< HEAD
     # 문서 타입별로 정리
     document_context = '\n\n'.join([
         f"[{c['doc_type']} - {c['file']} - {c['section']}]\n{c['text']}"
@@ -332,12 +400,27 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
 ⚠️ 다음을 구분해야 합니다:
 - ❌ 제출 서류명 (예: "연구계획서", "신청서", "동의서") → 포함하지 마세요
 - ✅ 작성 항목/목차 (예: "사업 추진계획", "운영 전략", "예산 편성") → 이것만 포함하세요
+=======
+    attachment_context = '\n\n'.join([
+        f"[{c['file']} - {c['section']}]\n{c['text']}"
+        for c in attachment_chunks[:5]  # 상위 5개만
+    ])
+
+    system_prompt = """당신은 정부 R&D 공고 분석 전문가입니다.
+
+공고문과 첨부서류를 분석하여 **연구계획서/제안서 작성 시 필요한 목차(작성 항목)**를 추출하세요.
+
+⚠️ 중요: 다음을 구분해야 합니다:
+- ❌ 제출 서류명 (예: "연구계획서", "신청서", "동의서") → 포함하지 마세요
+- ✅ 작성 항목/목차 (예: "연구개발 과제의 개요", "연구목표 및 내용") → 이것만 포함하세요
+>>>>>>> dev
 
 다음 형식으로 JSON 반환:
 {
   "sections": [
     {
       "number": "1",
+<<<<<<< HEAD
       "title": "사업 추진 개요",
       "required": true,
       "description": "사업의 목적과 필요성"
@@ -347,12 +430,24 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
       "title": "운영 계획 및 전략",
       "required": true,
       "description": "구체적인 운영 방안과 추진 전략"
+=======
+      "title": "연구개발 과제의 개요",
+      "required": true,
+      "description": "과제의 필요성 및 목표"
+    },
+    {
+      "number": "2",
+      "title": "연구개발 목표 및 내용",
+      "required": true,
+      "description": "구체적인 연구 목표와 수행 내용"
+>>>>>>> dev
     }
   ]
 }
 
 주의사항:
 - 제출 서류의 "이름"이 아닌, 서류 "내부의 작성 항목"을 추출하세요
+<<<<<<< HEAD
 - 공고의 실제 내용(연구개발/창업지원/주관기관선정 등)을 반영한 목차를 생성하세요
 - 섹션 번호는 "1", "1.1", "가" 등 원문 형식 유지
 - required는 필수 작성 항목 여부"""
@@ -368,11 +463,18 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
 {announcement_text}
 
 ## 제출서류 요구사항
+=======
+- 섹션 번호는 "1", "1.1", "가" 등 원문 형식 유지
+- required는 필수 작성 항목 여부"""
+
+    user_prompt = f"""## 공고문 - 제출서류 요구사항
+>>>>>>> dev
 
 {submission_content[:2000]}
 
 ## 첨부서류 관련 내용 (양식/계획서의 작성 항목)
 
+<<<<<<< HEAD
 {document_context[:2000] if document_context else '(첨부서류 없음)'}
 
 ⚠️ 분석 지침:
@@ -391,6 +493,18 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
    - ✅ 올바른 목차: ["사업 추진계획", "운영 전략", "예산 편성"]
 
 위 내용을 분석하여 신청자가 작성해야 할 계획서의 목차를 JSON 형식으로 생성해주세요."""
+=======
+{attachment_context[:2000]}
+
+⚠️ 중요: "연구계획서", "신청서" 같은 서류명이 아닌,
+그 서류 안에 작성해야 할 **세부 항목(목차)**만 추출해주세요.
+
+예시:
+- ❌ 잘못된 목차: ["연구계획서", "신청서", "동의서"]
+- ✅ 올바른 목차: ["연구개발 과제의 개요", "연구목표 및 내용", "추진체계 및 일정"]
+
+위 내용을 분석하여 제안서 작성 목차를 JSON 형식으로 생성해주세요."""
+>>>>>>> dev
 
     try:
         response = client.chat.completions.create(
@@ -478,11 +592,16 @@ def _extract_toc_from_template_with_llm(state: BatchState, template: Dict) -> Ba
     documents = state.get('documents', [])
     template_doc = None
 
+<<<<<<< HEAD
     template_file_name = unicodedata.normalize('NFC', template['file_name'])
 
     for doc in documents:
         doc_file_name = unicodedata.normalize('NFC', doc.get('file_name', ''))
         if doc_file_name == template_file_name:
+=======
+    for doc in documents:
+        if doc['file_name'] == template['file_name']:
+>>>>>>> dev
             template_doc = doc
             break
 
