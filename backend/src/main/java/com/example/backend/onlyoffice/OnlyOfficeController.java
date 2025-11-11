@@ -32,18 +32,24 @@ public class OnlyOfficeController {
     @PostMapping("/config")
     public ResponseEntity<?> buildConfig(@RequestBody Map<String, Object> body) {
         String url = (String) body.get("url");     // 예: http://127.0.0.1:8081/uploads/userId/1/1/abc.docx
-        System.out.println("url: " + url);
-        
-        // mac용 onlyoffice dev 서버 테스트 시
-        // System.out.println("Original url: " + url);
+        // System.out.println("url: " + url);
 
-        // // Docker 컨테이너에서 실행 중인 OnlyOffice가 호스트 머신의 Spring Boot에 접근하려면
-        // // 127.0.0.1 또는 localhost를 host.docker.internal로 변경
-        // if (url != null) {
-        //     url = url.replace("127.0.0.1", "host.docker.internal")
-        //              .replace("localhost", "host.docker.internal");
-        //     System.out.println("Converted url for Docker: " + url);
-        // }
+        // mac용 onlyoffice dev 서버 테스트 시
+        System.out.println("Original url: " + url);
+
+        // ★ 잘못된 경로 수정: /uploads/1/... → /uploads/userId/1/...
+        if (url != null && url.contains("/uploads/") && !url.contains("/uploads/userId/")) {
+            url = url.replace("/uploads/", "/uploads/userId/");
+            System.out.println("Fixed path: " + url);
+        }
+
+        // Docker 컨테이너에서 실행 중인 OnlyOffice가 호스트 머신의 Spring Boot에 접근하려면
+        // 127.0.0.1 또는 localhost를 host.docker.internal로 변경
+        if (url != null) {
+            url = url.replace("127.0.0.1", "host.docker.internal")
+                     .replace("localhost", "host.docker.internal");
+            System.out.println("Converted url for Docker: " + url);
+        }
 
         String title = (String) body.getOrDefault("title", "document.docx");
         if (url == null || url.isBlank()) {

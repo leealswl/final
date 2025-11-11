@@ -1,17 +1,19 @@
 import React from "react";
 import { Box, Tooltip, IconButton, Typography } from "@mui/material";
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import InsightsOutlinedIcon from "@mui/icons-material/InsightsOutlined";   // 분석
 import EditNoteOutlinedIcon from "@mui/icons-material/EditNoteOutlined";   // 생성
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined"; // 검증
-import EditOutlinedIcon from "@mui/icons-material/EditOutlined"; 
-import { useLocation, useNavigate,useParams } from "react-router-dom";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
-const ITEMS = [
-    { key: "analyze", label: "분석",  Icon: InsightsOutlinedIcon },
-    { key: "create",  label: "생성",  Icon: EditNoteOutlinedIcon },
-    { key: "edit",    label: "편집",  Icon: EditOutlinedIcon },
-    { key: "verify",  label: "검증",  Icon: FactCheckOutlinedIcon },
-    ];
+const ITEMS = [             
+    { key: 'home', label: '홈', Icon: HomeOutlinedIcon },
+    { key: 'analyze', label: '분석', Icon: InsightsOutlinedIcon },
+    { key: 'create', label: '생성', Icon: EditNoteOutlinedIcon },
+    { key: 'edit', label: '편집', Icon: EditOutlinedIcon },
+    { key: 'verify', label: '검증', Icon: FactCheckOutlinedIcon },
+];
 
 export default function LeftNav({ width = 64 }) {
     const nav = useNavigate();
@@ -41,8 +43,8 @@ export default function LeftNav({ width = 64 }) {
             gap: 0.5,
         }}
         >
-        {ITEMS.map(({ key, label, path, Icon }) => {
-            const selected = pathname.startsWith(path);
+        {ITEMS.map(({ key, label, Icon }) => {
+            const selected = pathname.startsWith(`/works/${key}`);
             return (
             <Tooltip key={key} title={label} placement="right">
                 <Box

@@ -57,16 +57,17 @@ public class FastAPIService {
      * @param files 업로드된 파일 목록
      * @param folders 각 파일이 속한 폴더 ID 목록
      * @param userid 사용자 ID
+     * @param projectidx 프로젝트 ID
      * @return FastAPI 분석 결과 (status, message, data 등)
      * @throws IOException 파일 읽기 실패 시
      *
      * 동작 흐름:
-     * 1. MultipartBodyBuilder로 폼 데이터 구성 (files, folders, userid)
+     * 1. MultipartBodyBuilder로 폼 데이터 구성 (files, folders, userid, projectidx)
      * 2. FastAPI 서버로 POST 요청 전송
      * 3. FastAPI는 파일을 분석하고 결과를 반환
      */
     public Map<String, Object> sendFilesToFastAPI(
-        List<MultipartFile> files, List<Long> folders, String userid
+        List<MultipartFile> files, List<Long> folders, String userid, Long projectidx
     ) throws IOException {
         System.out.println("fastapi 작동 시작");
 
@@ -104,6 +105,9 @@ public class FastAPIService {
         // 데이터들 추가가 다 이루어짐.
         builder.part("userid", userid);
 
+        // ✅ 프로젝트 ID 추가 (FastAPI 필수 파라미터)
+        builder.part("projectidx", projectidx.toString());
+
         try {
             // FastAPI 서버로 POST 요청 전송
             Map<String, Object> result = webClient.post()
@@ -112,7 +116,7 @@ public class FastAPIService {
                 .body(BodyInserters.fromMultipartData(builder.build()))
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
-                .block(Duration.ofSeconds(60)); // 최대 60초 대기 (AI 분석 시간 고려)
+                .block(); // WebClient 생성 시 설정한 timeoutSeconds를 그대로 사용
 
             System.out.println("fastapi 작동 완료");
             return result;
