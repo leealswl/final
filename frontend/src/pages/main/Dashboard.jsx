@@ -17,7 +17,7 @@ function Dashboard() {
     const user = useAuthStore((state) => state.user);
 
     useEffect(() => {
-        const projects = async () => {
+        const getProjects = async () => {
             try {
                 const res = await api.get(`/api/project/list/${user.idx}`);
                 console.log(res.data);
@@ -27,7 +27,7 @@ function Dashboard() {
         };
 
         if (user?.idx) {
-            projects();
+            getProjects();
         }
     }, [user]);
 
