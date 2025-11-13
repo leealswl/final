@@ -7,6 +7,8 @@ import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined"; // �
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined"; 
 import { useLocation, useNavigate,useParams } from "react-router-dom";
 import LoginOutlinedIcon from "@mui/icons-material/LoginOutlined";
+import LogoutButton from "../../components/LogoutButton";
+import { useAuthStore } from "../../store/useAuthStore";
 
 const ITEMS = [
     { key: "analyze", label: "홈",  Icon: HomeOutlinedIcon },
@@ -16,9 +18,6 @@ const ITEMS = [
     { key: "verify",  label: "검증",  Icon: FactCheckOutlinedIcon },
     ];
 
-const login = [
-    {key: "login", Icon: LoginOutlinedIcon}
-]
 
 export default function LeftNav({ width = 64 }) {
     const nav = useNavigate();
@@ -48,9 +47,17 @@ export default function LeftNav({ width = 64 }) {
             gap: 0.5,
         }}
         >
-        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5 }}>
-            {ITEMS.map(({ key, label, path, Icon }) => {
-                const selected = pathname.startsWith(path);
+            {/* 상단 메뉴 */}
+        <Box
+            sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 0.5,
+            }}
+            >
+            {ITEMS.map(({ key, label, Icon }) => {
+                const selected = isSelected(key);
                 return (
                 <Tooltip key={key} title={label} placement="right">
                     <Box
@@ -86,26 +93,9 @@ export default function LeftNav({ width = 64 }) {
             })}
         </Box>
             <Box sx={{mt: "auto"}}>
-            {login.map(({ key, Icon }) => {
-                return (
-                <Tooltip key={key} placement="right">
-                    <Box
-                        sx={{
-                        width: "100%",
-                        display: "grid",
-                        placeItems: "center",
-                        py: 1,
-                        cursor: "pointer",
-                        bgcolor:"rgba(99,102,241,0.08)",
-                        "&:hover": { bgcolor: "rgba(0,0,0,0.04)" },
-                        transition: "background-color .15s",
-                    }}>
-                        <IconButton size="small" color={"primary"}>
-                        <Icon />
-                        </IconButton>
-                    </Box>
+                <Tooltip title="로그아웃" placement="right">
+                    <LogoutButton />
                 </Tooltip>
-                )})}
             </Box >
         </Box>
     );

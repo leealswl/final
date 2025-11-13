@@ -6,12 +6,13 @@ import Layout from './pages/works/Layout';
 import AnalyzeView from './pages/works/views/AnalyzeView';
 import AnalyzeDashboard from './pages/works/views/AnalyzeDashboard';
 import CreateView from './pages/works/views/CreateView';
-// 2025-11-09 suyeon: 제안서 초안 생성 페이지 추가
 import GenerateView from './pages/works/views/GenerateView';
 import EditView from './pages/works/views/EditView';
 import VerifyView from './pages/works/views/VerifyView';
 import { useEffect } from 'react';
 import { useFileStore } from './store/useFileStore';
+import { Dashboard } from '@mui/icons-material';
+
 
 
 
@@ -29,7 +30,8 @@ function App() {
       <Routes>
         <Route path="/" element={<Homepage />} />
         <Route path="/login" element={<Login />} />
-
+        
+        <Route path="/Dashboard" element={<Dashboard />} />
         <Route path="/works" element={<Layout />}>
           <Route path="analyze" element={<AnalyzeView />} />
           {/* 2025-11-09 수연 추가: 분석 대시보드 라우트 */}
