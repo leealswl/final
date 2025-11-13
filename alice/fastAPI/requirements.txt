@@ -1,25 +1,26 @@
 # FastAPI v6 통합 요구사항
 
 # FastAPI 코어
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
-python-multipart==0.0.6
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
 
 # AI/ML 라이브러리
-sentence-transformers==2.3.1
-langchain==0.1.4
-langgraph==0.0.20
-chromadb==0.4.22
+sentence-transformers==5.1.2
+langchain==0.3.13
+langgraph==0.2.60
+langgraph-checkpoint==2.0.9
+chromadb==1.3.3
 
 # PDF 처리
 pdfplumber==0.10.3
 
 # 데이터 처리
-pandas==2.2.0
-numpy==1.26.3
+pandas==2.2.3
+numpy==1.26.4
 
 # 환경 설정
-python-dotenv==1.0.0
+python-dotenv==1.0.1
 
 # Oracle DB 연동은 Backend에서 처리
 # FastAPI는 HTTP API를 통해 Backend와 통신
