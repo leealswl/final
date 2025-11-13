@@ -5,7 +5,7 @@ import Section from '../img/Section.png';
 
 const Banner01 = () => {
     const home = () => {
-        window.location.href = '/home';
+        window.location.href = '/main';
     };
     return (
         <Grid mx={30} mt={4}>
