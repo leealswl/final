@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react';
 
 export function NewDocumentCard() {
     const works = () => {
-        window.location.href = 'works';
+        window.location.href = 'works/analyze';
     };
     return (
         <Box
