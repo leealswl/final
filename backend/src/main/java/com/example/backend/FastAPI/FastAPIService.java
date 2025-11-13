@@ -38,14 +38,15 @@ public class FastAPIService {
     public FastAPIService(
         @Value("${fastapi.base-url:http://localhost:8001}") String baseUrl,
         @Value("${fastapi.path:/analyze}") String analyzePath,
-        @Value("${fastapi.timeout-seconds:60}") long timeoutSeconds
+        @Value("${fastapi.timeout-seconds:300}") long timeoutSeconds
     ) {
         this.analyzePath = analyzePath;
         // WebClient 설정: 타임아웃, 메모리 버퍼 크기 등
+        System.out.println("timeoutSeconds: " + timeoutSeconds);
         this.webClient = WebClient.builder()
             .baseUrl(baseUrl)
             .clientConnector(new ReactorClientHttpConnector(
-                HttpClient.create().responseTimeout(Duration.ofSeconds(timeoutSeconds))
+                HttpClient.create().responseTimeout(Duration.ofSeconds(600))
             ))
             .codecs(c -> c.defaultCodecs().maxInMemorySize(50 * 1024 * 1024)) // 50MB 버퍼
             .build();

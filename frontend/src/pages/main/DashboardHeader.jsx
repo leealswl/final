@@ -18,7 +18,7 @@ export function DashboardHeader() {
     const makeProject = async () => {
         try {
             const res = await api.post(`/api/project/insert`, { userIdx: user.idx });
-            console.log(res.data);
+            console.log('res.data: ', res.data);
             setProject(res.data);
             navigate('/works/analyze');
         } catch (err) {
