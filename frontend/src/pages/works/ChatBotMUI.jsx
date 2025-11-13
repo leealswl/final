@@ -1,31 +1,62 @@
-// 파일명: ChatBotMUI.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Paper, Stack, Typography, TextField, Button } from '@mui/material';
+import axios from 'axios';
 
 const ChatBotMUI = () => {
-    const [messages, setMessages] = useState([{ sender: 'bot', text: '안녕하세요! 무엇을 도와드릴까요?' }]);
+    const [messages, setMessages] = useState([
+        { sender: 'bot', text: '안녕하세요! 무엇을 도와드릴까요?' }
+    ]);
     const [inputValue, setInputValue] = useState('');
+    const [isLoading, setIsLoading] = useState(false); // 🔹 로딩 상태
     const scrollRef = useRef(null);
 
-    const handleSend = () => {
+    const handleSend = async () => {
         if (!inputValue.trim()) return;
+        const userText = inputValue;
 
-        // 사용자 메시지 추가
-        setMessages((prev) => [...prev, { sender: 'user', text: inputValue }]);
+        setMessages((prev) => [...prev, { sender: 'user', text: userText }]);
         setInputValue('');
+        setIsLoading(true); // 🔹 로딩 시작
 
-        // 예시: 봇 응답
-        setTimeout(() => {
-            setMessages((prev) => [...prev, { sender: 'bot', text: `봇: "${inputValue}"에 대한 답변입니다.` }]);
-        }, 500);
+        try {
+            // 🔹 FastAPI 호출
+            const response = await axios.post('http://127.0.0.1:8001/chat', {
+                userMessage: userText
+            });
+
+            const aiText = response.data.aiResponse;
+
+            // 🔹 AI 메시지 추가 + 로딩 종료
+            setMessages((prev) => [...prev, { sender: 'bot', text: aiText }]);
+        } catch (err) {
+            console.error('백엔드 호출 실패:', err);
+            setMessages((prev) => [
+                ...prev,
+                { sender: 'bot', text: '⚠️ 서버 오류가 발생했습니다.' }
+            ]);
+        } finally {
+            setIsLoading(false); // 🔹 로딩 종료
+        }
     };
 
-    // 스크롤 항상 아래로
+    // ✅ 스크롤 항상 아래로
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [messages]);
+    }, [messages, isLoading]);
+
+    // 🔹 로딩 애니메이션 점 찍기
+    const LoadingDots = () => {
+        const [dots, setDots] = useState('');
+        useEffect(() => {
+            const interval = setInterval(() => {
+                setDots((prev) => (prev.length < 3 ? prev + '.' : ''));
+            }, 500);
+            return () => clearInterval(interval);
+        }, []);
+        return <Typography variant="body2">{`생각중이에요!${dots}`}</Typography>;
+    };
 
     return (
         <Paper
@@ -39,15 +70,7 @@ const ChatBotMUI = () => {
                 boxSizing: 'border-box',
             }}
         >
-            {/* 메시지 영역 */}
-            <Box
-                ref={scrollRef}
-                sx={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    mb: 2,
-                }}
-            >
+            <Box ref={scrollRef} sx={{ flex: 1, overflowY: 'auto', mb: 2 }}>
                 <Stack spacing={1}>
                     {messages.map((msg, index) => (
                         <Box
@@ -65,10 +88,25 @@ const ChatBotMUI = () => {
                             <Typography variant="body2">{msg.text}</Typography>
                         </Box>
                     ))}
+                    {/* 🔹 AI 답변 로딩 중일 때 표시 */}
+                    {isLoading && (
+                        <Box
+                            sx={{
+                                alignSelf: 'flex-start',
+                                bgcolor: 'grey.300',
+                                color: 'black',
+                                p: 1.5,
+                                borderRadius: 2,
+                                maxWidth: '80%',
+                                wordBreak: 'break-word',
+                            }}
+                        >
+                            <LoadingDots />
+                        </Box>
+                    )}
                 </Stack>
             </Box>
 
-            {/* 입력 영역 */}
             <Stack direction="row" spacing={1}>
                 <TextField
                     variant="outlined"
@@ -81,7 +119,7 @@ const ChatBotMUI = () => {
                     }}
                     fullWidth
                 />
-                <Button variant="contained" onClick={handleSend}>
+                <Button variant="contained" onClick={handleSend} disabled={isLoading}>
                     전송
                 </Button>
             </Stack>
