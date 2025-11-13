@@ -1,15 +1,16 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import api from '../utils/api';
 import { useAuthStore } from '../store/useAuthStore';
+// import { useQueryClient } from '@tanstack/react-query';
 
 export default function useSignIn(opts = {}) {
-    const qc = useQueryClient();
+    // const qc = useQueryClient();
     const setUser = useAuthStore((s) => s.setUser);
 
     return useMutation({
         mutationKey: ['user', 'login'],
         mutationFn: async ({ userId, userPw }) => {
-            const res = await api.post('/api/user/login', { userId, userPw });
+            const res = await api.post('/api/user/login', { userId, userPw }, { withCredentials: true });
             return res.data; // { userId, username }
         },
         onSuccess: async (data) => {

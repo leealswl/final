@@ -4,8 +4,8 @@ import banner01 from '../img/banner01.png';
 import Section from '../img/Section.png';
 
 const Banner01 = () => {
-    const works = () => {
-        window.location.href = '/works';
+    const home = () => {
+        window.location.href = '/home';
     };
     return (
         <Grid mx={30} mt={4}>
@@ -40,7 +40,7 @@ const Banner01 = () => {
                             Full framework support (React, Vue Angular, Svelte)
                         </Typography>
                         <Button
-                            onClick={works}
+                            onClick={home}
                             variant="contained"
                             size="large"
                             sx={{
