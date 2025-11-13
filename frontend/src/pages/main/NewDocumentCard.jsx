@@ -1,14 +1,30 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { Plus } from 'lucide-react';
+import api from '../../utils/api';
+import { useAuthStore } from '../../store/useAuthStore';
+import { useNavigate } from 'react-router';
+import { useProjectStore } from '../../store/useProjectStore';
 
 export function NewDocumentCard() {
-    const works = () => {
-        window.location.href = 'works/analyze';
+    const user = useAuthStore((state) => state.user);
+    const setProject = useProjectStore((state) => state.setProject);
+    const navigate = useNavigate();
+
+    const makeProject = async () => {
+        try {
+            const res = await api.post(`/api/project/insert`, { userIdx: user.idx });
+            console.log('res.data: ', res.data);
+            setProject(res.data);
+            navigate('/works/analyze');
+        } catch (err) {
+            console.error(err);
+        }
     };
+
     return (
         <Box
-            onClick={works}
+            onClick={makeProject}
             sx={{
                 p: 3,
                 border: 1,
