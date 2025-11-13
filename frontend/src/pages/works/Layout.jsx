@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+// import React, { useState } from 'react';
 import { Box, Paper, IconButton } from '@mui/material';
 
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -18,12 +18,12 @@ export default function Layout() {
     const ASSIST_W = 360; // 우측 어시스턴트 (열렸을 때)
 
     // 데스크톱 우측 패널 열림 상태
-    const [assistOpen, setAssistOpen] = useState(true);
+    // const [assistOpen, setAssistOpen] = useState(true);
     const location = useLocation();
     const isCreateMode = location.pathname.startsWith('/works/create');
 
     // 패널 열고닫을 때 에디터가 즉시 리사이즈되도록 resize 이벤트 발행
-    const fireResize = () => window.dispatchEvent(new Event('resize'));
+    // const fireResize = () => window.dispatchEvent(new Event('resize'));
 
     return (
         <Box sx={{ height: '100vh', bgcolor: '#ffffff' }}>
@@ -104,7 +104,7 @@ export default function Layout() {
                 </Box>
 
                 {/* 오른쪽 어시스턴트 — 열고/닫기 토글만 지원 */}
-                <Box
+                {/* <Box
                     component="aside"
                     sx={{
                         width: assistOpen ? ASSIST_W : 0,
@@ -117,10 +117,10 @@ export default function Layout() {
                     }}
                     onTransitionEnd={fireResize}
                 >
-                    {isCreateMode ? <CreateAssistant /> : <Assistant />}
+                    {isCreateMode ? <CreateAssistant /> : <Assistant />} */}
 
-                    {/* 패널 안쪽 왼쪽 가장자리: "접기" 핸들(›) */}
-                    <IconButton
+                {/* 패널 안쪽 왼쪽 가장자리: "접기" 핸들(›) */}
+                {/* <IconButton
                         size="small"
                         onClick={() => {
                             setAssistOpen((prev) => {
@@ -148,7 +148,7 @@ export default function Layout() {
                     >
                         {assistOpen ? <ChevronRightIcon /> : <ChevronLeftIcon />}
                     </IconButton>
-                </Box>
+                </Box> */}
             </Box>
         </Box>
     );

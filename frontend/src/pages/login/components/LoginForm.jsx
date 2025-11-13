@@ -20,7 +20,19 @@ const LoginForm = () => {
             alert('로그인 성공!');
             navigate(redirectTo, { replace: true });
         },
-        onError: (msg) => alert('로그인 실패: ' + msg),
+        onError: (error) => {
+            // console.log('전체 error 객체:', error);
+            // console.log('error.response:', error.response);
+            // console.log('error.response.status:', error.response?.status);
+            // console.log('error.response.data:', error.response?.data);
+            // if (error.response?.status === 401) {
+            //     alert('아이디 또는 비밀번호가 올바르지 않습니다.');
+            // } else {
+            //     alert('아이디 또는 비밀번호가 올바르지 않습니다.');
+            //     // alert('서버 오류: ' + error.message);
+            // }
+            alert(error);
+        },
     });
 
     const [values, setValues] = useState({ email: '', password: '', showPw: false });

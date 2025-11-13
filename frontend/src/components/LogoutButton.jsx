@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import useSignOut from '../hooks/userSignOut';
+import useSignOut from '../hooks/useSignOut';
 import LoginOutlinedIcon from '@mui/icons-material/LoginOutlined';
 
 export default function LogoutButton({ after = '/' }) {
