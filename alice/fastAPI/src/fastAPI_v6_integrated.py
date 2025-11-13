@@ -16,8 +16,17 @@ import os
 # v6_rag_real 모듈 import (프로덕션 전용)
 from v6_rag_real import create_batch_graph
 
+from pydantic import BaseModel
+import openai
+import json
+
 # 설정 로드
 settings = get_settings()
+
+class ChatRequest(BaseModel):
+    userMessage: str
+    userIDx: int | None = None
+    projectIDx: int | None = None
 
 # FastAPI 앱 초기화
 app = FastAPI(
@@ -145,7 +154,38 @@ async def analyze_documents(
         print(f"✅ LangGraph 분석 완료")
 
         # ========================================
-        # 5단계: 분석 결과 반환
+        # 5단계 LLM 호출 → JSON Plan 생성
+        # ========================================
+        try:
+            llm_prompt = f"""
+            다음 분석 결과를 참고하여, 사용자가 바로 편집 가능한 기획서 JSON Plan을 생성하세요.
+            분석 결과: {json.dumps(result['response_data'], ensure_ascii=False)}
+            JSON Plan 예시:
+            {{
+            "title": "문서 제목",
+            "sections": [
+                {{"title": "1. 서론", "content": ""}},
+                {{"title": "2. 본론", "content": ""}}
+            ]
+            }}
+            """
+
+            completion = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": llm_prompt}],
+                response_format={"type": "json_object"}
+            )
+
+            plan_json = json.loads(completion.choices[0].message["content"])
+            result['response_data']['plan'] = plan_json
+
+        except Exception as e:
+            print(f"⚠️ LLM Plan 생성 실패: {str(e)}")
+            result['response_data']['plan'] = None
+
+
+        # ========================================
+        # 6단계: 분석 결과 반환
         # ========================================
         return JSONResponse(
             status_code=200,
@@ -183,6 +223,28 @@ async def root():
         }
     }
 
+
+@app.post("/chat")
+async def chat(request: ChatRequest):
+    try:
+        completion = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "당신은 친절한 AI 어시스턴트입니다."},
+                {"role": "user", "content": request.userMessage}
+            ]
+        )
+
+        ai_response = completion.choices[0].message["content"]
+
+        # ✅ 유저 메시지도 함께 반환
+        return {
+            "userMessage": request.userMessage,
+            "aiResponse": ai_response
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
 
 # ========================================
 # 실행 (개발용)
