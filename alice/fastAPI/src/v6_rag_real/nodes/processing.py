@@ -3,7 +3,10 @@
 노트북에서 추출한 전체 구현
 """
 
+<<<<<<< HEAD
 import re
+=======
+>>>>>>> dev
 import json
 import pandas as pd
 from datetime import datetime
@@ -16,6 +19,7 @@ import os
 from dotenv import load_dotenv
 
 # 임베딩 & VectorDB
+<<<<<<< HEAD
 from sentence_transformers import SentenceTransformer
 import chromadb
 from chromadb.config import Settings
@@ -25,6 +29,14 @@ import numpy as np
 from ..state_types import BatchState
 from ..config import FEATURES, RAG_SETTINGS, VECTOR_DB_DIR, CSV_OUTPUT_DIR
 from ..utils import detect_section_headers, chunk_by_sections
+=======
+import chromadb
+import numpy as np
+
+from ..state_types import BatchState
+from ..config import FEATURES, CSV_OUTPUT_DIR
+from ..utils import chunk_by_sections
+>>>>>>> dev
 
 # OpenAI 클라이언트 초기화
 load_dotenv()
@@ -38,6 +50,7 @@ def chunk_all_documents(state: BatchState) -> BatchState:
     documents = state['documents']
     all_chunks = []
     chunk_global_id = 0
+<<<<<<< HEAD
     
     print(f"\n{'='*60}")
     print(f"📦 섹션 기반 청킹 시작")
@@ -52,50 +65,131 @@ def chunk_all_documents(state: BatchState) -> BatchState:
         for page_num, page_text in doc['page_texts'].items():
             page_chunks = chunk_by_sections(page_text, page_num)
             
+=======
+
+    print(f"\n{'='*60}")
+    print(f"📦 섹션 기반 청킹 시작")
+    print(f"{'='*60}")
+
+    for doc in documents:
+        print(f"\n  📄 {doc['file_name']} 청킹 중...")
+
+        doc_chunk_start = chunk_global_id
+
+        # [2025-01-10 suyeon] page_texts 타입 체크 추가
+        # 변경 이유:
+        # 1. 타입 안정성: dict/list 모두 처리하여 AttributeError 방지
+        # 2. 유연성: 문서 파싱 로직 변경 시에도 호환
+        # 근거: page_texts가 dict 또는 list로 들어올 수 있음
+
+        page_texts = doc.get('page_texts')
+        if not page_texts:
+            print(f"    ⚠️  page_texts가 없음 - 건너뜀")
+            continue
+
+        # 타입에 따라 순회 방식 분기
+        if isinstance(page_texts, dict):
+            page_items = page_texts.items()
+        elif isinstance(page_texts, list):
+            page_items = enumerate(page_texts, start=1)
+        else:
+            print(f"    ⚠️  잘못된 page_texts 타입: {type(page_texts)} - 건너뜀")
+            continue
+
+        # 페이지별로 청킹
+        empty_page_count = 0
+        for page_num, page_text in page_items:
+            page_chunks = chunk_by_sections(page_text, page_num)
+
+            # [2025-01-10 suyeon] 빈 페이지 처리 개선
+            # 변경 이유:
+            # 1. 가시성: 청크 생성 안된 페이지 명시적 로깅
+            # 2. 디버깅: 왜 청크 수가 적은지 사용자가 파악 가능
+            # 근거: 빈 페이지/짧은 페이지는 MIN_CHUNK_LENGTH(50)로 필터링됨
+            if not page_chunks:
+                empty_page_count += 1
+                continue
+
+>>>>>>> dev
             for chunk_data in page_chunks:
                 all_chunks.append({
                     'chunk_id': f"{doc['document_id']}_chunk_{chunk_global_id}",
                     'text': chunk_data['text'],
+<<<<<<< HEAD
                     
+=======
+>>>>>>> dev
                     # 문서 메타데이터
                     'project_idx': state['project_idx'],
                     'document_id': doc['document_id'],
                     'document_type': doc['document_type'],
                     'file_name': doc['file_name'],
+<<<<<<< HEAD
                     
+=======
+>>>>>>> dev
                     # 섹션 정보
                     'section': chunk_data['section'],
                     'page': chunk_data['page'],
                     'is_sectioned': chunk_data['is_sectioned'],
+<<<<<<< HEAD
                     
+=======
+>>>>>>> dev
                     # 첨부서류 번호
                     'attachment_number': doc.get('attachment_number'),
                 })
                 chunk_global_id += 1
+<<<<<<< HEAD
         
         doc_chunk_count = chunk_global_id - doc_chunk_start
         print(f"    ✓ {doc_chunk_count}개 청크 생성")
         
+=======
+
+        doc_chunk_count = chunk_global_id - doc_chunk_start
+        print(f"    ✓ {doc_chunk_count}개 청크 생성", end="")
+
+        # 빈 페이지 경고 출력
+        if empty_page_count > 0:
+            print(f" (⚠️  {empty_page_count}개 페이지 건너뜀: 빈 페이지 또는 너무 짧음)")
+        else:
+            print()
+
+>>>>>>> dev
         # 문서에 청크 범위 저장
         doc['chunk_start_id'] = doc_chunk_start
         doc['chunk_end_id'] = chunk_global_id - 1
         doc['chunk_count'] = doc_chunk_count
+<<<<<<< HEAD
     
     state['all_chunks'] = all_chunks
     state['status'] = 'all_chunked'
     
     print(f"\n  ✅ 총 {len(all_chunks)}개 청크 생성 ({len(documents)}개 문서)")
     
+=======
+
+    state['all_chunks'] = all_chunks
+    state['status'] = 'all_chunked'
+
+    print(f"\n  ✅ 총 {len(all_chunks)}개 청크 생성 ({len(documents)}개 문서)")
+
+>>>>>>> dev
     # 통계 출력
     sectioned_count = sum(1 for c in all_chunks if c['is_sectioned'])
     print(f"    - 섹션 기반 청크: {sectioned_count}개")
     print(f"    - 고정 길이 청크: {len(all_chunks) - sectioned_count}개")
+<<<<<<< HEAD
     
+=======
+>>>>>>> dev
     return state
 
 
 def embed_all_chunks(state: BatchState) -> BatchState:
     """
+<<<<<<< HEAD
     모든 청크를 임베딩 벡터로 변환
     """
     all_chunks = state['all_chunks']
@@ -114,12 +208,32 @@ def embed_all_chunks(state: BatchState) -> BatchState:
 
     # 배치 임베딩 (배치별 진행 상황 표시)
     batch_size = 32  # 64 → 32로 줄여서 더 자주 진행 상황 표시
+=======
+    OpenAI Embedding API로 모든 청크를 임베딩 벡터로 변환
+    """
+    all_chunks = state['all_chunks']
+
+    print(f"\n{'='*60}")
+    print(f"🧠 OpenAI 임베딩 생성 시작")
+    print(f"{'='*60}")
+
+    # 청크 텍스트 추출
+    chunk_texts = [chunk['text'] for chunk in all_chunks]
+
+    # OpenAI API 배치 임베딩 (최대 2048개/요청)
+    batch_size = 2048
+>>>>>>> dev
     total_chunks = len(chunk_texts)
     total_batches = (total_chunks + batch_size - 1) // batch_size
 
     print(f"\n  🔢 {total_chunks}개 청크 임베딩 중... (배치 크기: {batch_size}, 총 {total_batches}개 배치)")
+<<<<<<< HEAD
 
     import numpy as np
+=======
+    print(f"  📡 모델: text-embedding-3-small (1536 차원)")
+
+>>>>>>> dev
     all_embeddings = []
 
     for i in range(0, total_chunks, batch_size):
@@ -128,6 +242,7 @@ def embed_all_chunks(state: BatchState) -> BatchState:
 
         print(f"    ⏳ 배치 {batch_num}/{total_batches} 처리 중... ({i+1}-{min(i+len(batch), total_chunks)}/{total_chunks} 청크)")
 
+<<<<<<< HEAD
         batch_embeddings = model.encode(
             batch,
             show_progress_bar=False,  # 배치별로 진행바 끄기
@@ -139,6 +254,28 @@ def embed_all_chunks(state: BatchState) -> BatchState:
 
     state['all_embeddings'] = embeddings
     state['embedding_model'] = model
+=======
+        try:
+            response = client.embeddings.create(
+                model="text-embedding-3-small",  # 1536 차원, $0.02/1M tokens
+                input=batch
+            )
+
+            # 임베딩 추출
+            batch_embeddings = [item.embedding for item in response.data]
+            all_embeddings.extend(batch_embeddings)
+
+        except Exception as e:
+            print(f"    ❌ 배치 {batch_num} 임베딩 실패: {str(e)}")
+            state['errors'].append(f"임베딩 배치 {batch_num} 실패: {str(e)}")
+            # 실패한 배치는 0 벡터로 채움
+            all_embeddings.extend([[0.0] * 1536 for _ in batch])
+
+    embeddings = np.array(all_embeddings)
+
+    state['all_embeddings'] = embeddings
+    state['embedding_model'] = 'text-embedding-3-small'  # API 모델명 저장
+>>>>>>> dev
     state['status'] = 'all_embedded'
 
     print(f"\n  ✅ 임베딩 완료: {embeddings.shape}")
@@ -147,7 +284,10 @@ def embed_all_chunks(state: BatchState) -> BatchState:
         print(f"    - 차원: {embeddings.shape[1]}")
     else:
         print(f"    - 청크 수: {embeddings.shape[0] if embeddings.shape else 0}")
+<<<<<<< HEAD
     
+=======
+>>>>>>> dev
     return state
 
 
@@ -271,11 +411,25 @@ def extract_features_rag(state: BatchState) -> BatchState:
                 keywords_str = " ".join(keywords[:5])
 
             query_text = f"{feature_def['feature_type']} {keywords_str}"
+<<<<<<< HEAD
             query_embedding = model.encode([query_text], convert_to_numpy=True)
 
             # 2️⃣ VectorDB 유사도 검색
             results = collection.query(
                 query_embeddings=query_embedding.tolist(),
+=======
+
+            # OpenAI API로 쿼리 임베딩
+            query_response = client.embeddings.create(
+                model="text-embedding-3-small",
+                input=[query_text]
+            )
+            query_embedding = [query_response.data[0].embedding]
+
+            # 2️⃣ VectorDB 유사도 검색
+            results = collection.query(
+                query_embeddings=query_embedding,
+>>>>>>> dev
                 n_results=7,  # 상위 7개 (공고 + 첨부 포함)
                 # where 조건 없음 → 모든 문서 검색 (공고 + 첨부)
             )
@@ -412,6 +566,7 @@ def extract_features_rag(state: BatchState) -> BatchState:
 
 
 # ========================================
+<<<<<<< HEAD
 # 🔖 MVP2: 분석 대시보드 (근거 추적)
 # ========================================
 # 목적: 공고문에서 "붙임 1 참조", "별첨 2 참조" 등의 언급을 감지하여
@@ -521,6 +676,14 @@ def match_cross_references(state: BatchState) -> BatchState:
     print(f"\n  ✅ 총 {len(cross_references)}개 참조 매칭 완료")
     
     return state
+=======
+# [2025-01-10 suyeon] match_cross_references 함수 삭제
+# 삭제 이유:
+# 1. 현재 미사용: graph.py에서 노드로 등록되지 않음 (주석 처리됨)
+# 2. MVP2 재구현 예정: 현재 코드는 참고용이었으나 Git 히스토리에 보존
+# 3. 코드베이스 간소화: 115줄 삭제로 유지보수성 향상
+# 근거: MVP2에서 분석 대시보드 구현 시 새로운 구조로 재작성 예정
+>>>>>>> dev
 
 
 def save_to_csv(state: BatchState) -> BatchState:
@@ -529,7 +692,12 @@ def save_to_csv(state: BatchState) -> BatchState:
 
     저장 파일:
     1. ANALYSIS_RESULT_{timestamp}.csv - Feature 추출 결과 (RAG + LLM 분석)
+<<<<<<< HEAD
     2. table_of_contents_{timestamp}.json - 목차 정보 (JSON)
+=======
+    2. ANALYSIS_RESULT_{timestamp}.json - Feature 추출 결과 (JSON)
+    3. table_of_contents_{timestamp}.json - 목차 정보 (JSON)
+>>>>>>> dev
     """
     
     print(f"\n{'='*60}")
@@ -550,8 +718,32 @@ def save_to_csv(state: BatchState) -> BatchState:
         # 1. ANALYSIS_RESULT.csv (Feature 추출 결과만)
         # ========================================
         analysis_data = []
+<<<<<<< HEAD
         for feature in state['extracted_features']:
             analysis_data.append({
+=======
+        analysis_json = []
+        for idx, feature in enumerate(state['extracted_features'], start=1):
+            result_id = idx
+            analysis_json.append({
+                'result_id': result_id,
+                'project_idx': project_idx,
+                'feature_code': feature['feature_code'],
+                'feature_name': feature['feature_name'],
+                'title': feature.get('title', ''),
+                'summary': feature.get('summary', ''),
+                'full_content': feature.get('full_content', ''),
+                'key_points': feature.get('key_points', []),
+                'vector_similarity': float(feature.get('vector_similarity', 0.0)),
+                'chunks_from_announcement': int(feature.get('chunks_from_announcement', 0)),
+                'chunks_from_attachments': int(feature.get('chunks_from_attachments', 0)),
+                'referenced_attachments': feature.get('referenced_attachments', []),
+                'extracted_at': feature.get('extracted_at', datetime.now().isoformat())
+            })
+
+            analysis_data.append({
+                'result_id': result_id,
+>>>>>>> dev
                 'project_idx': project_idx,
                 'feature_code': feature['feature_code'],
                 'feature_name': feature['feature_name'],
@@ -572,9 +764,25 @@ def save_to_csv(state: BatchState) -> BatchState:
         output_paths['csv'] = str(csv_path)
         print(f"\n  ✅ ANALYSIS_RESULT.csv: {len(analysis_data)}행")
         print(f"     → {csv_path.name}")
+<<<<<<< HEAD
         
         # ========================================
         # 2. table_of_contents.json (목차 정보)
+=======
+
+        # ========================================
+        # 2. ANALYSIS_RESULT.json (Feature 추출 결과)
+        # ========================================
+        json_result_path = output_folder / f"ANALYSIS_RESULT_{project_idx}_{timestamp}.json"
+        with open(json_result_path, 'w', encoding='utf-8') as f:
+            json.dump(analysis_json, f, ensure_ascii=False, indent=2)
+        output_paths['analysis_json'] = str(json_result_path)
+        print(f"\n  ✅ ANALYSIS_RESULT.json: {len(analysis_json)}개 항목")
+        print(f"     → {json_result_path.name}")
+        
+        # ========================================
+        # 3. table_of_contents.json (목차 정보)
+>>>>>>> dev
         # ========================================
         toc = state.get('table_of_contents')
         if toc:

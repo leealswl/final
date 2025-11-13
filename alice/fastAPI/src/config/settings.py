@@ -5,12 +5,26 @@ Application settings configuration
 
 from pathlib import Path
 from typing import Optional
+<<<<<<< HEAD
 from pydantic_settings import BaseSettings
+=======
+from pydantic_settings import BaseSettings, SettingsConfigDict
+>>>>>>> dev
 
 
 class Settings(BaseSettings):
     """애플리케이션 설정"""
 
+<<<<<<< HEAD
+=======
+    # 2025-11-09 suyeon: 외부 .env에 정의된 추가 키 허용 및 .env 로딩 설정 통합
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore",
+    )
+>>>>>>> dev
     # API 메타데이터
     API_TITLE: str = "Alice Consultant API"
     API_VERSION: str = "1.0.0"
@@ -38,12 +52,15 @@ class Settings(BaseSettings):
     CHUNK_SIZE: int = 500
     CHUNK_OVERLAP: int = 50
 
+<<<<<<< HEAD
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = True
 
 
+=======
+>>>>>>> dev
 # 싱글톤 인스턴스
 _settings: Optional[Settings] = None
 

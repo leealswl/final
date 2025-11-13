@@ -8,6 +8,7 @@ from pathlib import Path
 # 경로 설정
 # ========================================
 BASE_DIR = Path(__file__).parent.parent
+<<<<<<< HEAD
 VECTOR_DB_DIR = BASE_DIR / "vector_db"
 CSV_OUTPUT_DIR = BASE_DIR / "parsed_results" / "v6_rag"
 
@@ -22,6 +23,14 @@ EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 OPENAI_MODEL = "gpt-4o-mini"
 
 # ========================================
+=======
+CSV_OUTPUT_DIR = BASE_DIR / "parsed_results" / "v6_rag"
+
+# 디렉토리 생성
+CSV_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+# ========================================
+>>>>>>> dev
 # Feature 정의 (정부 R&D 공고문 기준)
 # ========================================
 FEATURES = [
@@ -467,6 +476,7 @@ FEATURES = [
         "parent": None
     },
 ]
+<<<<<<< HEAD
 
 # ========================================
 # 청킹 설정
@@ -484,3 +494,5 @@ RAG_SETTINGS = {
     "top_k": 5,             # 검색할 최대 청크 수
     "score_threshold": 0.3, # 유사도 임계값
 }
+=======
+>>>>>>> dev

@@ -6,16 +6,23 @@ FastAPI with v6_rag integration
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.concurrency import run_in_threadpool
+<<<<<<< HEAD
 from typing import List, Optional
+=======
+from typing import List
+>>>>>>> dev
 from pathlib import Path
 
 # 설정 import
 from config import get_settings
 import os
 
+<<<<<<< HEAD
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+=======
+>>>>>>> dev
 # v6_rag_real 모듈 import (프로덕션 전용)
 from v6_rag_real import create_batch_graph
 
@@ -29,6 +36,7 @@ app = FastAPI(
     description=settings.API_DESCRIPTION
 )
 
+<<<<<<< HEAD
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -73,6 +81,11 @@ def _render_list(items: Optional[List[str]]) -> str:
 def _render_section(title: str, body: str) -> str:
     return f"<h2>{title}</h2>\n{body}"
 
+=======
+# 앱 시작 시 그래프 한 번만 생성
+batch_app = create_batch_graph()
+
+>>>>>>> dev
 # ========================================
 # API 엔드포인트
 # ========================================
@@ -86,6 +99,11 @@ async def analyze_documents(
     """
     ✅ MVP1: 공고 + 첨부서류 분석 및 사용자 입력 폼 자동 생성
 
+<<<<<<< HEAD
+=======
+    디버깅: 422 에러가 발생하면 받은 파라미터를 로그로 출력
+
+>>>>>>> dev
     Backend에서 받는 데이터 구조:
     - files: 업로드된 파일 리스트 (UploadFile 객체, 실제 파일 바이너리 포함)
     - folders: 각 파일이 속한 폴더 ID 리스트 (files와 1:1 매칭)
@@ -154,6 +172,7 @@ async def analyze_documents(
         #   {"bytes": b"XLSX binary...", "filename": "붙임2.xlsx", "folder": 2}
         # ]
 
+<<<<<<< HEAD
         # ✨ 저장 모드 결정: 환경변수 기반
         storage_mode = os.getenv('STORAGE_MODE', 'csv')  # 기본값: csv (개발)
         oracle_config = None
@@ -169,12 +188,17 @@ async def analyze_documents(
         else:
             print(f"🟢 CSV 저장 모드 (개발)")
 
+=======
+>>>>>>> dev
         state = {
             "files": saved_files,
             "user_id": userid,
             "project_idx": projectidx,
+<<<<<<< HEAD
             "storage_mode": storage_mode,          # ✨ 'csv' or 'oracle'
             "oracle_config": oracle_config,        # ✨ Oracle 설정 (프로덕션)
+=======
+>>>>>>> dev
             "documents": [],
             "all_chunks": [],
             "all_embeddings": None,
@@ -243,6 +267,7 @@ async def root():
     }
 
 
+<<<<<<< HEAD
 def polish_to_formal(text: str) -> str:
     base = text.strip()
     if not base:
@@ -325,6 +350,8 @@ async def generate_proposal(request: ProposalRequest):
     )
 
 
+=======
+>>>>>>> dev
 # ========================================
 # 실행 (개발용)
 # ========================================
