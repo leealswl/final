@@ -8,13 +8,21 @@ import api from '../../../utils/api';
 import 문서아이콘 from './icons/문서 아이콘.png';
 import 폴더아이콘 from './icons/폴더 아이콘.png';
 import Upload from '../../../components/Upload';
+import { useAuthStore } from '../../../store/useAuthStore';
+import { useProjectStore } from '../../../store/useProjectStore';
 
 const AnalyzeView = () => {
     const navigate = useNavigate();
-    const { tree, currentProjectId, currentUserId } = useFileStore();
+    const { tree } = useFileStore();
     const setAnalysisResult = useAnalysisStore((state) => state.setAnalysisResult);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+
+    const user = useAuthStore((s) => s.user);
+    const project = useProjectStore((s) => s.project);
+
+    console.log('projectIdx: ', project.projectIdx);
+    console.log('user: ', user.userId);
 
     // ✅ 업로드 컴포넌트 각각 제어할 Ref
     const rfpUploadRef = useRef(null);
@@ -55,8 +63,8 @@ const AnalyzeView = () => {
             console.log('📁 첨부 파일:', 첨부파일들.length, '개');
 
             const payload = {
-                projectId: currentProjectId,
-                userId: currentUserId,
+                projectId: project.projectIdx,
+                userId: user.userId,
                 announcement_files: 공고문파일들.map((f) => ({
                     id: f.id,
                     name: f.name,

@@ -1,10 +1,25 @@
 import React from 'react';
 import { Box, Button, Typography, Stack, IconButton } from '@mui/material';
 import { FileText, Grid3x3, List, ChevronDown } from 'lucide-react';
+import api from '../../utils/api';
+import { useAuthStore } from '../../store/useAuthStore';
+import { useNavigate } from 'react-router';
+import { useProjectStore } from '../../store/useProjectStore';
 
 export function DashboardHeader() {
-    const works = () => {
-        window.location.href = 'works/analyze';
+    const user = useAuthStore((state) => state.user);
+    const setProject = useProjectStore((state) => state.setProject);
+    const navigate = useNavigate();
+
+    const makeProject = async () => {
+        try {
+            const res = await api.post(`/api/project/insert`, { userIdx: user.idx });
+            console.log('res.data: ', res.data);
+            setProject(res.data);
+            navigate('/works/analyze');
+        } catch (err) {
+            console.error(err);
+        }
     };
     return (
         <Box
@@ -74,7 +89,7 @@ export function DashboardHeader() {
             <Stack direction="row" spacing={1} alignItems="center">
                 <Button
                     variant="contained"
-                    onClick={works}
+                    onClick={makeProject}
                     sx={{
                         borderRadius: '999px',
                         textTransform: 'none',
