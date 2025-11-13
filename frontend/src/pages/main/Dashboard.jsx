@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Grid, Box, Typography, Button } from '@mui/material';
-import { DashboardHeader } from './DashboardHeader';
-import { DocumentCard } from './DocumentCard';
-import { NewDocumentCard } from './NewDocumentCard';
-import { HelpSection } from './HelpSection';
+import { DashboardHeader } from './components/DashboardHeader';
+import { DocumentCard } from './components/DocumentCard';
+import { NewDocumentCard } from './components/NewDocumentCard';
+import { HelpSection } from './components/HelpSection';
 import { FileText, Microscope } from 'lucide-react';
 import api from '../../utils/api';
 import { useAuthStore } from '../../store/useAuthStore';

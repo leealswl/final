@@ -1,10 +1,10 @@
 import React from 'react';
 import { Box, Button, Typography, Stack, IconButton } from '@mui/material';
 import { FileText, Grid3x3, List, ChevronDown } from 'lucide-react';
-import api from '../../utils/api';
-import { useAuthStore } from '../../store/useAuthStore';
+import api from '../../../utils/api';
+import { useAuthStore } from '../../../store/useAuthStore';
 import { useNavigate } from 'react-router';
-import { useProjectStore } from '../../store/useProjectStore';
+import { useProjectStore } from '../../../store/useProjectStore';
 
 export function DashboardHeader() {
     const user = useAuthStore((state) => state.user);

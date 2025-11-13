@@ -1,6 +1,6 @@
 import { Send, Sparkles } from 'lucide-react';
 import { useState } from 'react';
-import { ScrollArea } from '../main/scroll-area';
+import { ScrollArea } from './scroll-area';
 
 export function ChatBot() {
     const [messages, setMessages] = useState([
