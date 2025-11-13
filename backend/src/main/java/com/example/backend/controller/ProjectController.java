@@ -41,6 +41,7 @@ public class ProjectController {
     public ResponseEntity<String> insertProject(@RequestBody Project project) {
         int insertCount = projectService.insertProject(project);
         System.out.println("insertCount" + insertCount);
+        System.out.println("project: " + project);
         
         return insertCount == 1 ? new ResponseEntity<String>("success", HttpStatus.OK) : new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);
     }

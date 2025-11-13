@@ -19,8 +19,12 @@ FastAPI는 `alice/fastAPI` 디렉터리에서 실행합니다.
    ```bash
    cd /Users/suyeonjo/alice_consultant_agent_real/final/alice
    source .venv/bin/activate  # 가상환경을 사용 중일 때만
+
+
+2. pip install -r requirements.txt
+   1. fastapi 위치에서 실행
    ```
-2. 서버 실행
+3. 서버 실행
 
    ```bash
    cd /Users/suyeonjo/alice_consultant_agent_real/final/alice/fastAPI/src

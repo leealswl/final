@@ -8,9 +8,9 @@ const Navbar = () => {
     const user = useAuthStore((s) => s.user);
     console.log(user);
 
-  const edit =() => {
-    window.location.href="/works"
-  }
+    const home = () => {
+        window.location.href = '/main';
+    };
 
     const login = () => {
         window.location.href = '/login';
@@ -49,7 +49,7 @@ const Navbar = () => {
                     <Button size="large" color="error" sx={{ color: 'black', '&:hover': { backgroundColor: '#f5f5f5' } }}>
                         고객지원
                     </Button>
-                    <Button size="large" color="secondary" sx={{ color: 'black', '&:hover': { backgroundColor: '#f5f5f5' } }} onClick={edit}>
+                    <Button size="large" color="secondary" sx={{ color: 'black', '&:hover': { backgroundColor: '#f5f5f5' } }} onClick={home}>
                         <strong>시작하기</strong>
                     </Button>
                 </Stack>

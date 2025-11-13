@@ -96,7 +96,7 @@ def build_response(state: BatchState) -> BatchState:
     # ========================================
     # 2025-11-09 suyeon: Backend API 호출하여 Oracle DB 저장
     # ========================================
-    backend_url = os.getenv('BACKEND_URL', 'http://localhost:8080')
+    backend_url = os.getenv('BACKEND_URL', 'http://localhost:8081')
     save_to_backend = os.getenv('SAVE_TO_BACKEND', 'true').lower() == 'true'
 
     if save_to_backend:
