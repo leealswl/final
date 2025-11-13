@@ -1,8 +1,7 @@
-// src/components/DocumentCard.jsx
 import React from 'react';
-import { Card, CardContent, CardMedia, Box, IconButton, Typography, Paper } from '@mui/material';
+import { Card, CardContent, Box, IconButton, Typography, Paper } from '@mui/material';
 import { FileText, Clock, MoreVertical } from 'lucide-react';
-import { ImageWithFallback } from './ImageWithFallback';
+
 
 export function DocumentCard({ title, description, lastEdited, icon, image }) {
     return (
@@ -21,22 +20,6 @@ export function DocumentCard({ title, description, lastEdited, icon, image }) {
                 },
             }}
         >
-            {/* 이미지 영역 */}
-            {/* {image && (
-                <CardMedia
-                    component={() => (
-                        <ImageWithFallback
-                            src={image}
-                            alt={title}
-                            style={{
-                                width: '100%',
-                                height: '160px',
-                                objectFit: 'cover',
-                            }}
-                        />
-                    )}
-                />
-            )} */}
 
             <CardContent sx={{ p: 3, height: '198px' }}>
                 {/* 아이콘 및 메뉴 버튼 영역 */}

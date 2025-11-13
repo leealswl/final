@@ -28,7 +28,7 @@ export function DashboardHeader() {
                 <Stack direction="row" spacing={1} alignItems="center">
                     <FileText size={24} style={{ color: '#1a73e8' }} />
                     <Typography variant="h6" sx={{ color: '#202124' }}>
-                        Palaodc
+                        Paladoc
                     </Typography>
                 </Stack>
 
@@ -56,7 +56,7 @@ export function DashboardHeader() {
                     >
                         프로젝트
                     </Button>
-                    <Button
+                    {/* <Button
                         variant="text"
                         sx={{
                             borderRadius: '999px',
@@ -66,7 +66,7 @@ export function DashboardHeader() {
                         }}
                     >
                         팀
-                    </Button>
+                    </Button> */}
                 </Stack>
             </Stack>
 

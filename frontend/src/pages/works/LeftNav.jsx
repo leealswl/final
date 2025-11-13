@@ -28,6 +28,7 @@ export default function LeftNav({ width = 64 }) {
     // key -> 선택 여부
     const isSelected = (key) => pathname.startsWith(`/works/${key}`);
 
+
     return (
         <Box
             component="nav"
