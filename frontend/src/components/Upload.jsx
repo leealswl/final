@@ -67,7 +67,7 @@ const Upload = forwardRef(function Upload({ rootId, asButton = true, onUploadCom
             selectNode(nodes[0].id);
 
             // 5) 에디터 페이지로 라우팅
-            navigate('/works/edit');
+            navigate('/works/analyze');
 
             // 6) 콜백 호출
             onUploadComplete?.(nodes);
