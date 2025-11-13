@@ -6,15 +6,12 @@ FastAPI with v6_rag integration
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.concurrency import run_in_threadpool
-from typing import List, Optional
+from typing import List
 from pathlib import Path
 
 # 설정 import
 from config import get_settings
 import os
-
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 
 # v6_rag_real 모듈 import (프로덕션 전용)
 from v6_rag_real import create_batch_graph
@@ -29,49 +26,8 @@ app = FastAPI(
     description=settings.API_DESCRIPTION
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # 앱 시작 시 그래프 한 번만 생성
 batch_app = create_batch_graph()
-
-
-class ProposalRequest(BaseModel):
-    project_title: Optional[str] = None
-    goal: Optional[str] = None
-    requirements: Optional[List[str]] = None
-    deliverables: Optional[List[str]] = None
-    tone: Optional[str] = None
-    extra: Optional[str] = None
-
-
-class PolishRequest(BaseModel):
-    text: str
-
-
-def _render_list(items: Optional[List[str]]) -> str:
-    if not items:
-        return "<p>• (내용 없음)</p>"
-    lines = []
-    lines.append("<ul>")
-    for item in items:
-        if not item:
-            continue
-        lines.append(f"  <li>{item}</li>")
-    lines.append("</ul>")
-    return "\n".join(lines)
-
-
-def _render_section(title: str, body: str) -> str:
-    return f"<h2>{title}</h2>\n{body}"
 
 # ========================================
 # API 엔드포인트
@@ -85,6 +41,8 @@ async def analyze_documents(
 ):
     """
     ✅ MVP1: 공고 + 첨부서류 분석 및 사용자 입력 폼 자동 생성
+
+    디버깅: 422 에러가 발생하면 받은 파라미터를 로그로 출력
 
     Backend에서 받는 데이터 구조:
     - files: 업로드된 파일 리스트 (UploadFile 객체, 실제 파일 바이너리 포함)
@@ -154,27 +112,10 @@ async def analyze_documents(
         #   {"bytes": b"XLSX binary...", "filename": "붙임2.xlsx", "folder": 2}
         # ]
 
-        # ✨ 저장 모드 결정: 환경변수 기반
-        storage_mode = os.getenv('STORAGE_MODE', 'csv')  # 기본값: csv (개발)
-        oracle_config = None
-
-        # 프로덕션 환경: Oracle DB 설정
-        if storage_mode == 'oracle':
-            oracle_config = {
-                'user': os.getenv('ORACLE_USER'),
-                'password': os.getenv('ORACLE_PASSWORD'),
-                'dsn': os.getenv('ORACLE_DSN')  # 예: localhost:1521/ORCL
-            }
-            print(f"🔵 Oracle 저장 모드 활성화: {oracle_config['dsn']}")
-        else:
-            print(f"🟢 CSV 저장 모드 (개발)")
-
         state = {
             "files": saved_files,
             "user_id": userid,
             "project_idx": projectidx,
-            "storage_mode": storage_mode,          # ✨ 'csv' or 'oracle'
-            "oracle_config": oracle_config,        # ✨ Oracle 설정 (프로덕션)
             "documents": [],
             "all_chunks": [],
             "all_embeddings": None,
@@ -241,88 +182,6 @@ async def root():
             "GET /health": "헬스 체크"
         }
     }
-
-
-def polish_to_formal(text: str) -> str:
-    base = text.strip()
-    if not base:
-        return ""
-    sentence = base[0].upper() + base[1:]
-    if not sentence.endswith("니다."):
-        sentence = sentence.rstrip(". ") + "입니다."
-    return sentence
-
-
-@app.post("/polish-text")
-async def polish_text(request: PolishRequest):
-    if not request.text or not request.text.strip():
-        return JSONResponse(status_code=400, content={"status": "fail", "message": "다듬을 문장을 입력해 주세요."})
-
-    refined = polish_to_formal(request.text)
-    return JSONResponse(status_code=200, content={"status": "success", "refined": refined})
-
-
-@app.post("/generate-proposal")
-async def generate_proposal(request: ProposalRequest):
-    """AI 제안서 초안 생성 (샘플 템플릿 기반)"""
-
-    project_title = request.project_title or "제안 프로젝트"
-    goal = request.goal or "프로젝트 목표가 입력되지 않았습니다."
-    tone = request.tone or "공문체"
-    requirements_html = _render_list(request.requirements)
-    deliverables_html = _render_list(request.deliverables)
-    extra_html = (
-        f"<p><strong>추가 요청</strong>: {request.extra}</p>"
-        if request.extra else ""
-    )
-
-    effects_html = _render_list([
-        "행정 문서 작성 시간 단축",
-        "공문체 품질 향상 및 오류 감소",
-        "협업 프로세스 자동화로 대응력 강화",
-    ])
-
-    sections = [
-        _render_section("1. 제안 개요", f"<p>{goal}</p>"),
-        _render_section("2. 추진 목표 및 필요성", (
-            "<p>본 과제는 행정 효율화를 위해 AI 기반 시스템을 구축하여 "
-            "사업 추진 속도와 품질을 동시에 개선하고자 합니다.</p>"
-            "<p>주요 기대 효과는 다음과 같습니다:</p>"
-            f"{effects_html}"
-        )),
-        _render_section("3. 핵심 요구사항", requirements_html),
-        _render_section("4. 주요 산출물", deliverables_html),
-        _render_section("5. 추진 일정(예시)", (
-            "<ul>"
-            "<li>1단계 (1개월) : 요구사항 정밀 분석 및 데이터 수집</li>"
-            "<li>2단계 (2개월) : AI 모델 설계 및 프로토타입 구현</li>"
-            "<li>3단계 (2개월) : 사용자 피드백 기반 고도화 및 안정화</li>"
-            "<li>4단계 (1개월) : 운영 전환 및 교육, 성과 측정</li>"
-            "</ul>"
-        )),
-    ]
-
-    article_html = "\n".join(sections)
-    proposal_html = (
-        f"<article>"
-        f"<h1>{project_title}</h1>"
-        f"<p><em>작성 톤: {tone}</em></p>"
-        f"{article_html}"
-        f"{extra_html}"
-        f"</article>"
-    )
-
-    return JSONResponse(
-        status_code=200,
-        content={
-            "status": "success",
-            "proposal_html": proposal_html,
-            "meta": {
-                "project_title": project_title,
-                "tone": tone,
-            }
-        }
-    )
 
 
 # ========================================

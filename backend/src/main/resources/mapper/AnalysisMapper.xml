@@ -11,17 +11,105 @@
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
-    <!-- <select>
-    </select>
+    <!-- 2025-11-09 suyeon 추가: AnalysisResult 테이블 매핑 -->
+    <resultMap id="analysisResultMap" type="AnalysisResult">
+        <id property="resultIdx" column="result_idx"/>
+        <result property="projectIdx" column="project_idx"/>
+        <result property="featureCode" column="feature_code"/>
+        <result property="featureName" column="feature_name"/>
+        <result property="title" column="title"/>
+        <result property="summary" column="summary"/>
+        <result property="fullContent" column="full_content"/>
+        <result property="keyPoints" column="key_points"/>
+        <result property="vectorSimilarity" column="vector_similarity"/>
+        <result property="chunksFromAnnouncement" column="chunks_from_announcement"/>
+        <result property="chunksFromAttachments" column="chunks_from_attachments"/>
+        <result property="referencedAttachments" column="referenced_attachments"/>
+        <result property="extractedAt" column="extracted_at"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
 
-    <update>
-    </update>
+    <!-- 2025-11-09 suyeon 추가: TableOfContents 테이블 매핑 -->
+    <resultMap id="tableOfContentsMap" type="TableOfContents">
+        <id property="tocIdx" column="toc_idx"/>
+        <result property="projectIdx" column="project_idx"/>
+        <result property="source" column="source"/>
+        <result property="totalSections" column="total_sections"/>
+        <result property="tocData" column="toc_data"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
 
-    <insert>
+    <!--
+        2025-11-10 suyeon 수정: 단순 INSERT 방식 (서비스에서 DELETE 후 호출)
+        FastAPI 분석 결과를 Oracle DB에 저장
+    -->
+    <insert id="insertAnalysisResult">
+        insert into analysis_result (
+            result_idx,
+            project_idx,
+            feature_code,
+            feature_name,
+            title,
+            summary,
+            full_content,
+            key_points,
+            vector_similarity,
+            chunks_from_announcement,
+            chunks_from_attachments,
+            referenced_attachments,
+            extracted_at
+        ) values (
+            analysis_result_seq.nextval,
+            #{projectIdx},
+            #{featureCode},
+            #{featureName},
+            #{title},
+            #{summary},
+            #{fullContent},
+            #{keyPoints},
+            #{vectorSimilarity},
+            #{chunksFromAnnouncement},
+            #{chunksFromAttachments},
+            #{referencedAttachments},
+            #{extractedAt}
+        )
     </insert>
 
-    <delete>
-    </delete> -->
+    <!--
+        2025-11-10 suyeon 추가: 재분석 시 기존 분석 결과 삭제 (MERGE 방식으로 대체됨, 필요시만 사용)
+    -->
+    <delete id="deleteAnalysisResultByProject">
+        delete from analysis_result
+        where project_idx = #{projectIdx}
+    </delete>
+
+    <!--
+        2025-11-10 suyeon 수정: 단순 INSERT 방식 (서비스에서 DELETE 후 호출)
+        공고문 목차 정보를 Oracle DB에 저장
+    -->
+    <insert id="insertTableOfContents">
+        insert into table_of_contents (
+            toc_idx,
+            project_idx,
+            source,
+            total_sections,
+            toc_data
+        ) values (
+            toc_seq.nextval,
+            #{projectIdx},
+            #{source},
+            #{totalSections},
+            #{tocData}
+        )
+    </insert>
+
+    <!--
+        2025-11-10 suyeon 추가: 재분석 시 기존 목차 데이터 삭제 (MERGE 방식으로 대체됨, 필요시만 사용)
+    -->
+    <delete id="deleteTableOfContentsByProject">
+        delete from table_of_contents
+        where project_idx = #{projectIdx}
+    </delete>
 
 
 </mapper>
