@@ -30,32 +30,6 @@ function Dashboard() {
             projects();
         }
     }, [user]);
-    // const recommendedProposals = [
-    //     {
-    //         title: '신약 개발 프로젝트 제안서',
-    //         description: 'AI 기반 분자 설계 및 임상 시험 계획',
-    //         lastEdited: '2시간 전',
-    //         image: 'https://images.unsplash.com/photo-1618053238059-cc7761222f2a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsYWJvcmF0b3J5JTIwc2NpZW5jZSUyMHJlc2VhcmNofGVufDF8fHx8MTc2MjcwODA4Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    //     },
-    //     {
-    //         title: '기후 변화 연구 보고서',
-    //         description: '2025년 탄소 배출 데이터 분석 및 예측 모델',
-    //         lastEdited: '어제',
-    //         image: 'https://images.unsplash.com/photo-1704793027965-da6e888e89fd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjbGltYXRlJTIwZW52aXJvbm1lbnQlMjBkYXRhfGVufDF8fHx8MTc2Mjc2MTQ1Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    //     },
-    //     {
-    //         title: '양자 컴퓨팅 연구 계획',
-    //         description: '큐비트 안정성 개선을 위한 실험 설계',
-    //         lastEdited: '3일 전',
-    //         image: 'https://images.unsplash.com/photo-1752451399416-faef5f9fe572?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxxdWFudHVtJTIwY29tcHV0aW5nJTIwdGVjaG5vbG9neXxlbnwxfHx8fDE3NjI2ODA2MjB8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    //     },
-    //     {
-    //         title: '유전자 치료 연구',
-    //         description: 'CRISPR 기술을 활용한 유전자 편집 프로토콜',
-    //         lastEdited: '5일 전',
-    //         image: 'https://images.unsplash.com/photo-1531956656798-56686eeef3d4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkbmElMjBnZW5ldGljcyUyMGJpb2xvZ3l8ZW58MXx8fHwxNzYyNzYxNDU3fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    //     },
-    // ];
 
     const recentDocuments = [
         {
@@ -118,20 +92,6 @@ function Dashboard() {
             <DashboardHeader />
 
             <Box component="main" sx={{ maxWidth: 1400, mx: 'auto', px: 3, py: 5 }}>
-                {/* 추천 제안서 섹션 */}
-                {/* <Box mb={8}>
-                    <Typography variant="h5" component="h2" mb={3} sx={{ color: '#202124' }}>
-                        추천 제안서
-                    </Typography>
-                    <Grid container spacing={3}>
-                        {recommendedProposals.map((doc, index) => (
-                            <Grid item xs={12} sm={6} md={3} key={index}>
-                                <DocumentCard {...doc} />
-                            </Grid>
-                        ))}
-                    </Grid>
-                </Box> */}
-
                 {/* 최근 작업 문서 섹션 */}
                 <Box mb={6}>
                     <Typography variant="h5" component="h2" mb={3} sx={{ color: '#202124' }}>

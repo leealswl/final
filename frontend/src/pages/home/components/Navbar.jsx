@@ -9,7 +9,7 @@ const Navbar = () => {
     console.log(user);
 
     const home = () => {
-        window.location.href = '/home';
+        window.location.href = '/main';
     };
 
     const login = () => {

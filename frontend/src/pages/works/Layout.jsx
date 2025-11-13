@@ -1,4 +1,4 @@
-// import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Box, Paper, IconButton } from '@mui/material';
 
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -6,8 +6,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 import LeftNav from './LeftNav';
 import Sidebar from './Sidebar';
-import Assistant from './Assistant';
-import CreateAssistant from './CreateAssistant';
+
 import CreateTocSidebar from './CreateTocSidebar';
 
 import { Outlet, useLocation } from 'react-router-dom';
@@ -18,12 +17,12 @@ export default function Layout() {
     const ASSIST_W = 360; // 우측 어시스턴트 (열렸을 때)
 
     // 데스크톱 우측 패널 열림 상태
-    // const [assistOpen, setAssistOpen] = useState(true);
+    const [assistOpen, setAssistOpen] = useState(true);
     const location = useLocation();
     const isCreateMode = location.pathname.startsWith('/works/create');
 
     // 패널 열고닫을 때 에디터가 즉시 리사이즈되도록 resize 이벤트 발행
-    // const fireResize = () => window.dispatchEvent(new Event('resize'));
+    const fireResize = () => window.dispatchEvent(new Event('resize'));
 
     return (
         <Box sx={{ height: '100vh', bgcolor: '#ffffff' }}>

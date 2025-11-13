@@ -13,17 +13,18 @@ const AnalyzeView = () => {
   const setAnalysisResult = useAnalysisStore(state => state.setAnalysisResult)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-//   const analyzeStart = () => {
-//     navigate('/works/analyze/dashboard')
-//   }
-//     // ✅ 업로드 컴포넌트 각각 제어할 Ref
-//     const rfpUploadRef = useRef(null);
-//     const attachUploadRef = useRef(null);
+  
+  // const analyzeStart = () => {
+  //   navigate('/works/analyze/dashboard')
+  // }
+  //   // ✅ 업로드 컴포넌트 각각 제어할 Ref
+  //   const rfpUploadRef = useRef(null);
+  //   const attachUploadRef = useRef(null);
 
-//     // ✅ 클릭 시 input 클릭 트리거
-//     const triggerUpload = (ref) => {
-//         ref.current?.click();
-//     };
+  //   // ✅ 클릭 시 input 클릭 트리거
+  //   const triggerUpload = (ref) => {
+  //       ref.current?.click();
+  //   };
 
   const collectFiles = (nodes) => {
     let files = []
