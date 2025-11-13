@@ -1,11 +1,11 @@
 import React, { useEffect } from 'react';
 import { useFileStore } from '../../../store/useFileStore';
-import Editor from '../Editor';
+import Editor from './Editor';
 import { useParams } from 'react-router';
-import { ChatBot } from '../Chatbot';
+import { ChatBot } from './ChatBot';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { Box, Divider } from '@mui/material';
-import ChatBotMUI from '../ChatBotMUI';
+import ChatBotMUI from './ChatBotMUI';
 
 export default function EditView() {
     const { docId } = useParams(); // /works/edit/:docId

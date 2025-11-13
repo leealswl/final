@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
-import { useFileStore } from '../../store/useFileStore';
-import { useDocumentStore } from '../../store/useDocumentStore';
-import TiptapEditor from '../../components/TiptapEditor';
+import { useFileStore } from '../../../store/useFileStore';
+import { useDocumentStore } from '../../../store/useDocumentStore';
+import TiptapEditor from '../../../components/TiptapEditor';
 
 const toAbs = (p) => (p?.startsWith('http') ? p : `http://localhost:8081${p}`);
 

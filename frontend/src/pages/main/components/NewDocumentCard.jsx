@@ -1,10 +1,10 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { Plus } from 'lucide-react';
-import api from '../../utils/api';
-import { useAuthStore } from '../../store/useAuthStore';
+import api from '../../../utils/api';
+import { useAuthStore } from '../../../store/useAuthStore';
 import { useNavigate } from 'react-router';
-import { useProjectStore } from '../../store/useProjectStore';
+import { useProjectStore } from '../../../store/useProjectStore';
 
 export function NewDocumentCard() {
     const user = useAuthStore((state) => state.user);
