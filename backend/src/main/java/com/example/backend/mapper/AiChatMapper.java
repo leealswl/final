@@ -7,6 +7,6 @@ import java.util.List;
 public interface AiChatMapper {
 
     void insertChat(AiChat aichat);
-    List<AiChat> getAllChat();
+    List<AiChat> getAllChats();
     AiChat getChatById(Long id);
 }

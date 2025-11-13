@@ -16,6 +16,7 @@ import os
 # v6_rag_real 모듈 import (프로덕션 전용)
 from v6_rag_real import create_batch_graph
 
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import openai
 import json
@@ -34,6 +35,15 @@ app = FastAPI(
     version=settings.API_VERSION,
     description=settings.API_DESCRIPTION
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 개발용으로 모든 도메인 허용
+    allow_credentials=True,
+    allow_methods=["*"],  # OPTIONS, POST, GET 등 모두 허용
+    allow_headers=["*"],  # 모든 헤더 허용
+)
+
 
 # 앱 시작 시 그래프 한 번만 생성
 batch_app = create_batch_graph()
@@ -226,18 +236,25 @@ async def root():
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
+    from openai import OpenAI
+    import os
+
+    # .env 또는 시스템 환경변수에서 키 로드
+    openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
     try:
-        completion = openai.ChatCompletion.create(
+        # 1.0.0 이상 호환 호출
+        completion = openai_client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "당신은 친절한 AI 어시스턴트입니다."},
                 {"role": "user", "content": request.userMessage}
-            ]
+            ],
+            temperature=0.7
         )
 
-        ai_response = completion.choices[0].message["content"]
+        ai_response = completion.choices[0].message.content  # 새 인터페이스 접근 방식
 
-        # ✅ 유저 메시지도 함께 반환
         return {
             "userMessage": request.userMessage,
             "aiResponse": ai_response
