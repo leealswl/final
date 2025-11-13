@@ -3,7 +3,7 @@ import api from '../utils/api';
 import { useFileStore } from '../store/useFileStore';
 import { toFolderNum } from '../utils/folder';
 
-const toFolderNum = (rootId) => (rootId === 'root-01' ? 1 : rootId === 'root-02' ? 2 : 3);
+// const toFolderNum = (rootId) => (rootId === 'root-01' ? 1 : rootId === 'root-02' ? 2 : 3);
 
 export default function useLoad() {
     const projectId = useFileStore((s) => s.currentProjectId);
