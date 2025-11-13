@@ -7,18 +7,14 @@ import { useNavigate } from 'react-router';
 import { useProjectStore } from '../../store/useProjectStore';
 
 export function DashboardHeader() {
-    const setProject = useProjectStore((state) => state.setProject); // ✅ 여기서 가져와야 함
-    const navigate = useNavigate();
-    // const works = () => {
-    //     window.location.href = 'works/analyze';
-    // };
-
     const user = useAuthStore((state) => state.user);
+    const setProject = useProjectStore((state) => state.setProject);
+    const navigate = useNavigate();
 
     const makeProject = async () => {
         try {
             const res = await api.post(`/api/project/insert`, { userIdx: user.idx });
-            console.log(res.data);
+            console.log('res.data: ', res.data);
             setProject(res.data);
             navigate('/works/analyze');
         } catch (err) {

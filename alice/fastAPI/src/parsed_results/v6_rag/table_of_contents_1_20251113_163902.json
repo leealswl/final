@@ -1,0 +1,39 @@
+{
+  "source": "announcement",
+  "extraction_method": "rag_llm",
+  "inference_confidence": 0.7,
+  "sections": [
+    {
+      "number": "1",
+      "title": "연구개발 개요",
+      "required": true,
+      "description": "연구개발의 목적 및 필요성"
+    },
+    {
+      "number": "2",
+      "title": "연구목표",
+      "required": true,
+      "description": "연구개발의 구체적인 목표"
+    },
+    {
+      "number": "3",
+      "title": "연구내용",
+      "required": true,
+      "description": "연구개발의 주요 내용 및 방법론"
+    },
+    {
+      "number": "4",
+      "title": "추진체계",
+      "required": true,
+      "description": "연구개발 추진을 위한 조직 및 인력 구성"
+    },
+    {
+      "number": "5",
+      "title": "예산 계획",
+      "required": true,
+      "description": "연구개발에 필요한 예산의 세부 계획"
+    }
+  ],
+  "total_sections": 5,
+  "extracted_at": "2025-11-13T16:39:02.250342"
+}
