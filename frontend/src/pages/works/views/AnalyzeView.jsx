@@ -72,7 +72,7 @@ const AnalyzeView = () => {
                     <Typography sx={{ fontSize: '20px', fontWeight: 'bold', mb: '12px' }}>2. 선택: 첨부파일 모음 업로드</Typography>
                     <Typography sx={{ color: '#FAAD14', fontWeight: 'bold', mb: '8px' }}>(ZIP 파일 또는 개별 파일)</Typography>
                     <Typography sx={{ color: '#8C8C8C' }} fontFamily="Pretendard4">
-                        관련 자료(도면, 이미지, 기타 부속 문서)를 함께 분석합니다.
+                        관련 자료(도면, 이미지, 기타 부속 문서)를 함께 분석합니다..
                     </Typography>
                 </Stack>
             </Grid>

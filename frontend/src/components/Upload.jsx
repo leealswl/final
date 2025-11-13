@@ -13,7 +13,7 @@ const Upload = forwardRef(function Upload({ rootId, asButton = true, onUploadCom
     const selectNode = useFileStore((s) => s.selectNode);
     const projectId = useFileStore((s) => s.currentProjectId);
     const userId = useFileStore((s) => s.currentUserId);
-    const navigate = useNavigate();
+    // const navigate = useNavigate();
 
     // 외부에서 사용할 수 있도록 API 노출
     useImperativeHandle(
