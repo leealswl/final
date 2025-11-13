@@ -4,7 +4,7 @@ import { FileText, Grid3x3, List, ChevronDown } from 'lucide-react';
 
 export function DashboardHeader() {
     const works = () => {
-        window.location.href = 'works';
+        window.location.href = 'works/analyze';
     };
     return (
         <Box

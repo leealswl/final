@@ -47,13 +47,13 @@ const Upload = forwardRef(function Upload({ rootId, asButton = true, onUploadCom
             let nodes;
             if (response?.files && response.files.length > 0) {
                 // Backend가 파일 정보를 반환했을 때
-                nodes = response.files.map(fileInfo => ({
+                nodes = response.files.map((fileInfo) => ({
                     id: `file-${fileInfo.id}`, // file-123 형태
                     type: 'file',
                     name: fileInfo.name,
                     path: fileInfo.path, // 서버에서 받은 파일 경로 저장
                     size: fileInfo.size,
-                    children: undefined
+                    children: undefined,
                 }));
             } else {
                 // Fallback: 기존 방식 (파일 정보가 없을 때)

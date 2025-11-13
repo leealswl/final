@@ -18,13 +18,25 @@ class BatchState(TypedDict):
     user_id: str
     project_idx: int
 
+<<<<<<< HEAD
+    # ========== 설정 ==========
+    storage_mode: Literal["csv", "oracle", "both"]
+    oracle_config: Optional[Dict]
+
+=======
+>>>>>>> dev
     # ========== 문서 처리 ==========
     documents: List[Dict[str, Any]]  # 각 파일의 메타데이터 및 추출 결과
 
     # ========== RAG 통합 저장소 ==========
     all_chunks: List[Dict[str, Any]]  # 모든 문서의 청크 통합
+<<<<<<< HEAD
+    all_embeddings: Optional[np.ndarray]  # 통합 임베딩 (N, 384)
+    embedding_model: Any  # SentenceTransformer 모델
+=======
     all_embeddings: Optional[np.ndarray] 
     embedding_model: Any  
+>>>>>>> dev
 
     # ========== VectorDB ==========
     chroma_client: Any  # ChromaDB 클라이언트
@@ -35,10 +47,14 @@ class BatchState(TypedDict):
     extracted_features: List[Dict[str, Any]]  # 추출된 모든 Feature
 
     # ========== 참조 관계 (🔖 MVP2: 분석 대시보드) ==========
+<<<<<<< HEAD
+    cross_references: List[Dict[str, Any]]  # 공고 ↔ 첨부 참조 정보 (근거 추적용)
+=======
     # [2025-01-10 suyeon] cross_references 필드 주석 처리
     # 삭제 이유: match_cross_references() 함수 삭제로 데이터 생성 안됨
     # MVP2 재구현 시 새로운 구조로 추가 예정
     # cross_references: List[Dict[str, Any]]  # 공고 ↔ 첨부 참조 정보 (근거 추적용)
+>>>>>>> dev
 
     # ========== 첨부 템플릿 (✅ MVP1: 사용자 입력 폼) ==========
     attachment_templates: List[Dict[str, Any]]  # 첨부 문서 양식 정보 (폼 생성용)
@@ -47,7 +63,12 @@ class BatchState(TypedDict):
     table_of_contents: Optional[Dict[str, Any]]  # 제안서 목차 구조
 
     # ========== 출력 ==========
+<<<<<<< HEAD
+    csv_paths: Optional[Dict[str, str]]
+    oracle_ids: Optional[Dict[str, Any]]
+=======
     csv_paths: Optional[Dict[str, str]]  # CSV 저장 경로 (개발/테스트용)
+>>>>>>> dev
     response_data: Dict[str, Any]  # FastAPI 응답용 데이터
 
     # ========== 메타 ==========
