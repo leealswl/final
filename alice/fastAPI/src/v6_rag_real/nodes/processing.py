@@ -3,10 +3,6 @@
 노트북에서 추출한 전체 구현
 """
 
-<<<<<<< HEAD
-import re
-=======
->>>>>>> dev
 import json
 import pandas as pd
 from datetime import datetime
@@ -19,24 +15,12 @@ import os
 from dotenv import load_dotenv
 
 # 임베딩 & VectorDB
-<<<<<<< HEAD
-from sentence_transformers import SentenceTransformer
-import chromadb
-from chromadb.config import Settings
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
-
-from ..state_types import BatchState
-from ..config import FEATURES, RAG_SETTINGS, VECTOR_DB_DIR, CSV_OUTPUT_DIR
-from ..utils import detect_section_headers, chunk_by_sections
-=======
 import chromadb
 import numpy as np
 
 from ..state_types import BatchState
 from ..config import FEATURES, CSV_OUTPUT_DIR
 from ..utils import chunk_by_sections
->>>>>>> dev
 
 # OpenAI 클라이언트 초기화
 load_dotenv()
@@ -50,22 +34,6 @@ def chunk_all_documents(state: BatchState) -> BatchState:
     documents = state['documents']
     all_chunks = []
     chunk_global_id = 0
-<<<<<<< HEAD
-    
-    print(f"\n{'='*60}")
-    print(f"📦 섹션 기반 청킹 시작")
-    print(f"{'='*60}")
-    
-    for doc in documents:
-        print(f"\n  📄 {doc['file_name']} 청킹 중...")
-        
-        doc_chunk_start = chunk_global_id
-        
-        # 페이지별로 청킹
-        for page_num, page_text in doc['page_texts'].items():
-            page_chunks = chunk_by_sections(page_text, page_num)
-            
-=======
 
     print(f"\n{'='*60}")
     print(f"📦 섹션 기반 청킹 시작")
@@ -110,42 +78,23 @@ def chunk_all_documents(state: BatchState) -> BatchState:
                 empty_page_count += 1
                 continue
 
->>>>>>> dev
             for chunk_data in page_chunks:
                 all_chunks.append({
                     'chunk_id': f"{doc['document_id']}_chunk_{chunk_global_id}",
                     'text': chunk_data['text'],
-<<<<<<< HEAD
-                    
-=======
->>>>>>> dev
                     # 문서 메타데이터
                     'project_idx': state['project_idx'],
                     'document_id': doc['document_id'],
                     'document_type': doc['document_type'],
                     'file_name': doc['file_name'],
-<<<<<<< HEAD
-                    
-=======
->>>>>>> dev
                     # 섹션 정보
                     'section': chunk_data['section'],
                     'page': chunk_data['page'],
                     'is_sectioned': chunk_data['is_sectioned'],
-<<<<<<< HEAD
-                    
-=======
->>>>>>> dev
                     # 첨부서류 번호
                     'attachment_number': doc.get('attachment_number'),
                 })
                 chunk_global_id += 1
-<<<<<<< HEAD
-        
-        doc_chunk_count = chunk_global_id - doc_chunk_start
-        print(f"    ✓ {doc_chunk_count}개 청크 생성")
-        
-=======
 
         doc_chunk_count = chunk_global_id - doc_chunk_start
         print(f"    ✓ {doc_chunk_count}개 청크 생성", end="")
@@ -156,59 +105,25 @@ def chunk_all_documents(state: BatchState) -> BatchState:
         else:
             print()
 
->>>>>>> dev
         # 문서에 청크 범위 저장
         doc['chunk_start_id'] = doc_chunk_start
         doc['chunk_end_id'] = chunk_global_id - 1
         doc['chunk_count'] = doc_chunk_count
-<<<<<<< HEAD
-    
-    state['all_chunks'] = all_chunks
-    state['status'] = 'all_chunked'
-    
-    print(f"\n  ✅ 총 {len(all_chunks)}개 청크 생성 ({len(documents)}개 문서)")
-    
-=======
 
     state['all_chunks'] = all_chunks
     state['status'] = 'all_chunked'
 
     print(f"\n  ✅ 총 {len(all_chunks)}개 청크 생성 ({len(documents)}개 문서)")
 
->>>>>>> dev
     # 통계 출력
     sectioned_count = sum(1 for c in all_chunks if c['is_sectioned'])
     print(f"    - 섹션 기반 청크: {sectioned_count}개")
     print(f"    - 고정 길이 청크: {len(all_chunks) - sectioned_count}개")
-<<<<<<< HEAD
-    
-=======
->>>>>>> dev
     return state
 
 
 def embed_all_chunks(state: BatchState) -> BatchState:
     """
-<<<<<<< HEAD
-    모든 청크를 임베딩 벡터로 변환
-    """
-    all_chunks = state['all_chunks']
-    
-    print(f"\n{'='*60}")
-    print(f"🧠 임베딩 생성 시작")
-    print(f"{'='*60}")
-    
-    # 임베딩 모델 로드
-    print(f"\n  📥 임베딩 모델 로딩...")
-    model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
-    print(f"    ✓ 모델 로딩 완료")
-    
-    # 청크 텍스트 추출
-    chunk_texts = [chunk['text'] for chunk in all_chunks]
-
-    # 배치 임베딩 (배치별 진행 상황 표시)
-    batch_size = 32  # 64 → 32로 줄여서 더 자주 진행 상황 표시
-=======
     OpenAI Embedding API로 모든 청크를 임베딩 벡터로 변환
     """
     all_chunks = state['all_chunks']
@@ -222,18 +137,12 @@ def embed_all_chunks(state: BatchState) -> BatchState:
 
     # OpenAI API 배치 임베딩 (최대 2048개/요청)
     batch_size = 2048
->>>>>>> dev
     total_chunks = len(chunk_texts)
     total_batches = (total_chunks + batch_size - 1) // batch_size
 
     print(f"\n  🔢 {total_chunks}개 청크 임베딩 중... (배치 크기: {batch_size}, 총 {total_batches}개 배치)")
-<<<<<<< HEAD
-
-    import numpy as np
-=======
     print(f"  📡 모델: text-embedding-3-small (1536 차원)")
 
->>>>>>> dev
     all_embeddings = []
 
     for i in range(0, total_chunks, batch_size):
@@ -242,19 +151,6 @@ def embed_all_chunks(state: BatchState) -> BatchState:
 
         print(f"    ⏳ 배치 {batch_num}/{total_batches} 처리 중... ({i+1}-{min(i+len(batch), total_chunks)}/{total_chunks} 청크)")
 
-<<<<<<< HEAD
-        batch_embeddings = model.encode(
-            batch,
-            show_progress_bar=False,  # 배치별로 진행바 끄기
-            convert_to_numpy=True
-        )
-        all_embeddings.append(batch_embeddings)
-
-    embeddings = np.vstack(all_embeddings)
-
-    state['all_embeddings'] = embeddings
-    state['embedding_model'] = model
-=======
         try:
             response = client.embeddings.create(
                 model="text-embedding-3-small",  # 1536 차원, $0.02/1M tokens
@@ -275,7 +171,6 @@ def embed_all_chunks(state: BatchState) -> BatchState:
 
     state['all_embeddings'] = embeddings
     state['embedding_model'] = 'text-embedding-3-small'  # API 모델명 저장
->>>>>>> dev
     state['status'] = 'all_embedded'
 
     print(f"\n  ✅ 임베딩 완료: {embeddings.shape}")
@@ -284,10 +179,6 @@ def embed_all_chunks(state: BatchState) -> BatchState:
         print(f"    - 차원: {embeddings.shape[1]}")
     else:
         print(f"    - 청크 수: {embeddings.shape[0] if embeddings.shape else 0}")
-<<<<<<< HEAD
-    
-=======
->>>>>>> dev
     return state
 
 
@@ -411,13 +302,6 @@ def extract_features_rag(state: BatchState) -> BatchState:
                 keywords_str = " ".join(keywords[:5])
 
             query_text = f"{feature_def['feature_type']} {keywords_str}"
-<<<<<<< HEAD
-            query_embedding = model.encode([query_text], convert_to_numpy=True)
-
-            # 2️⃣ VectorDB 유사도 검색
-            results = collection.query(
-                query_embeddings=query_embedding.tolist(),
-=======
 
             # OpenAI API로 쿼리 임베딩
             query_response = client.embeddings.create(
@@ -429,7 +313,6 @@ def extract_features_rag(state: BatchState) -> BatchState:
             # 2️⃣ VectorDB 유사도 검색
             results = collection.query(
                 query_embeddings=query_embedding,
->>>>>>> dev
                 n_results=7,  # 상위 7개 (공고 + 첨부 포함)
                 # where 조건 없음 → 모든 문서 검색 (공고 + 첨부)
             )
@@ -566,124 +449,12 @@ def extract_features_rag(state: BatchState) -> BatchState:
 
 
 # ========================================
-<<<<<<< HEAD
-# 🔖 MVP2: 분석 대시보드 (근거 추적)
-# ========================================
-# 목적: 공고문에서 "붙임 1 참조", "별첨 2 참조" 등의 언급을 감지하여
-#       해당 첨부 문서와 자동 매칭
-#       → 분석 대시보드에서 사용자가 특정 내용의 근거를 확인할 때 활용
-# 
-# 예시:
-# - 공고문: "제출 서류는 붙임 2 참조"
-# - 첨부문서: "붙임2_연구계획서양식.pdf"
-# - 매칭 결과: 공고 특정 섹션 ↔ 첨부2 연결 저장
-# ========================================
-
-def match_cross_references(state: BatchState) -> BatchState:
-    """
-    공고문 ↔ 첨부서류 참조 자동 매칭
-    
-    방법:
-    1. 공고문에서 "붙임 1", "별첨 2" 등 패턴 감지
-    2. VectorDB로 해당 첨부파일 검색
-    3. 매칭 결과 저장
-    """
-    documents = state['documents']
-    collection = state['chroma_collection']
-    model = state['embedding_model']
-    
-    print(f"\n{'='*60}")
-    print(f"🔗 참조 자동 매칭")
-    print(f"{'='*60}")
-    
-    cross_references = []
-    
-    # 공고문에서 참조 패턴 찾기
-    announcement_docs = [d for d in documents if d['document_type'] == 'ANNOUNCEMENT']
-    
-    for ann_doc in announcement_docs:
-        full_text = ann_doc['full_text']
-        
-        # 참조 패턴 추출
-        ref_patterns = re.findall(
-            r'(붙임|별첨|첨부)\s*(\d+)[.\s:]*([가-힣a-zA-Z\s]+)?',
-            full_text
-        )
-        
-        print(f"\n  📄 {ann_doc['file_name']}: {len(ref_patterns)}개 참조 패턴 발견")
-        
-        for pattern in ref_patterns:
-            ref_type = pattern[0]  # "붙임"
-            ref_number = int(pattern[1])  # 1
-            ref_title = pattern[2].strip() if pattern[2] else ""  # "연구계획서 양식"
-            
-            print(f"\n    🔍 '{ref_type} {ref_number} {ref_title}' 매칭 중...", end=" ")
-            
-            # 방법 1: 첨부번호로 직접 매칭
-            target_attachment = next(
-                (d for d in documents 
-                 if d['document_type'] == 'ATTACHMENT' 
-                 and d.get('attachment_number') == ref_number),
-                None
-            )
-            
-            match_method = "NUMBER_MATCH"
-            match_score = 1.0
-            
-            # 방법 2: 제목으로 Vector 검색
-            if not target_attachment and ref_title:
-                query = f"{ref_type} {ref_number} {ref_title}"
-                query_emb = model.encode([query], convert_to_numpy=True)
-                
-                results = collection.query(
-                    query_embeddings=query_emb.tolist(),
-                    n_results=3,
-                    where={"document_type": "ATTACHMENT"}
-                )
-                
-                if results['ids'][0] and results['distances'][0][0] < 0.5:
-                    # 가장 유사한 청크의 문서 찾기
-                    target_doc_id = results['metadatas'][0][0]['document_id']
-                    target_attachment = next(
-                        (d for d in documents if d['document_id'] == target_doc_id),
-                        None
-                    )
-                    match_method = "VECTOR_SEARCH"
-                    match_score = 1.0 - results['distances'][0][0]
-            
-            # 매칭 성공
-            if target_attachment:
-                cross_references.append({
-                    'source_document_id': ann_doc['document_id'],
-                    'source_file_name': ann_doc['file_name'],
-                    'target_document_id': target_attachment['document_id'],
-                    'target_file_name': target_attachment['file_name'],
-                    'reference_type': ref_type,
-                    'reference_number': ref_number,
-                    'reference_title': ref_title,
-                    'match_method': match_method,
-                    'match_score': match_score,
-                    'created_at': datetime.now().isoformat()
-                })
-                
-                print(f"✓ → {target_attachment['file_name']} ({match_method}, {match_score:.2f})")
-            else:
-                print("✗ (매칭 실패)")
-    
-    state['cross_references'] = cross_references
-    state['status'] = 'references_matched'
-    
-    print(f"\n  ✅ 총 {len(cross_references)}개 참조 매칭 완료")
-    
-    return state
-=======
 # [2025-01-10 suyeon] match_cross_references 함수 삭제
 # 삭제 이유:
 # 1. 현재 미사용: graph.py에서 노드로 등록되지 않음 (주석 처리됨)
 # 2. MVP2 재구현 예정: 현재 코드는 참고용이었으나 Git 히스토리에 보존
 # 3. 코드베이스 간소화: 115줄 삭제로 유지보수성 향상
 # 근거: MVP2에서 분석 대시보드 구현 시 새로운 구조로 재작성 예정
->>>>>>> dev
 
 
 def save_to_csv(state: BatchState) -> BatchState:
@@ -692,12 +463,8 @@ def save_to_csv(state: BatchState) -> BatchState:
 
     저장 파일:
     1. ANALYSIS_RESULT_{timestamp}.csv - Feature 추출 결과 (RAG + LLM 분석)
-<<<<<<< HEAD
-    2. table_of_contents_{timestamp}.json - 목차 정보 (JSON)
-=======
     2. ANALYSIS_RESULT_{timestamp}.json - Feature 추출 결과 (JSON)
     3. table_of_contents_{timestamp}.json - 목차 정보 (JSON)
->>>>>>> dev
     """
     
     print(f"\n{'='*60}")
@@ -718,10 +485,6 @@ def save_to_csv(state: BatchState) -> BatchState:
         # 1. ANALYSIS_RESULT.csv (Feature 추출 결과만)
         # ========================================
         analysis_data = []
-<<<<<<< HEAD
-        for feature in state['extracted_features']:
-            analysis_data.append({
-=======
         analysis_json = []
         for idx, feature in enumerate(state['extracted_features'], start=1):
             result_id = idx
@@ -743,7 +506,6 @@ def save_to_csv(state: BatchState) -> BatchState:
 
             analysis_data.append({
                 'result_id': result_id,
->>>>>>> dev
                 'project_idx': project_idx,
                 'feature_code': feature['feature_code'],
                 'feature_name': feature['feature_name'],
@@ -764,11 +526,6 @@ def save_to_csv(state: BatchState) -> BatchState:
         output_paths['csv'] = str(csv_path)
         print(f"\n  ✅ ANALYSIS_RESULT.csv: {len(analysis_data)}행")
         print(f"     → {csv_path.name}")
-<<<<<<< HEAD
-        
-        # ========================================
-        # 2. table_of_contents.json (목차 정보)
-=======
 
         # ========================================
         # 2. ANALYSIS_RESULT.json (Feature 추출 결과)
@@ -782,7 +539,6 @@ def save_to_csv(state: BatchState) -> BatchState:
         
         # ========================================
         # 3. table_of_contents.json (목차 정보)
->>>>>>> dev
         # ========================================
         toc = state.get('table_of_contents')
         if toc:
