@@ -5,10 +5,7 @@
 
 from datetime import datetime
 from typing import List, Dict, Any
-<<<<<<< HEAD
-=======
 import unicodedata
->>>>>>> dev
 import numpy as np
 
 from ..state_types import BatchState
@@ -52,24 +49,13 @@ def detect_proposal_templates(state: BatchState) -> BatchState:
 
     # 2️⃣ 각 첨부파일에 대해 양식 여부 판단
     for att_doc in attachment_docs:
-<<<<<<< HEAD
-        file_name = att_doc['file_name']
-=======
         file_name_raw = att_doc['file_name']
         file_name = unicodedata.normalize('NFC', file_name_raw)
->>>>>>> dev
         attachment_num = att_doc.get('attachment_number')
 
         print(f"\n  📄 {file_name}")
 
         # 신호 1: 파일명 키워드 체크
-<<<<<<< HEAD
-        FORM_KEYWORDS = ['계획서', '신청서', '제안서', '양식', '서식', '작성요령']
-        has_form_keyword = any(kw in file_name for kw in FORM_KEYWORDS)
-        confidence_score = 0.3 if has_form_keyword else 0.0
-
-        print(f"    - 파일명 키워드: {'✓' if has_form_keyword else '✗'} (신뢰도: +{0.3 if has_form_keyword else 0.0})")
-=======
         keyword_weights = {
             '계획서': 0.5,
             '제안서': 0.4,
@@ -86,7 +72,6 @@ def detect_proposal_templates(state: BatchState) -> BatchState:
             print(f"    - 파일명 키워드: ✓ {matched_keywords} (신뢰도: +{keyword_score:.2f})")
         else:
             print("    - 파일명 키워드: ✗ (신뢰도: +0.0)")
->>>>>>> dev
 
         # 신호 2: 공고문에서 해당 첨부파일 언급 체크
         mentioned_in_announcement = False
@@ -141,14 +126,11 @@ def detect_proposal_templates(state: BatchState) -> BatchState:
         else:
             print(f"    - 표 구조: ✗")
 
-<<<<<<< HEAD
-=======
         # 계획서 첨부 번호 가중치 (붙임 2 등에 우선순위 부여)
         if attachment_num in (1, 2) and '계획서' in file_name:
             confidence_score += 0.15
             print(f"    - 첨부번호/계획서 우선 가중치 적용 (+0.15)")
 
->>>>>>> dev
         # 최종 판단 (임계값: 0.6)
         is_template = confidence_score >= 0.6
 
@@ -165,11 +147,7 @@ def detect_proposal_templates(state: BatchState) -> BatchState:
             'has_template': is_template,
             'confidence_score': round(confidence_score, 2),
             'detection_signals': {
-<<<<<<< HEAD
-                'filename_keyword': has_form_keyword,
-=======
                 'filename_keyword': matched_keywords,
->>>>>>> dev
                 'announcement_mention': mentioned_in_announcement,
                 'table_structure': has_table_structure
             },

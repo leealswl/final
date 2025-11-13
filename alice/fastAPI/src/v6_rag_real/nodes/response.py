@@ -1,16 +1,11 @@
 """
 응답 생성 노드
 ✅ MVP1: form_source 결정 및 사용자 폼 데이터 생성
-<<<<<<< HEAD
-"""
-
-=======
 ✅ 2025-11-09 suyeon: Backend API 호출하여 Oracle DB 저장
 """
 
 import os
 import requests
->>>>>>> dev
 from ..state_types import BatchState
 
 
@@ -67,10 +62,7 @@ def build_response(state: BatchState) -> BatchState:
         'features_summary': {
             'total_count': len(all_features),
         },
-<<<<<<< HEAD
-=======
         'features': all_features,
->>>>>>> dev
 
         'attachment_templates': attachment_templates,  # ✨ MVP1
         'table_of_contents': table_of_contents,  # ✨ NEW: 목차 구조
@@ -101,8 +93,6 @@ def build_response(state: BatchState) -> BatchState:
         print(f"    - 목차 섹션: {table_of_contents.get('total_sections', 0)}개")
         print(f"    - 목차 출처: {table_of_contents.get('source', 'unknown')}")
 
-<<<<<<< HEAD
-=======
     # ========================================
     # 2025-11-09 suyeon: Backend API 호출하여 Oracle DB 저장
     # ========================================
@@ -142,5 +132,4 @@ def build_response(state: BatchState) -> BatchState:
     else:
         print(f"\n  ⏭️ Backend 저장 스킵 (SAVE_TO_BACKEND=false)")
 
->>>>>>> dev
     return state
