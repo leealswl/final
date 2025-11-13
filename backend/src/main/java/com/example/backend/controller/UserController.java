@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.backend.domain.User;
 import com.example.backend.service.UserService;
 
+import jakarta.servlet.http.HttpSession;
+
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,18 +35,33 @@ public class UserController {
         return insertCount == 1 ? new ResponseEntity<String>("success", HttpStatus.OK) : new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
     @PostMapping("/login")
-    public ResponseEntity<User> getUser(@RequestBody User user) {
-        User loginUser = userService.getUser(user);
-        System.out.println("login user: " + loginUser);
-        
-        return new ResponseEntity<>(loginUser, HttpStatus.OK);
+    public ResponseEntity<?> getUser(@RequestBody User user, HttpSession session) {
+        System.out.println("요청된 user: " + user);
+        User loginUser = null;
+        try {
+            loginUser = userService.getUser(user);
+            System.out.println("login user: " + loginUser);
+        } catch (Exception e) {
+            e.printStackTrace(); // 서버 콘솔에 예외 전체 출력
+            return new ResponseEntity<>("Server error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        if (loginUser != null) {
+            session.setAttribute("loginUser", loginUser);
+            return new ResponseEntity<>(loginUser, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>("Invalid credentials", HttpStatus.UNAUTHORIZED);
+        }
     }
 
-        @PostMapping("/logout")
-    public ResponseEntity<String> userLogout() {
-        
-        return new ResponseEntity<String>("Logout Success", HttpStatus.OK);
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> userLogout(HttpSession session) {
+        session.invalidate(); // 세션 삭제
+
+        return new ResponseEntity<String>("Log out Success", HttpStatus.OK);
     }
 
     @DeleteMapping("/delete")

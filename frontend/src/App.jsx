@@ -1,6 +1,6 @@
-import './App.css'
-import Homepage from './pages/home/Homepage'
-import {Route, Routes} from 'react-router-dom'
+import './App.css';
+import Homepage from './pages/home/Homepage';
+import { Route, Routes } from 'react-router-dom';
 import Login from './pages/login/Login';
 import Layout from './pages/works/Layout';
 import AnalyzeView from './pages/works/views/AnalyzeView';
@@ -9,22 +9,21 @@ import CreateView from './pages/works/views/CreateView';
 import GenerateView from './pages/works/views/GenerateView';
 import EditView from './pages/works/views/EditView';
 import VerifyView from './pages/works/views/VerifyView';
+import Dashboard from './pages/works/Dashboard';
 import { useEffect } from 'react';
 import { useFileStore } from './store/useFileStore';
 import { Dashboard } from '@mui/icons-material';
 
 
-
-
 function App() {
-  const setCtx = useFileStore(s => s.setCurrentContext);
+    const setCtx = useFileStore((s) => s.setCurrentContext);
 
-  useEffect(() => {
-    // TODO: 실제 로그인/선택값으로 설정
-    setCtx({ projectId: 1, userId: 'userId' });
-    // 임시 하드코딩 분석에이전트 관련
-    // setCtx({ projectId: 1, userId: '1' });
-  }, [setCtx]);
+    useEffect(() => {
+        // TODO: 실제 로그인/선택값으로 설정
+        setCtx({ projectId: 1, userId: 'userId' });
+        // 임시 하드코딩 분석에이전트 관련
+        // setCtx({ projectId: 1, userId: '1' });
+    }, [setCtx]);
 
   return (
       <Routes>
@@ -47,4 +46,4 @@ function App() {
   );
 }
 
-export default App
+export default App;

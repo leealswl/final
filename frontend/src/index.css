@@ -1,11 +1,15 @@
-html, body, #root {
+html,
+body,
+#root {
     height: 100%;
 }
 body {
-     margin: 0;
+    margin: 0;
     background: #fff;
 }
-* { box-sizing: border-box; }
+* {
+    box-sizing: border-box;
+}
 
 @font-face {
     font-family: 'SeoulAlrim-Medium';
@@ -53,7 +57,7 @@ body {
     font-family: 'Isamanru-Bold';
     src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-10@1.0/GongGothicBold.woff') format('woff');
     font-weight: 700;
-    font-display: swap
+    font-display: swap;
 }
 
 @font-face {
