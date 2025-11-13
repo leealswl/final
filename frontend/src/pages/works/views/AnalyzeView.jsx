@@ -10,25 +10,6 @@ import 폴더아이콘 from './icons/폴더 아이콘.png';
 import Upload from '../../../components/Upload';
 
 const AnalyzeView = () => {
-<<<<<<< HEAD
-  const navigate = useNavigate()
-  const { tree, currentProjectId, currentUserId } = useFileStore()
-  const setAnalysisResult = useAnalysisStore(state => state.setAnalysisResult)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  
-  // const analyzeStart = () => {
-  //   navigate('/works/analyze/dashboard')
-  // }
-  //   // ✅ 업로드 컴포넌트 각각 제어할 Ref
-  //   const rfpUploadRef = useRef(null);
-  //   const attachUploadRef = useRef(null);
-
-  //   // ✅ 클릭 시 input 클릭 트리거
-  //   const triggerUpload = (ref) => {
-  //       ref.current?.click();
-  //   };
-=======
     const navigate = useNavigate();
     const { tree, currentProjectId, currentUserId } = useFileStore();
     const setAnalysisResult = useAnalysisStore((state) => state.setAnalysisResult);
@@ -38,7 +19,6 @@ const AnalyzeView = () => {
     // ✅ 업로드 컴포넌트 각각 제어할 Ref
     const rfpUploadRef = useRef(null);
     const attachUploadRef = useRef(null);
->>>>>>> ab82b44cc56fe35ee8d77bf3a3a30aab1cf09bf1
 
     // ✅ 클릭 시 input 클릭 트리거
     const triggerUpload = (ref) => {
