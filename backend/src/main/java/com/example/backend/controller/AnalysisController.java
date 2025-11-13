@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -87,6 +88,23 @@ public class AnalysisController {
                         .body(Map.of("status", "fail", "message", "문서 저장 실패"));
             }
 
+            // 2단계: FastAPI로 파일 전송 및 분석 수행
+            // Map<String, Object> fastApiResult = fastApi.sendFilesToFastAPI(files, folders, userid);
+
+            // 3단계: FastAPI 분석 결과 반환
+            // if (fastApiResult != null && "success".equals(fastApiResult.get("status"))) {
+            //     return new ResponseEntity<>(fastApiResult, HttpStatus.OK);
+            // } else {
+            //     return ResponseEntity.internalServerError()
+            //             .body(Map.of("status", "fail", "message", "FastAPI 처리 실패"));
+            // }
+
+            // FastAPI를 안 쓰는 동안에는 저장 성공만 바로 반환 (현재 비활성화)
+            // return ResponseEntity.ok(Map.of(
+            //     "status", "success",
+            //     "message", "FastAPI 비활성화",
+            //     "savedCount", resultDocs
+            // ));
             // 2단계: FastAPI 분석은 "분석 시작" 버튼 클릭 시에만 실행
             // 업로드 시점에는 DB 저장만 수행
 

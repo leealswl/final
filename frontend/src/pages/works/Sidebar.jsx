@@ -49,9 +49,6 @@ const isRootId = (id) => /^root-(01|02)$/.test(String(id));
 
 export default function Sidebar() {
   const { tree, selectedNodeId, selectNode, renameNode, deleteNode } = useFileStore();
-  //const projectId = useFileStore(s => s.currentProjectId);
-  //const userId    = useFileStore(s => s.currentUserId);
-  //const { uploadAsync, isUploading } = useUpload();
 
   const [expandedItems, setExpandedItems] = useState(() => (tree || []).map(n => String(n.id)));
   const selectedNode = useMemo(
@@ -168,18 +165,7 @@ export default function Sidebar() {
     <Box sx={{ height: "100%", p: 1, overflow: "auto", bgcolor: "background.paper" }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1, pb: 1 }}>
         <Typography variant="subtitle2" sx={{ color: "#374151" }}>프로젝트 관리</Typography>
-        {/* <Button size="small" startIcon={<UploadIcon />} onClick={onClickUpload} disabled={isUploading}>
-          업로드
-        </Button> */}
         <Upload rootId={rootId} />
-        {/* <input
-          ref={fileInputRef}
-          type="file"
-          hidden
-          multiple
-          accept=".md,.txt,.pdf,.docx,.hwp,.hwpx,.xlsx,.pptx"
-          onChange={onChangeUpload}
-        /> */}
       </Stack>
 
       <SimpleTreeView

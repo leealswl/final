@@ -1,69 +1,78 @@
-import { Grid, Box, Stack, Typography, Button } from '@mui/material'
-import React from 'react'
-import banner01 from '../img/banner01.png'
-import Section from '../img/Section.png'
+import { Grid, Box, Stack, Typography, Button } from '@mui/material';
+import React from 'react';
+import banner01 from '../img/banner01.png';
+import Section from '../img/Section.png';
 
 const Banner01 = () => {
-    const edit =() => {
-    window.location.href="/edit"
-  }
-  return (
-    <Grid mx={30} mt={4}>
-      <Stack display={'flex'} justifyContent={'center'} alignItems={'center'}>
-        <Grid sx={{width: '80%', height: '55vh'}}>
-            <Box
-              sx={{
-                width: "100%",
-                height: "100%",
-                backgroundImage: `url(${banner01})`,
-                backgroundSize: "contain",       // 이미지 크기 조정 (cover, contain 등)
-                backgroundPosition: "center",  // 가운데 정렬
-                backgroundRepeat: "no-repeat", // 반복 방지
-                // boxShadow: 3,
-                // borderRadius: 2,
-                display:'flex',
-                justifyContent:'center',
-                alignItems:'center',
-                flexDirection:'column'
-              }}
-            >
-              <Typography fontSize={60} textAlign={'center'}  my={2} fontFamily={'Isamanru-Bold'}>A next-gen<br />AI editor for all your<br />documents</Typography>
-              <Typography textAlign={'center'} fontFamily={'Pretendard5'}>Out-of-the-box, Markdown-Friendly<br />Full framework support (React, Vue Angular, Svelte)</Typography>
-              <Button
-                onClick={edit}
-                variant="contained"
-                size='large'
-                sx={{
-                  my: '20px',
-                  backgroundColor: 'black',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  '&:hover': {
-                    backgroundColor: '#333',
-                  },
-                }}
-              >
-                Quick Start
-              </Button>
-            </Box>
+    const home = () => {
+        window.location.href = '/main';
+    };
+    return (
+        <Grid mx={30} mt={4}>
+            <Stack display={'flex'} justifyContent={'center'} alignItems={'center'}>
+                <Grid sx={{ width: '80%', height: '55vh' }}>
+                    <Box
+                        sx={{
+                            width: '100%',
+                            height: '100%',
+                            backgroundImage: `url(${banner01})`,
+                            backgroundSize: 'contain', // 이미지 크기 조정 (cover, contain 등)
+                            backgroundPosition: 'center', // 가운데 정렬
+                            backgroundRepeat: 'no-repeat', // 반복 방지
+                            // boxShadow: 3,
+                            // borderRadius: 2,
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            flexDirection: 'column',
+                        }}
+                    >
+                        <Typography fontSize={60} textAlign={'center'} my={2} fontFamily={'Isamanru-Bold'}>
+                            A next-gen
+                            <br />
+                            AI editor for all your
+                            <br />
+                            documents
+                        </Typography>
+                        <Typography textAlign={'center'} fontFamily={'Pretendard5'}>
+                            Out-of-the-box, Markdown-Friendly
+                            <br />
+                            Full framework support (React, Vue Angular, Svelte)
+                        </Typography>
+                        <Button
+                            onClick={home}
+                            variant="contained"
+                            size="large"
+                            sx={{
+                                my: '20px',
+                                backgroundColor: 'black',
+                                color: 'white',
+                                fontWeight: 'bold',
+                                '&:hover': {
+                                    backgroundColor: '#333',
+                                },
+                            }}
+                        >
+                            Quick Start
+                        </Button>
+                    </Box>
+                </Grid>
+                <Box
+                    component={'img'}
+                    src={Section}
+                    alt="Section"
+                    sx={{
+                        width: '120%',
+                        height: 'auto',
+                        // display:'block',
+                        // margin: '0 auto'
+                        // borderRadius: 2,
+                        // boxShadow: 3,
+                    }}
+                />
+            </Stack>
         </Grid>
-          <Box
-            component={'img'}
-            src={Section}
-            alt="Section"
-            sx={{
-              width: '120%',
-              height: "auto",
-              // display:'block',
-              // margin: '0 auto'
-              // borderRadius: 2,
-              // boxShadow: 3,
-            }}
-          />
-      </Stack>
-      
-    </Grid>
-  )
-}
+    );
+};
 
-export default Banner01
+export default Banner01;
