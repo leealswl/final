@@ -3,9 +3,7 @@ import { Box, Paper, Stack, Typography, TextField, Button } from '@mui/material'
 import axios from 'axios';
 
 const ChatBotMUI = () => {
-    const [messages, setMessages] = useState([
-        { sender: 'bot', text: '안녕하세요! 무엇을 도와드릴까요?' }
-    ]);
+    const [messages, setMessages] = useState([{ sender: 'bot', text: '안녕하세요! 무엇을 도와드릴까요?' }]);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false); // 🔹 로딩 상태
     const scrollRef = useRef(null);
@@ -21,7 +19,7 @@ const ChatBotMUI = () => {
         try {
             // 🔹 FastAPI 호출
             const response = await axios.post('http://127.0.0.1:8001/chat', {
-                userMessage: userText
+                userMessage: userText,
             });
             const aiText = response.data.aiResponse;
 
@@ -29,10 +27,7 @@ const ChatBotMUI = () => {
             setMessages((prev) => [...prev, { sender: 'bot', text: aiText }]);
         } catch (err) {
             console.error('백엔드 호출 실패:', err);
-            setMessages((prev) => [
-                ...prev,
-                { sender: 'bot', text: '⚠️ 서버 오류가 발생했습니다.' }
-            ]);
+            setMessages((prev) => [...prev, { sender: 'bot', text: '⚠️ 서버 오류가 발생했습니다.' }]);
         } finally {
             setIsLoading(false); // 🔹 로딩 종료
         }
