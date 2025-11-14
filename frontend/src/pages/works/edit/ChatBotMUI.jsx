@@ -33,11 +33,14 @@ const ChatBotMUI = () => {
                     setIsLoading(false); // 🔹 로딩 종료
                 },
                 onError: () => {
-                    setMessages((prev) => [...prev, { sender: 'bot', text: '⚠️ 서버 오류가 발생했습니다.' }]);
+                    setMessages((prev) => [
+                        ...prev,
+                        { sender: 'bot', text: '⚠️ 서버 오류가 발생했습니다.' }
+                    ]);
                     setIsLoading(false); // 🔹 에러 시에도 로딩 종료
-                },
-            },
-        );
+                }
+        });
+        
     };
 
     // ✅ 스크롤 항상 아래로
