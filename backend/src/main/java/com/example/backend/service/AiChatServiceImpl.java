@@ -38,13 +38,13 @@ public class AiChatServiceImpl implements AiChatService {
 
     @Override
     @Transactional
-    public AiChat processChat(String userMessage, Long userIDx, Long projectIDx) {
+    public AiChat processChat(String userMessage, Long userIdx, Long projectIdx) {
 
         // 1️⃣ FastAPI 요청 바디 생성
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("userMessage", userMessage);
-        requestBody.put("userIDx", userIDx);
-        requestBody.put("projectIDx", projectIDx);
+        requestBody.put("userIdx", userIdx);
+        requestBody.put("projectIdx", projectIdx);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -53,8 +53,8 @@ public class AiChatServiceImpl implements AiChatService {
 
         // 2️⃣ AiChat 객체 초기화
         AiChat chat = new AiChat();
-        chat.setUserIDx(userIDx);
-        chat.setProjectIDx(projectIDx);
+        chat.setUserIdx(userIdx);
+        chat.setProjectIdx(projectIdx);
         chat.setUserMessage(userMessage);
 
         // 3️⃣ FastAPI 호출

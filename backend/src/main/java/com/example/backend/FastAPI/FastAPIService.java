@@ -139,9 +139,14 @@ public class FastAPIService {
     }
 // 챗봇메세지 호출 - fastapi 연동
     public AiChat ChatbotMessage(String message) {
+
+        System.out.println("fastapi 호출 성공");
         
         Mono<AiChat> response = webClient.post().uri("/chat").bodyValue(Map.of("userMessage", message)).retrieve().bodyToMono(AiChat.class);
+        System.out.println("agent 송신 후");
+        System.out.println(response);
         AiChat result = response.block();
+        System.out.println("agent 송신 후123123");
         return result;
         
     }

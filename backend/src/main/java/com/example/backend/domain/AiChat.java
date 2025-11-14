@@ -4,8 +4,8 @@ import lombok.Data;
 
 @Data
 public class AiChat {
-    private Long userIDx;
-    private Long projectIDx;
+    private Long userIdx;
+    private Long projectIdx;
     private String userMessage;
     private String aiResponse;
 }
