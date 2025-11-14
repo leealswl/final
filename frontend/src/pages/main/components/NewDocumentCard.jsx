@@ -1,30 +1,33 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { Plus } from 'lucide-react';
-import api from '../../../utils/api';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useNavigate } from 'react-router';
-import { useProjectStore } from '../../../store/useProjectStore';
+import UseProject from '../../../hooks/useProject';
 
 export function NewDocumentCard() {
     const user = useAuthStore((state) => state.user);
-    const setProject = useProjectStore((state) => state.setProject);
     const navigate = useNavigate();
 
-    const makeProject = async () => {
-        try {
-            const res = await api.post(`/api/project/insert`, { userIdx: user.idx });
-            console.log('res.data: ', res.data);
-            setProject(res.data);
+    const { mutate: project, inPending } = UseProject({
+        onSuccess: () => {
+            // alert('프로젝트 성공');
             navigate('/works/analyze');
-        } catch (err) {
-            console.error(err);
-        }
+        },
+        onError: (error) => {
+            alert(error);
+        },
+    });
+
+    const onClickEvent = (e) => {
+        e.preventDefault();
+        if (inPending) return;
+        project({ userIdx: user.idx });
     };
 
     return (
         <Box
-            onClick={makeProject}
+            onClick={onClickEvent}
             sx={{
                 p: 3,
                 border: 1,
