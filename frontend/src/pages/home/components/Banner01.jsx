@@ -10,13 +10,13 @@ const Banner01 = () => {
     return (
         <Grid mx={30} mt={4}>
             <Stack display={'flex'} justifyContent={'center'} alignItems={'center'}>
-                <Grid sx={{ width: '80%', height: '55vh' }}>
+                <Grid sx={{ width: '100%', height: '55vh' }}>
                     <Box
                         sx={{
                             width: '100%',
                             height: '100%',
                             backgroundImage: `url(${banner01})`,
-                            backgroundSize: 'contain', // 이미지 크기 조정 (cover, contain 등)
+                            backgroundSize: 'cover', // 이미지 크기 조정 (cover, contain 등)
                             backgroundPosition: 'center', // 가운데 정렬
                             backgroundRepeat: 'no-repeat', // 반복 방지
                             // boxShadow: 3,
@@ -58,12 +58,19 @@ const Banner01 = () => {
                     </Box>
                 </Grid>
                 <Box
-                    component={'img'}
-                    src={Section}
-                    alt="Section"
                     sx={{
-                        width: '120%',
-                        height: 'auto',
+                        width: '100%',
+                        height: '55vh',
+                        backgroundImage: `url(${Section})`,
+                        backgroundSize: 'cover', // 이미지 크기 조정 (cover, contain 등)
+                        backgroundPosition: 'center', // 가운데 정렬
+                        backgroundRepeat: 'no-repeat', // 반복 방지
+                        // boxShadow: 3,
+                        // borderRadius: 2,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        flexDirection: 'column',
                     }}
                 />
             </Stack>

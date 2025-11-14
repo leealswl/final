@@ -59,7 +59,7 @@ const Navbar = () => {
                 </Stack>
             </Grid>
             <Grid size={2} display="flex" justifyContent="center" alignItems="center">
-                <Stack direction="row" spacing={2} alignItems='center'>
+                <Stack direction="row" spacing={2} alignItems="center">
                     {user ? (
                         <>
                             <Typography>{user.userName}님</Typography>
