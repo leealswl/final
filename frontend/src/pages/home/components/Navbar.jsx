@@ -21,6 +21,7 @@ const Navbar = () => {
     const home=() =>{
         navigate('/');
     }
+    //네비수정
 
     return (
         <Grid container pt={3} mx={30}>
