@@ -255,9 +255,18 @@ async def chat(request: ChatRequest):
 
         ai_response = completion.choices[0].message.content  # 새 인터페이스 접근 방식
 
+        # 버튼 표시 판단 로직 
+        def is_editor_request(text: str) -> bool:
+            trigger_phrases = ["에디터에 추가", "문서 생성", "플랜 반영"]
+            return any(phrase in text for phrase in trigger_phrases)
+
+        show_editor_button = is_editor_request(ai_response)
+
+
         return {
             "userMessage": request.userMessage,
-            "aiResponse": ai_response
+            "aiResponse": ai_response,
+            "showEditorButton": show_editor_button
         }
 
     except Exception as e:
