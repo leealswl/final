@@ -3,28 +3,30 @@ import { Box, Paper, Stack, Typography, TextField, Button } from '@mui/material'
 import useChatbot from '../../../hooks/useChatbot';
 
 const ChatBotMUI = () => {
-    const [messages, setMessages] = useState([
-        { sender: 'bot', text: '안녕하세요! 무엇을 도와드릴까요?' }
-    ]);
+    const [messages, setMessages] = useState([{ sender: 'bot', text: '안녕하세요! 무엇을 도와드릴까요?' }]);
     const [inputValue, setInputValue] = useState('');
-    const {mutate: sendChatMessage} = useChatbot();
+    const { mutate: sendChatMessage } = useChatbot();
     const [isLoading, setIsLoading] = useState(false);
 
+    // 여기 수정
     const scrollRef = useRef(null);
+    const isComposingRef = useRef(false); // IME 조합 중인지 추적
+    const pendingEnterRef = useRef(false); // 조합 종료 직후 Enter 키 대기
 
     const handleSend = () => {
-        if (!inputValue.trim()) return;
+        // 중복 호출 방지: 로딩 중이거나 입력값이 없으면 무시
+        if (isLoading || !inputValue.trim()) return;
 
-        const userText = inputValue;
+        const userText = inputValue.trim();
 
         setMessages((prev) => [...prev, { sender: 'user', text: userText }]);
         setInputValue('');
         setIsLoading(true); // 🔹 로딩 시작
 
         sendChatMessage(
-            {userMessage: userText}, 
+            { userMessage: userText },
             {
-                onSuccess: (data) => { 
+                onSuccess: (data) => {
                     setMessages((prev) => [...prev, { sender: 'bot', text: data.aiResponse }]);
                     setIsLoading(false); // 🔹 로딩 종료
                 },
@@ -33,6 +35,7 @@ const ChatBotMUI = () => {
                         ...prev,
                         { sender: 'bot', text: '⚠️ 서버 오류가 발생했습니다.' }
                     ]);
+                    setIsLoading(false); // 🔹 에러 시에도 로딩 종료
                 }
         });
         
@@ -113,12 +116,48 @@ const ChatBotMUI = () => {
                     placeholder="메시지를 입력하세요..."
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
+                    onCompositionStart={() => {
+                        isComposingRef.current = true; // IME 조합 시작 (macOS, Windows 공통)
+                    }}
+                    onCompositionUpdate={() => {
+                        isComposingRef.current = true; // IME 조합 업데이트 (Windows에서 중요)
+                    }}
+                    onCompositionEnd={() => {
+                        // 조합 종료 즉시 ref 업데이트
+                        isComposingRef.current = false;
+                        
+                        // 조합 종료 직후 Enter 키가 눌릴 수 있으므로 짧은 시간 동안 대기
+                        // onCompositionEnd와 onKeyDown의 이벤트 순서 문제 해결
+                        pendingEnterRef.current = true;
+                        setTimeout(() => {
+                            pendingEnterRef.current = false;
+                        }, 10);
+                    }}
                     onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleSend();
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            // IME 조합 중인지 확인 (Windows와 macOS 모두 지원)
+                            const isComposing = isComposingRef.current || 
+                                (e.nativeEvent && e.nativeEvent.isComposing !== undefined ? e.nativeEvent.isComposing : false);
+                            
+                            // 조합 중이 아니거나 조합 종료 직후면 전송
+                            if (!isComposing || pendingEnterRef.current) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleSend();
+                            }
+                        }
                     }}
                     fullWidth
                 />
-                <Button variant="contained" onClick={handleSend} disabled={isLoading}>
+                <Button 
+                    variant="contained"
+                    onClick={(e) => { 
+                        e.preventDefault(); 
+                        e.stopPropagation();
+                        handleSend();
+                    }} 
+                    disabled={isLoading || !inputValue.trim()}
+                >
                     전송
                 </Button>
             </Stack>

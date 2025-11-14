@@ -1,6 +1,6 @@
 // store/useProjectStore.js
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export const useProjectStore = create(
     persist(
@@ -9,6 +9,10 @@ export const useProjectStore = create(
             setProject: (data) => set({ project: data }),
             clearProject: () => set({ project: null }),
         }),
-        { name: 'project-store' }, // localStorage에 저장
+        {
+            name: 'project-store',
+            storage: createJSONStorage(() => sessionStorage),
+            partialize: (state) => ({ project: state.project }),
+        },
     ),
 );
