@@ -1,15 +1,13 @@
 import { BookOpen, Video, MessageCircleQuestion } from 'lucide-react';
-import { useState } from 'react';
 import { Box, Typography } from '@mui/material';
 
 export function HelpSection() {
-    const [isExpanded, setIsExpanded] = useState(false);
 
     const helpItems = [
         {
             icon: <BookOpen size={20} style={{ color: '#1a73e8' }} />,
             title: '시작 가이드',
-            description: 'Palaodc의 기본 기능을 알아보세요',
+            description: 'Paladoc의 기본 기능을 알아보세요',
         },
         {
             icon: <Video size={20} style={{ color: '#1a73e8' }} />,
@@ -28,20 +26,13 @@ export function HelpSection() {
             mt={6}
             p={3}
             border={1}
-            borderColor="var(--nb-border)"
-            borderRadius="var(--card-radius)"
-            bgcolor="var(--nb-card-bg)"
             sx={{
-                maxHeight: isExpanded ? 400 : 150,
-                opacity: isExpanded ? 1 : 0.5,
-                overflow: 'hidden',
-                transition: 'all 0.3s',
-                '&:hover': {
-                    opacity: 1,
-                },
+                maxHeight: 400,
+                opacity: 1,
+                borderRadius: 2,
+                borderColor: '#dadce0',
+                bgcolor: "#f7f9fa"
             }}
-            onMouseEnter={() => setIsExpanded(true)}
-            onMouseLeave={() => setIsExpanded(false)}
         >
             <Typography variant="h6" mb={2} sx={{ color: '#202124' }}>
                 도움말 및 가이드
@@ -59,7 +50,7 @@ export function HelpSection() {
                         sx={{
                             cursor: 'pointer',
                             transition: 'background-color 0.3s',
-                            '&:hover': { bgcolor: 'var(--nb-background)' },
+                            '&:hover': { bgcolor: 'white' },
                         }}
                     >
                         {item.icon}

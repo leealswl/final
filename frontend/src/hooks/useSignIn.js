@@ -1,10 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
 import api from '../utils/api';
 import { useAuthStore } from '../store/useAuthStore';
-// import { useQueryClient } from '@tanstack/react-query';
 
 export default function useSignIn(opts = {}) {
-    // const qc = useQueryClient();
     const setUser = useAuthStore((s) => s.setUser);
 
     return useMutation({
@@ -15,7 +13,6 @@ export default function useSignIn(opts = {}) {
         },
         onSuccess: async (data) => {
             setUser(data);
-            // await qc.invalidateQueries({ queryKey: ['auth', 'me'] });
             opts.onSuccess?.(data);
         },
         onError: (err) => {
