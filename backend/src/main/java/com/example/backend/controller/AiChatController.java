@@ -1,11 +1,17 @@
 package com.example.backend.controller;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.backend.FastAPI.FastAPIService;
 import com.example.backend.domain.AiChat;
 import com.example.backend.service.AiChatService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * AiChatController
@@ -13,8 +19,11 @@ import java.util.List;
  *  - GET  /ai-chat/history  : DB에서 채팅 히스토리 조회
  */
 @RestController
-@RequestMapping("/ai-chat")
+@RequestMapping("/api/ai-chat")
 public class AiChatController {
+
+    @Autowired
+    FastAPIService fastApi;
 
     private final AiChatService aiChatService;
 
@@ -32,12 +41,9 @@ public class AiChatController {
      * }
      */
     @PostMapping("/response")
-    public AiChat sendMessage(@RequestBody ChatRequest chatRequest){
-        return aiChatService.processChat(
-                chatRequest.getUserMessage(),
-                chatRequest.getUserIDx(),
-                chatRequest.getProjectIDx()
-        );
+    public AiChat sendMessage(@RequestBody AiChat chatRequest){
+
+        return fastApi.ChatbotMessage(chatRequest.getUserMessage());
     }
 
     /**
@@ -51,29 +57,29 @@ public class AiChatController {
     /**
      * 요청 DTO
      */
-    public static class ChatRequest {
-        private String userMessage;
-        private Long userIDx;
-        private Long projectIDx;
+    // public static class ChatRequest {
+    //     private String userMessage;
+    //     private Long userIDx;
+    //     private Long projectIDx;
 
-        // Getter & Setter
-        public String getUserMessage() {
-            return userMessage;
-        }
-        public void setUserMessage(String userMessage) {
-            this.userMessage = userMessage;
-        }
-        public Long getUserIDx() {
-            return userIDx;
-        }
-        public void setUserIDx(Long userIDx) {
-            this.userIDx = userIDx;
-        }
-        public Long getProjectIDx() {
-            return projectIDx;
-        }
-        public void setProjectIDx(Long projectIDx) {
-            this.projectIDx = projectIDx;
-        }
-    }
+    //     // Getter & Setter
+    //     public String getUserMessage() {
+    //         return userMessage;
+    //     }
+    //     public void setUserMessage(String userMessage) {
+    //         this.userMessage = userMessage;
+    //     }
+    //     public Long getUserIDx() {
+    //         return userIDx;
+    //     }
+    //     public void setUserIDx(Long userIDx) {
+    //         this.userIDx = userIDx;
+    //     }
+    //     public Long getProjectIDx() {
+    //         return projectIDx;
+    //     }
+    //     public void setProjectIDx(Long projectIDx) {
+    //         this.projectIDx = projectIDx;
+    //     }
+    // }
 }

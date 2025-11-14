@@ -1,36 +1,36 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, use } from 'react';
 import { Box, Paper, Stack, Typography, TextField, Button } from '@mui/material';
-import axios from 'axios';
+import useChatbot from '../../../hooks/useChatbot';
 
 const ChatBotMUI = () => {
     const [messages, setMessages] = useState([{ sender: 'bot', text: '안녕하세요! 무엇을 도와드릴까요?' }]);
     const [inputValue, setInputValue] = useState('');
-    const [isLoading, setIsLoading] = useState(false); // 🔹 로딩 상태
+    const { mutate: sendChatMessage } = useChatbot();
+    const [isLoading, setIsLoading] = useState(false);
+
     const scrollRef = useRef(null);
 
-    const handleSend = async () => {
+    const handleSend = () => {
         if (!inputValue.trim()) return;
+
         const userText = inputValue;
 
         setMessages((prev) => [...prev, { sender: 'user', text: userText }]);
         setInputValue('');
         setIsLoading(true); // 🔹 로딩 시작
 
-        try {
-            // 🔹 FastAPI 호출
-            const response = await axios.post('http://127.0.0.1:8001/chat', {
-                userMessage: userText,
-            });
-            const aiText = response.data.aiResponse;
-
-            // 🔹 AI 메시지 추가 + 로딩 종료
-            setMessages((prev) => [...prev, { sender: 'bot', text: aiText }]);
-        } catch (err) {
-            console.error('백엔드 호출 실패:', err);
-            setMessages((prev) => [...prev, { sender: 'bot', text: '⚠️ 서버 오류가 발생했습니다.' }]);
-        } finally {
-            setIsLoading(false); // 🔹 로딩 종료
-        }
+        sendChatMessage(
+            { userMessage: userText },
+            {
+                onSuccess: (data) => {
+                    setMessages((prev) => [...prev, { sender: 'bot', text: data.aiResponse }]);
+                    setIsLoading(false); // 🔹 로딩 종료
+                },
+                onError: () => {
+                    setMessages((prev) => [...prev, { sender: 'bot', text: '⚠️ 서버 오류가 발생했습니다.' }]);
+                },
+            },
+        );
     };
 
     // ✅ 스크롤 항상 아래로
