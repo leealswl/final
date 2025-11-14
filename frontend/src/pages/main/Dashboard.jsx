@@ -89,7 +89,9 @@ function Dashboard() {
                 bgcolor: 'white',
             }}
         >
+            <Box sx={{ maxWidth: 1400, mx:'auto', px:1}}>
             <DashboardHeader />
+            </Box>
 
             <Box component="main" sx={{ maxWidth: 1400, mx: 'auto', px: 3, py: 5 }}>
                 {/* 최근 작업 문서 섹션 */}

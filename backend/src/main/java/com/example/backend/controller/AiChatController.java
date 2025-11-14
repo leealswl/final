@@ -27,7 +27,6 @@ public class AiChatController {
 
     private final AiChatService aiChatService;
 
-    @Autowired
     public AiChatController(AiChatService aiChatService){
         this.aiChatService = aiChatService;
     }
@@ -42,7 +41,6 @@ public class AiChatController {
      */
     @PostMapping("/response")
     public AiChat sendMessage(@RequestBody AiChat chatRequest){
-
         return fastApi.ChatbotMessage(chatRequest.getUserMessage());
     }
 
@@ -53,33 +51,4 @@ public class AiChatController {
     public List<AiChat> getChatHistory(){
         return aiChatService.getChatHistory();
     }
-
-    /**
-     * 요청 DTO
-     */
-    // public static class ChatRequest {
-    //     private String userMessage;
-    //     private Long userIDx;
-    //     private Long projectIDx;
-
-    //     // Getter & Setter
-    //     public String getUserMessage() {
-    //         return userMessage;
-    //     }
-    //     public void setUserMessage(String userMessage) {
-    //         this.userMessage = userMessage;
-    //     }
-    //     public Long getUserIDx() {
-    //         return userIDx;
-    //     }
-    //     public void setUserIDx(Long userIDx) {
-    //         this.userIDx = userIDx;
-    //     }
-    //     public Long getProjectIDx() {
-    //         return projectIDx;
-    //     }
-    //     public void setProjectIDx(Long projectIDx) {
-    //         this.projectIDx = projectIDx;
-    //     }
-    // }
 }
