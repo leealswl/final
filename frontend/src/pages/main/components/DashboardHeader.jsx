@@ -41,6 +41,7 @@ export function DashboardHeader() {
                 bgcolor: 'white',
             }}
         >
+            
             {/* 왼쪽: 로고 + 네비게이션 */}
             <Stack direction="row" spacing={3} alignItems="center">
                 <Stack direction="row" spacing={1} alignItems="center">
@@ -74,17 +75,6 @@ export function DashboardHeader() {
                     >
                         프로젝트
                     </Button>
-                    {/* <Button
-                        variant="text"
-                        sx={{
-                            borderRadius: '999px',
-                            color: '#5f6368',
-                            textTransform: 'none',
-                            '&:hover': { bgcolor: '#f7f9fa' },
-                        }}
-                    >
-                        팀
-                    </Button> */}
                 </Stack>
             </Stack>
 

@@ -8,8 +8,8 @@ import api from '../../../utils/api';
 import 문서아이콘 from './icons/문서 아이콘.png';
 import 폴더아이콘 from './icons/폴더 아이콘.png';
 import Upload from '../../../components/Upload';
-import { useAuthStore } from '../../../store/useAuthStore';
 import { useProjectStore } from '../../../store/useProjectStore';
+import { useAuthStore } from '../../../store/useAuthStore';
 
 const AnalyzeView = () => {
     const navigate = useNavigate();
