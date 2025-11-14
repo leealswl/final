@@ -9,6 +9,8 @@ from fastapi.concurrency import run_in_threadpool
 from typing import List
 from pathlib import Path
 
+from v11_generator.ai_generator import generate_proposal
+
 # 설정 import
 from config import get_settings
 import os
@@ -164,36 +166,9 @@ async def analyze_documents(
         print(f"✅ LangGraph 분석 완료")
 
         # ========================================
-        # 5단계 LLM 호출 → JSON Plan 생성
+        # 5단계 LLM 호출 → JSON Plan 생성 [분리함]
         # ========================================
-        try:
-            llm_prompt = f"""
-            다음 분석 결과를 참고하여, 사용자가 바로 편집 가능한 기획서 JSON Plan을 생성하세요.
-            분석 결과: {json.dumps(result['response_data'], ensure_ascii=False)}
-            JSON Plan 예시:
-            {{
-            "title": "문서 제목",
-            "sections": [
-                {{"title": "1. 서론", "content": ""}},
-                {{"title": "2. 본론", "content": ""}}
-            ]
-            }}
-            """
-
-            completion = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[{"role": "user", "content": llm_prompt}],
-                response_format={"type": "json_object"}
-            )
-
-            plan_json = json.loads(completion.choices[0].message["content"])
-            result['response_data']['plan'] = plan_json
-
-        except Exception as e:
-            print(f"⚠️ LLM Plan 생성 실패: {str(e)}")
-            result['response_data']['plan'] = None
-
-
+       
         # ========================================
         # 6단계: 분석 결과 반환
         # ========================================
@@ -236,41 +211,24 @@ async def root():
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
-    from openai import OpenAI
-    import os
-
-    # .env 또는 시스템 환경변수에서 키 로드
-    openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
     try:
-        # 1.0.0 이상 호환 호출
-        completion = openai_client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "당신은 친절한 AI 어시스턴트입니다."},
-                {"role": "user", "content": request.userMessage}
-            ],
-            temperature=0.7
+        print("📢 Chat 요청 수신:", request.userMessage)
+        print("📢 OpenAI 호출 키:", os.getenv("OPENAI_API_KEY") is not None)
+
+        # 분석 단계 없이 바로 LLM 호출
+        response_data = await generate_proposal(
+            request.userMessage,
+            request.userIDx,
+            request.projectIDx,
+            os.getenv("OPENAI_API_KEY")
         )
 
-        ai_response = completion.choices[0].message.content  # 새 인터페이스 접근 방식
 
-        # 버튼 표시 판단 로직 
-        def is_editor_request(text: str) -> bool:
-            trigger_phrases = ["에디터에 추가", "문서 생성", "플랜 반영"]
-            return any(phrase in text for phrase in trigger_phrases)
-
-        show_editor_button = is_editor_request(ai_response)
-
-
-        return {
-            "userMessage": request.userMessage,
-            "aiResponse": ai_response,
-            "showEditorButton": show_editor_button
-        }
+        return response_data
 
     except Exception as e:
         return {"error": str(e)}
+    
 
 # ========================================
 # 실행 (개발용)
