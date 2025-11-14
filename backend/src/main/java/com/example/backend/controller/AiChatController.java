@@ -41,6 +41,7 @@ public class AiChatController {
      */
     @PostMapping("/response")
     public AiChat sendMessage(@RequestBody AiChat chatRequest){
+        System.out.println("fastapi 호출 시작");
         return fastApi.ChatbotMessage(chatRequest.getUserMessage());
     }
 

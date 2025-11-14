@@ -28,8 +28,8 @@ settings = get_settings()
 
 class ChatRequest(BaseModel):
     userMessage: str
-    userIDx: int | None = None
-    projectIDx: int | None = None
+    userIdx: int | None = None
+    projectIdx: int | None = None
 
 # FastAPI 앱 초기화
 app = FastAPI(
@@ -218,8 +218,8 @@ async def chat(request: ChatRequest):
         # 분석 단계 없이 바로 LLM 호출
         response_data = await generate_proposal(
             request.userMessage,
-            request.userIDx,
-            request.projectIDx,
+            request.userIdx,
+            request.projectIdx,
             os.getenv("OPENAI_API_KEY")
         )
 

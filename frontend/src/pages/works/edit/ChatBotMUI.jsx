@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, use } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Box, Paper, Stack, Typography, TextField, Button } from '@mui/material';
 import useChatbot from '../../../hooks/useChatbot';
 
