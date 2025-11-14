@@ -2,10 +2,12 @@ import { Grid, Box, Stack, Typography, Button } from '@mui/material';
 import React from 'react';
 import banner01 from '../img/banner01.png';
 import Section from '../img/Section.png';
+import { useNavigate } from 'react-router';
 
 const Banner01 = () => {
+    const navigate = useNavigate();
     const main = () => {
-        window.location.href = '/main';
+        navigate('/main');
     };
     return (
         <Grid mx={30} mt={4}>

@@ -12,13 +12,13 @@ const LoginForm = () => {
     const redirectTo = location.state?.from || '/'; // 이전 페이지 or 홈
 
     const home = () => {
-        window.location.href = '/';
+        navigate('/');
     };
 
     const { mutate: signIn, isPending } = useSignIn({
         onSuccess: () => {
             alert('로그인 성공!');
-            navigate(redirectTo, { replace: true });
+            navigate('/');
         },
         onError: (error) => {
             // console.log('전체 error 객체:', error);
