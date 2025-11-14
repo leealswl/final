@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Grid, Stack, Box, Typography, CircularProgress } from '@mui/material';
+import { Button, Grid, Stack, Box, Typography } from '@mui/material';
 import logo from '../img/nav_logo.png';
 import { useAuthStore } from '../../../store/useAuthStore';
 import LogoutButton from '../../../components/LogoutButton';
@@ -8,7 +8,7 @@ const Navbar = () => {
     const user = useAuthStore((s) => s.user);
     console.log(user);
 
-    const home = () => {
+    const main = () => {
         window.location.href = '/main';
     };
 
@@ -27,8 +27,6 @@ const Navbar = () => {
                         mr: '10px',
                         width: 30,
                         height: 'auto',
-                        // borderRadius: 2,
-                        // boxShadow: 3,
                     }}
                 />
                 <Typography fontSize={24} fontWeight={'bold'}>
@@ -49,13 +47,13 @@ const Navbar = () => {
                     <Button size="large" color="error" sx={{ color: 'black', '&:hover': { backgroundColor: '#f5f5f5' } }}>
                         고객지원
                     </Button>
-                    <Button size="large" color="secondary" sx={{ color: 'black', '&:hover': { backgroundColor: '#f5f5f5' } }} onClick={home}>
+                    <Button size="large" color="secondary" sx={{ color: 'black', '&:hover': { backgroundColor: '#f5f5f5' } }} onClick={main}>
                         <strong>시작하기</strong>
                     </Button>
                 </Stack>
             </Grid>
             <Grid size={2} display="flex" justifyContent="center" alignItems="center">
-                <Stack direction="row" spacing={2}>
+                <Stack direction="row" spacing={2} alignItems='center'>
                     {user ? (
                         <>
                             <Typography>{user.userName}님</Typography>
@@ -69,22 +67,19 @@ const Navbar = () => {
                                 sx={{
                                     color: 'black',
                                     borderColor: 'black',
-                                    // fontWeight: 'bold',
                                     '&:hover': {
                                         borderColor: 'black',
                                         backgroundColor: '#f5f5f5',
                                     },
                                 }}
                             >
-                                LOG IN
+                                LOGIN
                             </Button>
-
                             <Button
                                 variant="contained"
                                 sx={{
                                     backgroundColor: 'black',
                                     color: 'white',
-                                    // fontWeight: 'bold',
                                     '&:hover': {
                                         backgroundColor: '#333',
                                     },

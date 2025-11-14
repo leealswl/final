@@ -4,7 +4,7 @@ import banner01 from '../img/banner01.png';
 import Section from '../img/Section.png';
 
 const Banner01 = () => {
-    const home = () => {
+    const main = () => {
         window.location.href = '/main';
     };
     return (
@@ -40,7 +40,7 @@ const Banner01 = () => {
                             Full framework support (React, Vue Angular, Svelte)
                         </Typography>
                         <Button
-                            onClick={home}
+                            onClick={main}
                             variant="contained"
                             size="large"
                             sx={{
@@ -64,10 +64,6 @@ const Banner01 = () => {
                     sx={{
                         width: '120%',
                         height: 'auto',
-                        // display:'block',
-                        // margin: '0 auto'
-                        // borderRadius: 2,
-                        // boxShadow: 3,
                     }}
                 />
             </Stack>

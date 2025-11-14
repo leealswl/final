@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { useFileStore } from '../../../store/useFileStore';
 import Editor from './Editor';
 import { useParams } from 'react-router';
-import { ChatBot } from './ChatBot';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { Box, Divider } from '@mui/material';
 import ChatBotMUI from './ChatBotMUI';
@@ -42,12 +41,6 @@ export default function EditView() {
                     />
                 </PanelResizeHandle>
 
-                {/* Document Editor Panel */}
-                {/* <Panel defaultSize={50} minSize={30}>
-                    <Box height="100%" bgcolor="grey.50" p={1} overflow="auto">
-                        <Editor />
-                    </Box>
-                </Panel> */}
                 <Panel defaultSize={50} minSize={30}>
                     <Box display="flex" flexDirection="column" height="100%" bgcolor="grey.50" p={1}>
                         <Box flex={1} overflow="auto">

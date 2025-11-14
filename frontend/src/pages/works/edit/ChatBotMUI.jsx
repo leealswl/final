@@ -23,7 +23,6 @@ const ChatBotMUI = () => {
             const response = await axios.post('http://127.0.0.1:8001/chat', {
                 userMessage: userText
             });
-
             const aiText = response.data.aiResponse;
 
             // 🔹 AI 메시지 추가 + 로딩 종료
