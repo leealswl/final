@@ -31,12 +31,6 @@ const ChatBotMUI = () => {
                     setIsLoading(false); // 🔹 로딩 종료
                 },
                 onError: () => {
-<<<<<<< HEAD
-                    setMessages((prev) => [...prev, { sender: 'bot', text: '⚠️ 서버 오류가 발생했습니다.' }]);
-                },
-            },
-        );
-=======
                     setMessages((prev) => [
                         ...prev,
                         { sender: 'bot', text: '⚠️ 서버 오류가 발생했습니다.' }
@@ -45,7 +39,6 @@ const ChatBotMUI = () => {
                 }
         });
         
->>>>>>> dev
     };
 
     // ✅ 스크롤 항상 아래로
