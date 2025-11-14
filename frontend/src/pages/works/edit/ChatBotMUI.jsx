@@ -3,13 +3,12 @@ import { Box, Paper, Stack, Typography, TextField, Button } from '@mui/material'
 import useChatbot from '../../../hooks/useChatbot';
 
 const ChatBotMUI = () => {
-    const [messages, setMessages] = useState([
-        { sender: 'bot', text: '안녕하세요! 무엇을 도와드릴까요?' }
-    ]);
+    const [messages, setMessages] = useState([{ sender: 'bot', text: '안녕하세요! 무엇을 도와드릴까요?' }]);
     const [inputValue, setInputValue] = useState('');
-    const {mutate: sendChatMessage} = useChatbot();
+    const { mutate: sendChatMessage } = useChatbot();
     const [isLoading, setIsLoading] = useState(false);
 
+    // 여기 수정
     const scrollRef = useRef(null);
     const isComposingRef = useRef(false); // IME 조합 중인지 추적
     const pendingEnterRef = useRef(false); // 조합 종료 직후 Enter 키 대기
@@ -25,13 +24,19 @@ const ChatBotMUI = () => {
         setIsLoading(true); // 🔹 로딩 시작
 
         sendChatMessage(
-            {userMessage: userText}, 
+            { userMessage: userText },
             {
-                onSuccess: (data) => { 
+                onSuccess: (data) => {
                     setMessages((prev) => [...prev, { sender: 'bot', text: data.aiResponse }]);
                     setIsLoading(false); // 🔹 로딩 종료
                 },
                 onError: () => {
+<<<<<<< HEAD
+                    setMessages((prev) => [...prev, { sender: 'bot', text: '⚠️ 서버 오류가 발생했습니다.' }]);
+                },
+            },
+        );
+=======
                     setMessages((prev) => [
                         ...prev,
                         { sender: 'bot', text: '⚠️ 서버 오류가 발생했습니다.' }
@@ -40,6 +45,7 @@ const ChatBotMUI = () => {
                 }
         });
         
+>>>>>>> dev
     };
 
     // ✅ 스크롤 항상 아래로
