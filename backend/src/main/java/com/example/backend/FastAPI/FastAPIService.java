@@ -16,6 +16,9 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import com.example.backend.domain.AiChat;
+
+import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
 /**
@@ -133,5 +136,15 @@ public class FastAPIService {
      */
     public String CallFastApiWithAnalsys() {
         return "test";
+    }
+// 챗봇메세지 호출
+    public AiChat ChatbotMessage(String message) {
+        
+        Mono<AiChat> response = webClient.post().uri("/chat").bodyValue(Map.of("userMessage", message)).retrieve().bodyToMono(AiChat.class);
+
+        AiChat result = response.block();
+
+        return result;
+        
     }
 }

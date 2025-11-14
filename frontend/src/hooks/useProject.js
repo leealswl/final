@@ -21,3 +21,4 @@ export default function UseProject(opts = {}) {
         },
     });
 }
+// 새프로젝트 생성했을때 데이터베이스 추가되는 훅입니다
