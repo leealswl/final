@@ -9,6 +9,8 @@ const ChatBotMUI = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     // 여기 수정
+    // 여기 수정 두번째
+    
     const scrollRef = useRef(null);
     const isComposingRef = useRef(false); // IME 조합 중인지 추적
     const pendingEnterRef = useRef(false); // 조합 종료 직후 Enter 키 대기
