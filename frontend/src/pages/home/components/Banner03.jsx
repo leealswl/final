@@ -86,7 +86,7 @@ const Banner03 = () => {
                             <Box
                                 component={'img'}
                                 src={banner03img04}
-                                sx={{height:'250px',}}
+                                sx={{height:'250px' }}
                                 />
                             <Box
                                 component={'img'}
