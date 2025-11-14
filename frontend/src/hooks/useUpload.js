@@ -54,7 +54,4 @@ export default function useUpload() {
         data: mutation.data,
     };
 }
-//전역에서 project 읽고 폼데이터를 만들어서 api/analysis로 업로드. 리턴으로 usemutaion 반환
-//전역에서 projectId, userId 읽어 컨텍스트 검증, 폼데이터구성
-//file 은 upload 컴포넌트에서 받음
-// 업로드는 서버상태 변경이기 떄문에 usemutation 사용
+
