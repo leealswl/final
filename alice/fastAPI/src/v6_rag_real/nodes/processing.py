@@ -367,7 +367,8 @@ def extract_features_rag(state: BatchState) -> BatchState:
             # 7️⃣ LLM 호출
             system_prompt = f"""당신은 정부 연구개발 공고문을 분석하는 전문가입니다.
 
-공고문 및 첨부서류에서 '{feature_def['feature_type']}'에 해당하는 내용을 추출해주세요.
+공고문 및 첨부서류에서 '{feature_def['feature_type']}'에 해당하는 내용을 추출하고,
+사업계획서 작성 시 필요한 전략도 함께 제시해주세요.
 
 설명: {feature_def['description']}
 
@@ -377,7 +378,17 @@ def extract_features_rag(state: BatchState) -> BatchState:
 "title": "섹션 제목",
 "content": "추출된 내용 (200자 이내 요약)",
 "full_content": "전체 내용",
-"key_points": ["요점1", "요점2"]
+"key_points": ["요점1", "요점2"],
+"writing_strategy": {{
+  "overview": "이 섹션에서 평가위원이 중요하게 보는 핵심 포인트",
+  "must_include": ["반드시 포함해야 할 내용1 (근거: 공고문 X페이지)", "반드시 포함해야 할 내용2"],
+  "recommended_structure": ["1. 추천 작성 구조 1단계", "2. 추천 작성 구조 2단계"],
+  "writing_tips": ["정량적 데이터 포함 필요", "구체적 수치 제시"],
+  "common_mistakes": ["피해야 할 실수1", "피해야 할 실수2"],
+  "example_phrases": ["좋은 작성 예시1", "좋은 작성 예시2"],
+  "evaluation_criteria": "평가 시 중점 사항",
+  "word_count_guide": "권장 분량 (예: 1-2페이지)"
+}}
 }}
 
 해당 내용을 찾을 수 없으면 found를 false로 반환하세요."""
@@ -409,6 +420,7 @@ def extract_features_rag(state: BatchState) -> BatchState:
                     'summary': result.get('content', ''),
                     'full_content': result.get('full_content', ''),
                     'key_points': result.get('key_points', []),
+                    'writing_strategy': result.get('writing_strategy', {}),  # ✅ 작성 전략 추가
 
                     # RAG 메타데이터
                     'chunks_used': [
@@ -497,6 +509,7 @@ def save_to_csv(state: BatchState) -> BatchState:
                 'summary': feature.get('summary', ''),
                 'full_content': feature.get('full_content', ''),
                 'key_points': feature.get('key_points', []),
+                'writing_strategy': feature.get('writing_strategy', {}),  # ✅ 작성 전략 추가
                 'vector_similarity': float(feature.get('vector_similarity', 0.0)),
                 'chunks_from_announcement': int(feature.get('chunks_from_announcement', 0)),
                 'chunks_from_attachments': int(feature.get('chunks_from_attachments', 0)),
@@ -513,6 +526,7 @@ def save_to_csv(state: BatchState) -> BatchState:
                 'summary': feature.get('summary', ''),
                 'full_content': feature.get('full_content', ''),
                 'key_points': '|'.join(feature.get('key_points', [])),
+                'writing_strategy': json.dumps(feature.get('writing_strategy', {}), ensure_ascii=False),  # ✅ JSON 문자열로 저장
                 'vector_similarity': feature.get('vector_similarity', 0.0),
                 'chunks_from_announcement': feature.get('chunks_from_announcement', 0),
                 'chunks_from_attachments': feature.get('chunks_from_attachments', 0),

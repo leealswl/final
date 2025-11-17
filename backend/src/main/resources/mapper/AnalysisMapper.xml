@@ -21,6 +21,7 @@
         <result property="summary" column="summary"/>
         <result property="fullContent" column="full_content"/>
         <result property="keyPoints" column="key_points"/>
+        <result property="writingStrategy" column="writing_strategy"/>
         <result property="vectorSimilarity" column="vector_similarity"/>
         <result property="chunksFromAnnouncement" column="chunks_from_announcement"/>
         <result property="chunksFromAttachments" column="chunks_from_attachments"/>
@@ -53,6 +54,7 @@
             summary,
             full_content,
             key_points,
+            writing_strategy,
             vector_similarity,
             chunks_from_announcement,
             chunks_from_attachments,
@@ -67,6 +69,7 @@
             #{summary},
             #{fullContent},
             #{keyPoints},
+            #{writingStrategy},
             #{vectorSimilarity},
             #{chunksFromAnnouncement},
             #{chunksFromAttachments},
