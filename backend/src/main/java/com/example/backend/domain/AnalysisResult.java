@@ -17,6 +17,7 @@ public class AnalysisResult {
     private String summary;              // 요약
     private String fullContent;          // 전체 내용
     private String keyPoints;            // 핵심 포인트 (파이프로 구분)
+    private String writingStrategy;      // 작성 전략 (JSON 문자열)
     private Double vectorSimilarity;     // 벡터 유사도
     private Integer chunksFromAnnouncement;   // 공고문 청크 수
     private Integer chunksFromAttachments;    // 첨부파일 청크 수

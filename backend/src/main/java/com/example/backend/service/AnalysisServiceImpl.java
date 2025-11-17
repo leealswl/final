@@ -78,6 +78,14 @@ public class AnalysisServiceImpl implements AnalysisService {
                         result.setKeyPoints(String.join("|", keyPoints));
                     }
 
+                    // writing_strategy: Map<String, Object> → JSON 문자열
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> writingStrategy = (Map<String, Object>) feature.get("writing_strategy");
+                    if (writingStrategy != null && !writingStrategy.isEmpty()) {
+                        String strategyJson = objectMapper.writeValueAsString(writingStrategy);
+                        result.setWritingStrategy(strategyJson);
+                    }
+
                     // 숫자 필드 처리
                     result.setVectorSimilarity(getDoubleValue(feature, "vector_similarity"));
                     result.setChunksFromAnnouncement(getIntValue(feature, "chunks_from_announcement"));
