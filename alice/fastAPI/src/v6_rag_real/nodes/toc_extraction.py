@@ -73,15 +73,13 @@ def _find_proposal_template(templates: List[Dict]) -> Optional[Dict]:
 
         return score
 
-    # 최고 점수 템플릿 선택
-    best_template = max(valid_templates, key=template_priority)
-
     # 계획서가 포함된 템플릿이 있으면 최우선 반환
     for template in valid_templates:
         if '계획서' in template.get('file_name', ''):
             return template
 
-    return best_template
+    # 그 외는 최고 점수 템플릿 반환
+    return max(valid_templates, key=template_priority)
 
 
 def extract_toc_from_template(state: BatchState) -> BatchState:
@@ -264,7 +262,6 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
 
     all_features = state.get('extracted_features', [])
     collection = state['chroma_collection']
-    model = state['embedding_model']
 
     # 1️⃣ 제출서류 feature 찾기
     submission_features = [
@@ -282,17 +279,20 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
         f.get('full_content', '') for f in submission_features
     ])
 
-    # 2️⃣ RAG로 모든 문서(공고+첨부) 검색
+    # 2️⃣ RAG로 모든 문서(공고+첨부) 검색 (볼륨 증가를 위해 검색 결과 확대)
     try:
-        query_embedding = model.encode(
-            ["제출서류 작성항목 구성 목차 제안서 계획서 사업계획서 운영계획"],
-            convert_to_numpy=True
+        # OpenAI API로 쿼리 임베딩 생성 (processing.py의 extract_features_rag와 동일한 방식)
+        query_text = "제출서류 작성항목 구성 목차 제안서 계획서 사업계획서 운영계획"
+        query_response = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=[query_text]
         )
+        query_embedding = [query_response.data[0].embedding]
 
         # ✅ 모든 문서에서 검색 (ATTACHMENT 필터 제거)
         results = collection.query(
-            query_embeddings=query_embedding.tolist(),
-            n_results=15  # 더 많은 결과 검색
+            query_embeddings=query_embedding,
+            n_results=25  # 15 → 25로 증가: 더 많은 컨텍스트 확보
             # where 조건 제거 → 공고문 + 모든 첨부서류 검색
         )
 
@@ -313,10 +313,10 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
     # 3️⃣ LLM으로 목차 생성
     print(f"    🤖 LLM으로 목차 구조 생성 중...")
 
-    # 문서 타입별로 정리
+    # 문서 타입별로 정리 (더 많은 컨텍스트 활용)
     document_context = '\n\n'.join([
         f"[{c['doc_type']} - {c['file']} - {c['section']}]\n{c['text']}"
-        for c in all_chunks[:10]  # 상위 10개로 확대
+        for c in all_chunks[:20]  # 10 → 20으로 증가: 더 풍부한 컨텍스트 제공
     ])
 
     system_prompt = """당신은 정부 지원사업 공고 분석 전문가입니다.
@@ -333,6 +333,63 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
 - ❌ 제출 서류명 (예: "연구계획서", "신청서", "동의서") → 포함하지 마세요
 - ✅ 작성 항목/목차 (예: "사업 추진계획", "운영 전략", "예산 편성") → 이것만 포함하세요
 
+📋 목차 생성 요구사항:
+1. **최소 10-15개 이상의 섹션을 생성**하세요 (너무 적으면 안 됩니다)
+2. **계층 구조를 포함**하세요 (1, 1.1, 1.2, 2, 2.1, 2.2 등)
+3. 공고의 성격에 맞는 **표준 목차 구조**를 참고하되, 실제 공고 내용을 반영하세요
+
+📚 공고 유형별 표준 목차 구조 참고:
+
+【연구개발(R&D) 과제】
+1. 연구개발과제의 개요 (필수)
+   1.1. 과제의 필요성
+   1.2. 과제의 목표
+2. 연구개발 목표 및 내용 (필수)
+   2.1. 연구개발 목표
+   2.2. 연구개발 내용
+   2.3. 기술적 해결과제
+3. 연구개발 추진체계 및 일정 (필수)
+   3.1. 추진체계
+   3.2. 연구일정
+   3.3. 인력운용계획
+4. 연구개발 성과 활용방안 (필수)
+   4.1. 기대효과
+   4.2. 활용방안
+5. 소요예산 및 자금계획 (필수)
+   5.1. 예산계획
+   5.2. 자금조달계획
+
+【창업지원/사업계획서】
+1. 사업 개요 (필수)
+   1.1. 사업 배경 및 필요성
+   1.2. 사업 목표
+2. 사업 모델 (필수)
+   2.1. 사업 아이템
+   2.2. 사업 전략
+3. 추진 계획 (필수)
+   3.1. 운영 계획
+   3.2. 마케팅 계획
+4. 조직 및 인력 (필수)
+   4.1. 조직 구성
+   4.2. 인력 운영
+5. 재무 계획 (필수)
+   5.1. 매출 계획
+   5.2. 자금 계획
+
+【주관기관/운영기관 선정】
+1. 기관 개요 (필수)
+   1.1. 기관 현황
+   1.2. 조직 구성
+2. 운영 계획 (필수)
+   2.1. 프로그램 기획
+   2.2. 운영 전략
+3. 추진 체계 (필수)
+   3.1. 조직 체계
+   3.2. 인력 운용
+4. 예산 및 자금 계획 (필수)
+   4.1. 예산 편성
+   4.2. 자금 관리
+
 다음 형식으로 JSON 반환:
 {
   "sections": [
@@ -343,6 +400,12 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
       "description": "사업의 목적과 필요성"
     },
     {
+      "number": "1.1",
+      "title": "사업 배경 및 필요성",
+      "required": true,
+      "description": "사업을 추진하는 배경과 필요성"
+    },
+    {
       "number": "2",
       "title": "운영 계획 및 전략",
       "required": true,
@@ -351,17 +414,21 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
   ]
 }
 
-주의사항:
+⚠️ 중요 주의사항:
 - 제출 서류의 "이름"이 아닌, 서류 "내부의 작성 항목"을 추출하세요
 - 공고의 실제 내용(연구개발/창업지원/주관기관선정 등)을 반영한 목차를 생성하세요
-- 섹션 번호는 "1", "1.1", "가" 등 원문 형식 유지
-- required는 필수 작성 항목 여부"""
+- 섹션 번호는 "1", "1.1", "1.2", "2", "가" 등 계층 구조 형식 유지
+- required는 필수 작성 항목 여부
+- **반드시 10개 이상의 섹션을 생성**하되, 공고 내용에 근거하여 생성하세요"""
 
-    # 공고문 전체 내용 가져오기 (첨부파일이 없을 때 대비)
+    # 공고문 전체 내용 가져오기 (첨부파일이 없을 때 대비) - 컨텍스트 확대
     announcement_docs = [d for d in state['documents'] if d.get('document_type') == 'ANNOUNCEMENT']
     announcement_text = ''
     if announcement_docs:
-        announcement_text = announcement_docs[0].get('text', '')[:3000]
+        announcement_text = announcement_docs[0].get('text', '')[:5000]  # 3000 → 5000으로 증가
+
+    submission_text_limit = submission_content[:3000]  # 2000 → 3000으로 증가
+    document_context_limit = document_context[:4000] if document_context else '(첨부서류 없음)'  # 2000 → 4000으로 증가
 
     user_prompt = f"""## 공고문 내용
 
@@ -369,28 +436,68 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
 
 ## 제출서류 요구사항
 
-{submission_content[:2000]}
+{submission_text_limit}
 
 ## 첨부서류 관련 내용 (양식/계획서의 작성 항목)
 
-{document_context[:2000] if document_context else '(첨부서류 없음)'}
+{document_context_limit}
 
-⚠️ 분석 지침:
-1. 먼저 이 공고가 어떤 성격인지 파악하세요:
-   - 연구개발(R&D) 과제인가?
-   - 창업기업 지원 사업인가?
-   - 주관기관/운영기관 선정 공고인가?
+---
 
-2. 공고의 성격에 맞는 계획서 목차를 생성하세요:
-   - 주관기관 선정 → 운영계획, 프로그램 기획, 추진체계, 예산계획 등
-   - 연구개발 과제 → 연구개발 개요, 연구목표, 연구내용, 추진체계 등
-   - 창업지원 사업 → 사업개요, 사업모델, 추진전략, 자금계획 등
+## 📋 분석 및 목차 생성 지침
 
-3. "서류명"이 아닌 "작성 항목"만 추출하세요:
-   - ❌ 잘못된 목차: ["사업계획서", "신청서", "동의서"]
-   - ✅ 올바른 목차: ["사업 추진계획", "운영 전략", "예산 편성"]
+### 1단계: 공고 성격 파악
+다음 중 해당하는 항목을 파악하세요:
+- [ ] 연구개발(R&D) 과제 공고
+- [ ] 창업지원/벤처 지원 사업 공고
+- [ ] 주관기관/운영기관 선정 공고
+- [ ] 기타 지원사업 공고
 
-위 내용을 분석하여 신청자가 작성해야 할 계획서의 목차를 JSON 형식으로 생성해주세요."""
+### 2단계: 목차 구조 생성
+위에서 파악한 공고 성격에 맞는 표준 목차 구조를 참고하되, **공고문과 첨부서류에서 언급된 구체적인 작성 항목**을 반드시 반영하세요.
+
+**⚠️ 반드시 준수할 사항:**
+1. **최소 10-15개 이상의 섹션 생성** (계층 구조 포함 시 15-20개 이상)
+2. **계층 구조 필수 포함**:
+   - 1차 섹션: "1", "2", "3" 등
+   - 2차 섹션: "1.1", "1.2", "2.1", "2.2" 등
+   - 3차 섹션 (필요시): "1.1.1", "1.1.2" 등
+3. **공고 내용 기반 생성**: 표준 구조를 참고하되, 공고문과 첨부서류에서 실제로 언급된 항목을 우선 반영
+4. **"서류명"이 아닌 "작성 항목"만 추출**:
+   - ❌ 잘못된 목차: ["사업계획서", "신청서", "동의서", "첨부자료"]
+   - ✅ 올바른 목차: ["사업 추진 개요", "운영 계획", "예산 편성", "추진 체계"]
+
+### 3단계: 구체적인 예시
+
+**연구개발 과제 예시:**
+```
+1. 연구개발과제의 개요
+   1.1. 과제의 필요성 및 배경
+   1.2. 과제의 목표
+   1.3. 기대효과
+2. 연구개발 목표 및 내용
+   2.1. 연구개발 목표
+   2.2. 연구개발 내용
+   2.3. 기술적 해결과제
+   2.4. 핵심기술 요소
+3. 연구개발 추진체계 및 일정
+   3.1. 추진체계
+   3.2. 연구일정 (Gantt 차트 포함)
+   3.3. 인력운용계획
+   3.4. 역할 분담
+4. 연구개발 성과 활용방안
+   4.1. 기대효과
+   4.2. 활용방안
+   4.3. 사업화 계획
+5. 소요예산 및 자금계획
+   5.1. 예산계획 (연도별)
+   5.2. 자금조달계획
+   5.3. 예산 집행 계획
+```
+
+**⚠️ 주의: 위 예시는 참고용이며, 실제 공고문과 첨부서류의 내용을 반영하여 생성하세요.**
+
+위 내용을 종합적으로 분석하여 신청자가 작성해야 할 계획서의 **상세한 목차(최소 10-15개 섹션, 계층 구조 포함)**를 JSON 형식으로 생성해주세요."""
 
     try:
         response = client.chat.completions.create(
