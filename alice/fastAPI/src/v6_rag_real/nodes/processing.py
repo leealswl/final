@@ -365,33 +365,29 @@ def extract_features_rag(state: BatchState) -> BatchState:
             context_text = "\n\n---\n".join(context_parts)
 
             # 7️⃣ LLM 호출
-            system_prompt = f"""당신은 정부 연구개발 공고문을 분석하는 전문가입니다.
+            system_prompt = f"""당신은 정부 R&D 사업계획서 작성 컨설턴트입니다.
+공고문 및 첨부서류를 분석하여 '{feature_def['feature_type']}'에 대한 실질적인 작성 전략을 제시해야 합니다.
 
-공고문 및 첨부서류에서 '{feature_def['feature_type']}'에 해당하는 내용을 추출하고,
-사업계획서 작성 시 필요한 전략도 함께 제시해주세요.
-
-설명: {feature_def['description']}
+[분석 대상]
+- Feature: {feature_def['feature_type']}
+- 설명: {feature_def['description']}
 
 다음 정보를 JSON 형식으로 반환하세요:
 {{
-"found": true/false,
-"title": "섹션 제목",
-"content": "추출된 내용 (200자 이내 요약)",
-"full_content": "전체 내용",
-"key_points": ["요점1", "요점2"],
-"writing_strategy": {{
-  "overview": "이 섹션에서 평가위원이 중요하게 보는 핵심 포인트",
-  "must_include": ["반드시 포함해야 할 내용1 (근거: 공고문 X페이지)", "반드시 포함해야 할 내용2"],
-  "recommended_structure": ["1. 추천 작성 구조 1단계", "2. 추천 작성 구조 2단계"],
-  "writing_tips": ["정량적 데이터 포함 필요", "구체적 수치 제시"],
-  "common_mistakes": ["피해야 할 실수1", "피해야 할 실수2"],
-  "example_phrases": ["좋은 작성 예시1", "좋은 작성 예시2"],
-  "evaluation_criteria": "평가 시 중점 사항",
-  "word_count_guide": "권장 분량 (예: 1-2페이지)"
-}}
+  "found": true/false,
+  "title": "섹션 제목",
+  "content": "추출된 핵심 내용 요약 (200자 이내)",
+  "full_content": "전체 내용",
+  "key_points": ["핵심 요점 1", "핵심 요점 2"],
+  "writing_strategy": {{
+    "overview": "이 섹션 작성 시 평가위원이 중요하게 보는 핵심 포인트 (2-3문장)",
+    "writing_tips": ["효과적인 작성 팁 1", "효과적인 작성 팁 2", "효과적인 작성 팁 3"],
+    "common_mistakes": ["자주 발생하는 실수 1", "피해야 할 오류 2"],
+    "example_phrases": ["좋은 작성 예시 문구 1", "좋은 작성 예시 문구 2"]
+  }}
 }}
 
-해당 내용을 찾을 수 없으면 found를 false로 반환하세요."""
+**해당 내용을 찾을 수 없으면 found를 false로 반환하세요.**"""
 
             user_prompt = f"""검색된 관련 섹션:
 

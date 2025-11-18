@@ -48,7 +48,13 @@ public class FastAPIService {
         this.webClient = WebClient.builder()
             .baseUrl(baseUrl)
             .clientConnector(new ReactorClientHttpConnector(
-                HttpClient.create().responseTimeout(Duration.ofSeconds(timeoutSeconds))
+                HttpClient.create()
+                    .responseTimeout(Duration.ofSeconds(timeoutSeconds))  // 응답 타임아웃
+                    .option(io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS, (int)(timeoutSeconds * 1000))  // 연결 타임아웃
+                    .doOnConnected(conn -> conn
+                        .addHandlerLast(new io.netty.handler.timeout.ReadTimeoutHandler(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS))  // Read 타임아웃
+                        .addHandlerLast(new io.netty.handler.timeout.WriteTimeoutHandler(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS))  // Write 타임아웃
+                    )
             ))
             .codecs(c -> c.defaultCodecs().maxInMemorySize(50 * 1024 * 1024)) // 50MB 버퍼
             .build();
