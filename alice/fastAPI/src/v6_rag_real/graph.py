@@ -29,9 +29,6 @@ def create_batch_graph():
     graph.add_node("extract_toc_from_template", nodes.extract_toc_from_template)  # 양식 기반
     graph.add_node("extract_toc_from_announcement_and_attachments", nodes.extract_toc_from_announcement_and_attachments)  # 공고+첨부 기반
 
-    # 🔖 MVP2: match_cross_references 노드 제거 (현재 미사용, MVP2에서 재구현 예정)
-    # graph.add_node("match_cross_references", nodes.match_cross_references)
-
     # ✨ 저장 노드: CSV (개발/테스트용)
     graph.add_node("save_to_csv", nodes.save_to_csv)
     graph.add_node("build_response", nodes.build_response)

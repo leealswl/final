@@ -58,8 +58,8 @@ def detect_proposal_templates(state: BatchState) -> BatchState:
         # 신호 1: 파일명 키워드 체크
         keyword_weights = {
             '계획서': 0.5,
-            '제안서': 0.4,
-            '신청서': 0.35,
+            '제안서': 0.45,
+            '신청서': 0.5,  # 신청서 가중치 상향 (0.35 → 0.5)
             '양식': 0.2,
             '서식': 0.2,
             '작성요령': 0.2
@@ -96,13 +96,23 @@ def detect_proposal_templates(state: BatchState) -> BatchState:
 
         # 신호 3: RAG로 첨부파일 자체에서 "양식" 관련 키워드 검색
         try:
-            query_embedding = model.encode(
-                ["양식 서식 작성예시 작성방법 입력칸"],
-                convert_to_numpy=True
+            # OpenAI API로 쿼리 임베딩 생성 (processing.py의 extract_features_rag와 동일한 방식)
+            from openai import OpenAI
+            import os
+            from dotenv import load_dotenv
+            
+            load_dotenv()
+            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            
+            query_text = "양식 서식 작성예시 작성방법 입력칸"
+            query_response = client.embeddings.create(
+                model="text-embedding-3-small",
+                input=[query_text]
             )
+            query_embedding = [query_response.data[0].embedding]
 
             results = collection.query(
-                query_embeddings=query_embedding.tolist(),
+                query_embeddings=query_embedding,
                 n_results=3,
                 where={'file_name': file_name}  # 해당 파일만 검색
             )
@@ -126,10 +136,19 @@ def detect_proposal_templates(state: BatchState) -> BatchState:
         else:
             print(f"    - 표 구조: ✗")
 
-        # 계획서 첨부 번호 가중치 (붙임 2 등에 우선순위 부여)
-        if attachment_num in (1, 2) and '계획서' in file_name:
-            confidence_score += 0.15
-            print(f"    - 첨부번호/계획서 우선 가중치 적용 (+0.15)")
+        # 계획서/신청서 첨부 번호 가중치 (붙임 1, 2 등에 우선순위 부여)
+        if attachment_num in (1, 2):
+            if '계획서' in file_name:
+                confidence_score += 0.15
+                print(f"    - 첨부번호/계획서 우선 가중치 적용 (+0.15)")
+            elif '신청서' in file_name:
+                confidence_score += 0.1
+                print(f"    - 첨부번호/신청서 우선 가중치 적용 (+0.1)")
+        
+        # 신청서 + 표 구조 조합 가중치 (신청서는 보통 표 구조가 있으면 양식일 가능성 높음)
+        if '신청서' in file_name and has_table_structure:
+            confidence_score += 0.1
+            print(f"    - 신청서+표구조 조합 가중치 적용 (+0.1)")
 
         # 최종 판단 (임계값: 0.6)
         is_template = confidence_score >= 0.6

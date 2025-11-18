@@ -1,34 +1,101 @@
 """
 목차(Table of Contents) 추출 모듈
 제안서 양식 또는 공고문/첨부서류에서 목차 구조 추출
+
+핵심 노드 함수만 포함 (유틸리티 함수는 toc_util.py 참조)
 """
 
-import re
 import json
+import re
 import unicodedata
 from datetime import datetime
-from typing import List, Dict, Any, Optional
-from openai import OpenAI
-import os
-from dotenv import load_dotenv
+from typing import List, Dict
 
 from ..state_types import BatchState
+from .toc_util import (
+    find_proposal_template,
+    find_toc_table,
+    parse_toc_table,
+    extract_sections_from_symbols,
+    create_default_toc,
+    client  # OpenAI 클라이언트는 toc_util.py에서 초기화
+)
 
-# OpenAI 클라이언트 초기화
-load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+SUBSECTION_PATTERNS = [
+    (re.compile(r'^￭\s*(.+)$'), 1),
+    (re.compile(r'^▪\s*(.+)$'), 1),
+    (re.compile(r'^▫\s*(.+)$'), 1),
+    (re.compile(r'^[-–—]\s*(.+)$'), 1),
+    (re.compile(r'^●\s*(.+)$'), 1),
+    (re.compile(r'^○\s*(.+)$'), 1),
+    (re.compile(r'^([0-9]{1,2})\)\s*(.+)$'), 2),
+    (re.compile(r'^\(([0-9]{1,2})\)\s*(.+)$'), 2),
+    (re.compile(r'^([가-힣])\)\s*(.+)$'), 2),
+    (re.compile(r'^\(([가-힣])\)\s*(.+)$'), 2),
+]
+
+
+def extract_subsections_from_range(
+    lines_block: List[str],
+    parent_number: str,
+    base_line_index: int,
+    end_line_index: int,
+    start_counter: int = 1
+) -> List[Dict]:
+    subsections = []
+    counter = start_counter
+    for offset, line in enumerate(lines_block):
+        clean = line.strip()
+        if not clean:
+            continue
+        for pattern, group_idx in SUBSECTION_PATTERNS:
+            match = pattern.match(clean)
+            if match:
+                title = match.group(group_idx).strip()
+                if len(title) < 2:
+                    break
+                subsection_number = f"{parent_number}.{counter}"
+                absolute_index = base_line_index + offset
+                subsections.append({
+                    'number': subsection_number,
+                    'title': title,
+                    'required': True,
+                    'level': 'sub',
+                    'parent_number': parent_number,
+                    'line_index': absolute_index
+                })
+                counter += 1
+                break
+    for idx, sub in enumerate(subsections):
+        next_line = subsections[idx + 1]['line_index'] if idx + 1 < len(subsections) else end_line_index
+        sub['next_line_index'] = next_line
+    return subsections
 
 
 def route_toc_extraction(state: BatchState) -> str:
     """
     목차 추출 방법 결정 (조건부 라우팅)
-
+    
+    LangGraph에서 사용하는 라우팅 함수로, 양식이 있는지 확인하여
+    적절한 목차 추출 방법을 선택합니다.
+    
+    동작 방식:
+    1. state에서 attachment_templates를 가져옴
+    2. 제안서 양식이 있는지 확인 (find_proposal_template)
+    3. 양식이 있으면 → "extract_toc_from_template" 반환
+    4. 양식이 없으면 → "extract_toc_from_announcement_and_attachments" 반환
+    
+    Args:
+        state: BatchState - 현재 처리 중인 배치 상태
+        
     Returns:
-        "extract_toc_from_template" - 양식 기반 추출
-        "extract_toc_from_announcement_and_attachments" - 공고 + 첨부서류 기반 추출
+        str: 다음에 실행할 노드 이름
+        - "extract_toc_from_template": 양식에서 목차 추출
+        - "extract_toc_from_announcement_and_attachments": 공고+첨부서류에서 목차 유추
     """
     templates = state.get('attachment_templates', [])
-    proposal_template = _find_proposal_template(templates)
+    proposal_template = find_proposal_template(templates)
 
     if proposal_template:
         return "extract_toc_from_template"
@@ -36,63 +103,9 @@ def route_toc_extraction(state: BatchState) -> str:
         return "extract_toc_from_announcement_and_attachments"
 
 
-# 라우팅할때 양식 찾기
-def _find_proposal_template(templates: List[Dict]) -> Optional[Dict]:
-    """
-    제안서 양식 찾기 (우선순위: 제안서 > 계획서 > 신청서)
-    """
-    if not templates:
-        return None
-
-    # 양식으로 감지된 것만 필터링
-    valid_templates = [t for t in templates if t.get('has_template')]
-
-    if not valid_templates:
-        return None
-
-    # 우선순위/가중치 계산
-    def template_priority(template: Dict) -> float:
-        file_name = template.get('file_name', '')
-        score = template.get('confidence_score', 0.0)
-
-        # 파일명 키워드 가중치
-        keyword_weights = {
-            '계획서': 1.0,
-            '제안서': 0.8,
-            '신청서': 0.6,
-            '양식': 0.2
-        }
-        for keyword, weight in keyword_weights.items():
-            if keyword in file_name:
-                score += weight
-
-        # 첨부 번호가 2 (붙임2)면 추가 가중치
-        attachment_num = template.get('attachment_number')
-        if attachment_num == 2:
-            score += 0.3
-
-        return score
-
-    # 계획서가 포함된 템플릿이 있으면 최우선 반환
-    for template in valid_templates:
-        if '계획서' in template.get('file_name', ''):
-            return template
-
-    # 그 외는 최고 점수 템플릿 반환
-    return max(valid_templates, key=template_priority)
-
-
 def extract_toc_from_template(state: BatchState) -> BatchState:
     """
-    제안서 양식에서 목차 추출 (LangGraph 노드)
-
-    방법:
-    1. 표 구조에서 목차 섹션 찾기 (키워드: "목차", "작성항목", "구성")
-    2. 각 행에서 섹션 번호, 제목, 페이지 번호 추출
-    3. 계층 구조 파싱 (1. → 1.1. → 1.1.1.)
-
-    Returns:
-        state: table_of_contents 업데이트된 BatchState
+    제안서 양식에서 목차 추출 (청킹 + 패턴 힌트 + LLM 단일 경로)
     """
     print(f"\n{'='*60}")
     print(f"📑 양식에서 목차 추출")
@@ -100,178 +113,537 @@ def extract_toc_from_template(state: BatchState) -> BatchState:
 
     # 양식 찾기
     templates = state.get('attachment_templates', [])
-    template = _find_proposal_template(templates)
+    template = find_proposal_template(templates)
 
+    # 양식이 감지되지 않았지만, 첨부 파일이 있고 신뢰도가 0.5 이상이면 강제로 시도
     if not template:
-        print(f"\n  ⚠️  양식을 찾을 수 없음 → 기본 템플릿 사용")
-        state['table_of_contents'] = _create_default_toc()
-        state['status'] = 'toc_extracted'
-        return state
+        # 신뢰도가 낮아서 양식으로 감지되지 않았지만, 파일명에 키워드가 있으면 시도
+        documents = state.get('documents', [])
+        attachment_docs = [d for d in documents if d.get('folder') == 2]
+        
+        for att_doc in attachment_docs:
+            file_name = att_doc.get('file_name', '')
+            # 신청서, 계획서, 제안서 키워드가 있으면 강제로 시도
+            if any(kw in file_name for kw in ['신청서', '계획서', '제안서', '양식']):
+                print(f"\n  ⚠️  양식으로 감지되지 않았지만, 파일명 기반으로 강제 시도: {file_name}")
+                # 임시 템플릿 정보 생성
+                template = {
+                    'file_name': file_name,
+                    'tables': att_doc.get('tables', []),
+                    'confidence_score': 0.5,  # 낮은 신뢰도로 표시
+                    'has_template': False  # 감지는 안 되었지만 시도
+                }
+                break
+        
+        if not template:
+            print(f"\n  ⚠️  양식을 찾을 수 없음 → 기본 템플릿 사용")
+            state['table_of_contents'] = create_default_toc()
+            state['status'] = 'toc_extracted'
+            return state
 
     print(f"\n  📋 양식: {template['file_name']}")
 
     tables = template.get('tables', [])
-    if not tables:
-        print(f"  ✗ 표 구조 없음 → 기본 템플릿 사용")
-        state['table_of_contents'] = _create_default_toc()
+
+    # 양식 문서 텍스트 가져오기
+    documents = state.get('documents', [])
+    template_file_name = unicodedata.normalize('NFC', template['file_name'])
+    template_doc = None
+    
+    for doc in documents:
+        doc_file_name = unicodedata.normalize('NFC', doc.get('file_name', ''))
+        if doc_file_name == template_file_name:
+            template_doc = doc
+            break
+    
+    # template에 tables가 없으면 documents에서 가져오기
+    if not template.get('tables') and template_doc:
+        template['tables'] = template_doc.get('tables', [])
+    
+    if not template_doc or not template_doc.get('full_text'):
+        print(f"  ✗ 양식 텍스트 없음 → 기본 템플릿 사용")
+        state['table_of_contents'] = create_default_toc()
         state['status'] = 'toc_extracted'
         return state
 
-    # 목차 관련 표 찾기
-    toc_table = _find_toc_table(tables)
+    full_text = template_doc.get('full_text', '')
+    if not full_text:
+        print(f"  ✗ 양식 텍스트 없음 → 기본 템플릿 사용")
+        state['table_of_contents'] = create_default_toc()
+        state['status'] = 'toc_extracted'
+        return state
 
-    if not toc_table:
-        print(f"  ⚠️  목차 표 찾기 실패 → LLM 기반 추출 시도")
-        # LLM으로 양식 텍스트 전체 분석
-        return _extract_toc_from_template_with_llm(state, template)
+    print(f"  🤖 청킹 기반 LLM 추출 시작 (템플릿 전용)")
 
-    # 표에서 섹션 추출
-    sections = _parse_toc_table(toc_table['data'])
+    all_chunks = state.get('all_chunks', [])
+    template_chunks = []
+    template_file_name_nfc = unicodedata.normalize('NFC', template['file_name'])
+    
+    if all_chunks:
+        for chunk in all_chunks:
+            chunk_file = unicodedata.normalize('NFC', chunk.get('file_name', ''))
+            if chunk_file == template_file_name_nfc:
+                template_chunks.append(chunk)
+    
+    # 페이지 순으로 정렬
+    template_chunks.sort(key=lambda c: (c.get('page', 0) or 0, c.get('chunk_id', '')))
+    
+    # 상위 20개 청크만 사용하여 토큰 절약
+    MAX_TEMPLATE_CHUNKS = 20
+    chunk_context_parts = []
+    for chunk in template_chunks[:MAX_TEMPLATE_CHUNKS]:
+        page = chunk.get('page', '?')
+        section = chunk.get('section', '섹션')
+        text_snippet = chunk.get('text', '')[:800]
+        chunk_context_parts.append(
+            f"[페이지 {page} | {section}]\n{text_snippet}"
+        )
+    
+    chunk_context = '\n\n'.join(chunk_context_parts)
+    
+    if not chunk_context:
+        chunk_context = full_text[:5000]
+        if chunk_context:
+            print(f"  ⚠️  템플릿 청크 없음 → full_text 일부 사용 (길이 {len(chunk_context)}자)")
+        else:
+            print(f"  ✗ 텍스트 컨텍스트 확보 실패 → 기본 템플릿 사용")
+            state['table_of_contents'] = create_default_toc()
+            state['status'] = 'toc_extracted'
+            return state
+    
+    # 패턴 감지 결과 (LLM에 참고로 제공, 스켈레톤 생성에도 활용)
+    toc_table = find_toc_table(tables) if tables else None
+    table_sections = parse_toc_table(toc_table['data']) if toc_table else []
+    
+    # full_text에서 [페이지 X] 마커 제거 (extract_sections_from_symbols용)
+    clean_full_text = re.sub(r'\[페이지 \d+\]', '', template_doc['full_text'])
+    symbol_sections = extract_sections_from_symbols(clean_full_text)
+    full_lines = full_text.split('\n')
+    
+    # 디버깅: symbol_sections 추출 결과 확인
+    print(f"    🔍 패턴 기반 섹션 추출: {len(symbol_sections)}개")
+    if symbol_sections:
+        print(f"    📋 추출된 섹션 (첫 5개):")
+        for sec in symbol_sections[:5]:
+            print(f"      • {sec.get('number', '')} {sec.get('title', '')} (level: {sec.get('level', 'unknown')})")
+    else:
+        print(f"    ⚠️  패턴 기반 섹션 추출 실패 - LLM이 전체 텍스트에서 추출 시도")
 
-    if not sections:
-        print(f"  ⚠️  섹션 파싱 실패 → LLM 기반 추출 시도")
-        # LLM으로 양식 텍스트 전체 분석
-        return _extract_toc_from_template_with_llm(state, template)
+    base_sections: List[Dict] = []
+    section_contexts: List[Dict] = []
+    total_lines = len(full_lines)
+    main_sections = [sec for sec in symbol_sections if sec.get('level') == 'main']
 
-    toc = {
-        'source': 'template',
-        'source_file': template['file_name'],
-        'extraction_method': 'table_parsing',
-        'sections': sections,
-        'total_sections': len(sections),
-        'has_page_numbers': any(s.get('page') for s in sections),
-        'extracted_at': datetime.now().isoformat()
+    if main_sections:
+        for main in main_sections:
+            start_line = main.get('line_index', 0)
+            end_line = main.get('next_line_index', total_lines)
+            block_lines = full_lines[start_line:end_line]
+            block_text = '\n'.join(block_lines).strip()
+
+            main_entry = {
+                'number': main['number'],
+                'title': main['title'],
+                'required': True,
+                'level': 'main',
+                'parent_number': None,
+                'line_index': start_line,
+                'next_line_index': end_line
+            }
+            if block_text:
+                main_entry['excerpt'] = block_text[:800]
+                section_contexts.append({
+                    'number': main_entry['number'],
+                    'title': main_entry['title'],
+                    'excerpt': main_entry['excerpt']
+                })
+            base_sections.append(main_entry)
+
+            subs = [
+                sec for sec in symbol_sections
+                if sec.get('level') == 'sub' and sec.get('parent_number') == main['number']
+            ]
+            if subs:
+                subs.sort(key=lambda s: s.get('line_index', 0))
+                for sub in subs:
+                    sub_start = sub.get('line_index', start_line)
+                    sub_end = sub.get('next_line_index', end_line)
+                    sub_text = '\n'.join(full_lines[sub_start:sub_end]).strip()
+                    sub_entry = {
+                        'number': sub['number'],
+                        'title': sub['title'],
+                        'required': True,
+                        'level': 'sub',
+                        'parent_number': main_entry['number'],
+                        'line_index': sub_start,
+                        'next_line_index': sub_end
+                    }
+                    if sub_text:
+                        sub_entry['excerpt'] = sub_text[:600]
+                        section_contexts.append({
+                            'number': sub_entry['number'],
+                            'title': sub_entry['title'],
+                            'excerpt': sub_entry['excerpt']
+                        })
+                    base_sections.append(sub_entry)
+            else:
+                sub_candidates = extract_subsections_from_range(
+                    block_lines,
+                    main['number'],
+                    start_line,
+                    end_line
+                )
+                for sub in sub_candidates:
+                    sub_start = sub.get('line_index', start_line)
+                    sub_end = sub.get('next_line_index', end_line)
+                    sub_text = '\n'.join(full_lines[sub_start:sub_end]).strip()
+                    sub_entry = {
+                        'number': sub['number'],
+                        'title': sub['title'],
+                        'required': True,
+                        'level': 'sub',
+                        'parent_number': main_entry['number'],
+                        'line_index': sub_start,
+                        'next_line_index': sub_end
+                    }
+                    if sub_text:
+                        sub_entry['excerpt'] = sub_text[:600]
+                        section_contexts.append({
+                            'number': sub_entry['number'],
+                            'title': sub_entry['title'],
+                            'excerpt': sub_entry['excerpt']
+                        })
+                    base_sections.append(sub_entry)
+
+    skeleton_payload = [
+        {'number': sec['number'], 'title': sec['title'], 'required': sec.get('required', True)}
+        for sec in base_sections
+    ]
+    skeleton_json = json.dumps(skeleton_payload, ensure_ascii=False, indent=2) if base_sections else ""
+    
+    # 섹션 컨텍스트 추출 로그
+    print(f"    📊 섹션 스켈레톤: {len(base_sections)}개")
+    print(f"    📝 섹션별 본문 발췌: {len(section_contexts)}개")
+    if section_contexts:
+        print(f"    📄 발췌 샘플 (첫 3개):")
+        for ctx in section_contexts[:3]:
+            excerpt_preview = ctx.get('excerpt', '')[:100]
+            print(f"      • {ctx.get('number', '')} {ctx.get('title', '')}: {excerpt_preview}...")
+    
+    # base_sections가 비어있으면 경고
+    if not base_sections:
+        print(f"    ⚠️  경고: base_sections가 비어있습니다. LLM이 전체 텍스트에서 추출 시도 (폼 필드 포함 가능)")
+        print(f"    💡 해결: extract_sections_from_symbols()가 제대로 동작하지 않았을 수 있습니다.")
+    
+    def summarize_sections(sections: List[Dict], label: str, limit: int = 10) -> str:
+        if not sections:
+            return f"- {label}: 감지되지 않음"
+        lines = [f"- {label} (상위 {min(len(sections), limit)}개)"]
+        for sec in sections[:limit]:
+            lines.append(f"  • {sec.get('number', '-')}: {sec.get('title', '')}")
+        if len(sections) > limit:
+            lines.append(f"  • ... 외 {len(sections) - limit}개")
+        return '\n'.join(lines)
+    
+    detected_outline = '\n'.join([
+        summarize_sections(table_sections, "표 기반 후보"),
+        summarize_sections(symbol_sections, "기호/패턴 기반 후보")
+    ])
+    
+    # 🔍 텍스트 기반 목차 섹션 추출 (기존 LLM 폴백 로직 통합)
+    template_text = ''
+
+    toc_start_keywords = [
+        '< 본문', '<본문', '본문>',
+        '작성 목차', '제출서류 목차', '계획서 목차',
+        '작성항목', '제출항목', '기재사항'
+    ]
+    toc_section_start = -1
+    for keyword in toc_start_keywords:
+        idx = full_text.find(keyword)
+        if idx != -1:
+            toc_section_start = idx
+            print(f"    📍 목차 시작 키워드 발견: '{keyword}' (위치: {idx})")
+            break
+
+    if toc_section_start != -1:
+        text_after_start = full_text[toc_section_start:]
+        end_keywords = [
+            '< 본문 2', '<본문 2', '본문 2>',
+            '작성요령', '작성 요령', '주의사항', '유의사항',
+            '참고사항', '기재요령', '첨부서류',
+            '※ 참고', '【참고', '[참고'
+        ]
+        toc_end = len(text_after_start)
+        for end_kw in end_keywords:
+            end_idx = text_after_start.find(end_kw)
+            if end_idx != -1 and end_idx < toc_end:
+                toc_end = end_idx
+                print(f"    📍 목차 끝 키워드 발견: '{end_kw}' (상대 위치: {end_idx})")
+                break
+        template_text = text_after_start[:min(toc_end, 5000)]
+        print(f"    ✅ 목차 섹션 추출 완료 (길이: {len(template_text)}자)")
+    else:
+        pattern = r'^[1-9]\.\s+[가-힣]{2,}'
+        lines = full_text.split('\n')
+        toc_line_start = -1
+        consecutive_numbered = 0
+        for i, line in enumerate(lines):
+            if re.search(pattern, line.strip()):
+                if toc_line_start == -1:
+                    toc_line_start = i
+                consecutive_numbered += 1
+                if consecutive_numbered >= 3:
+                    toc_lines = lines[toc_line_start:toc_line_start + 100]
+                    template_text = '\n'.join(toc_lines)[:5000]
+                    print(f"    ✅ 번호 패턴 기반 목차 발견 (라인: {toc_line_start}, 길이: {len(template_text)}자)")
+                    break
+            else:
+                consecutive_numbered = 0
+        if not template_text:
+            template_text = full_text[:15000]
+            print(f"    ⚠️  목차 패턴 미발견 → 전체 텍스트 사용 (15000자)")
+
+    if not template_text:
+        template_text = chunk_context
+
+    system_prompt = """당신은 정부 지원사업 신청서/제안서 양식을 분석하여 실제 작성해야 하는 본문 목차를 정리하는 전문가입니다.
+
+⚠️ 중요 규칙:
+1. **폼 입력 필드는 절대 목차로 포함하지 마세요:**
+   - ❌ 제외: "기업명", "대표자", "연락처", "주소", "전화", "팩스", "mail", "휴대전화", "생년월일", "성별", "직위", "부서" 등
+   - ❌ 제외: "1)기업현황", "2)대표자", "3)실무책임자" 같은 폼 섹션 번호
+   - ✅ 포함: "□ 기업현황", "□ 대표자 및 경영진 현황", "□ 목표" 같은 본문 작성 섹션
+
+2. **본문 작성 항목만 목차로 추출:**
+   - □, ■, ￭로 시작하는 섹션만 추출
+   - 각 섹션은 실제로 서술해야 할 내용을 요구하는 항목이어야 함
+
+3. **계층 구조:**
+   - □, ■, ●는 주요 섹션 (1, 2, 3...)
+   - ￭, ▪, ▫, 1), (가) 등은 하위 섹션 (1.1, 1.2...)
+
+4. **JSON 형식을 반드시 지키고, 섹션은 최소 10개 이상 출력하세요.**
+"""
+    if skeleton_json:
+        system_prompt += "\n\n⚠️ 매우 중요: 제공된 스켈레톤의 number/title 순서를 반드시 그대로 유지하고, 스켈레톤에 없는 섹션은 추가하지 마세요. 스켈레톤에 있는 섹션만 목차로 반환하세요."
+    else:
+        system_prompt += "\n\n⚠️ 매우 중요: 스켈레톤이 제공되지 않았습니다. 텍스트에서 □, ■, ●로 시작하는 본문 작성 섹션만 추출하세요. 폼 입력 필드(기업명, 대표자, 연락처, mail, 팩스, 휴대전화 등)는 절대 포함하지 마세요."
+    
+    if section_contexts:
+        system_prompt += "\n\n⚠️ 중요: '섹션별 본문 발췌'에 제공된 텍스트는 각 □ 섹션의 시작부터 다음 □ 섹션 직전까지의 실제 원문입니다. 이 텍스트를 사람처럼 읽어서 해당 구간에서 요구하는 하위 항목(￭, 1), (가) 등)을 추출하고, 섹션의 실제 내용을 파악하여 목차를 구성하세요."
+
+    user_prompt_parts = [
+        f"""## 템플릿 정보
+- 파일명: {template['file_name']}
+- 페이지 수: {template_doc.get('page_count', '?')}
+- 표 수: {len(tables)}""",
+        f"""## 사전 감지된 목차 후보 (참고용)
+{detected_outline}""",
+        f"""## 목차 텍스트 (키워드/패턴 기반)
+{template_text}""",
+        f"""## 첨부 양식 청킹 텍스트 (상위 {min(len(template_chunks), MAX_TEMPLATE_CHUNKS)}개)
+{chunk_context}"""
+    ]
+
+    if skeleton_json:
+        user_prompt_parts.append(f"""## 강제 목차 스켈레톤 (number/title을 그대로 사용)
+{skeleton_json}""")
+
+    if section_contexts:
+        MAX_CONTEXT_SECTIONS = 20
+        trimmed_contexts = []
+        for ctx in section_contexts:
+            excerpt = ctx.get('excerpt', '').strip()
+            if not excerpt:
+                continue
+            trimmed_contexts.append({
+                'number': ctx['number'],
+                'title': ctx['title'],
+                'excerpt': excerpt[:600]
+            })
+            if len(trimmed_contexts) >= MAX_CONTEXT_SECTIONS:
+                break
+        if trimmed_contexts:
+            context_json = json.dumps(trimmed_contexts, ensure_ascii=False, indent=2)
+            user_prompt_parts.append(f"""## 섹션별 본문 발췌 (상위 {len(trimmed_contexts)}개)
+⚠️ 중요: 아래 각 섹션의 "excerpt"는 해당 □ 섹션의 시작부터 다음 □ 섹션 직전까지의 실제 원문 텍스트입니다.
+이 텍스트를 읽어서 해당 구간에서 요구하는 하위 항목(￭, 1), (가) 등)과 실제 작성 내용을 파악하세요.
+
+{context_json}""")
+
+    user_prompt_parts.append("""---
+요구 사항:
+1. **폼 입력 필드는 절대 포함하지 마세요:**
+   - ❌ 제외: "기업명", "대표자", "연락처", "주소", "전화", "팩스", "mail", "휴대전화", "생년월일", "성별", "직위", "부서", "E-mail" 등
+   - ❌ 제외: "1)기업현황", "2)대표자", "3)실무책임자" 같은 폼 섹션 번호
+   - ✅ 포함: "□ 기업현황", "□ 대표자 및 경영진 현황", "□ 목표" 같은 본문 작성 섹션
+
+2. 상기 텍스트에서 본문 작성 항목만 추출하여 목차를 생성하세요.
+
+3. "섹션별 본문 발췌"가 제공된 경우, 각 섹션의 excerpt 텍스트를 반드시 읽어서 해당 구간의 실제 내용과 하위 항목을 파악하세요.
+
+4. 계층 구조는 "1 → 1.1 → 1.1.1" 형식을 사용하세요.
+
+5. 각 항목에 'required' 여부와 간단한 설명을 포함하세요.
+
+6. 출력 형식은 아래 JSON 스키마를 따르세요:
+{
+  "sections": [
+    {
+      "number": "1",
+      "title": "사업 개요",
+      "required": true,
+      "description": "사업 추진 배경과 목적"
     }
+  ]
+}""")
 
-    state['table_of_contents'] = toc
-    state['status'] = 'toc_extracted'
-
-    print(f"\n  ✅ 양식에서 {len(sections)}개 섹션 추출 완료")
-    for sec in sections[:5]:
-        print(f"    • {sec.get('number', '')} {sec.get('title', '')}")
-    if len(sections) > 5:
-        print(f"    ... 외 {len(sections) - 5}개")
+    user_prompt = "\n\n".join(user_prompt_parts)
+    
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0
+        )
+        
+        content = response.choices[0].message.content
+        if not content:
+            raise ValueError("LLM 응답이 비어 있습니다.")
+        
+        result = json.loads(content)
+        sections = result.get('sections', [])
+        
+        if not sections:
+            raise ValueError("LLM 결과에 sections가 없습니다.")
+        
+        if base_sections:
+            llm_map = {sec.get('number'): sec for sec in sections}
+            final_sections = []
+            for base in base_sections:
+                llm_candidate = llm_map.get(base['number'], {})
+                description = llm_candidate.get('description') or base.get('excerpt', '')
+                if not isinstance(description, str):
+                    description = str(description) if description is not None else ''
+                merged = {
+                    'number': base['number'],
+                    'title': base['title'],
+                    'required': llm_candidate.get('required', base.get('required', True)),
+                    'description': description.strip()
+                }
+                final_sections.append(merged)
+        else:
+            # base_sections가 비어있을 때 폼 필드 필터링
+            form_field_keywords = ['mail', '팩스', '휴대전화', '전화', '주소', '생년월일', '성별', '직위', '부서', 'E-mail', 'E-mail']
+            final_sections = []
+            for sec in sections:
+                title = sec.get('title', '').lower()
+                # 폼 필드 키워드가 제목에 포함되어 있으면 제외
+                if any(keyword.lower() in title for keyword in form_field_keywords):
+                    continue
+                # □로 시작하지 않는 섹션도 제외 (폼 필드일 가능성)
+                if not any(title.startswith(marker) for marker in ['□', '■', '●', '○']):
+                    # 하지만 "□"가 제목에 포함되어 있으면 포함
+                    if '□' not in sec.get('title', ''):
+                        continue
+                final_sections.append(sec)
+            
+            if not final_sections:
+                print(f"    ⚠️  폼 필드 필터링 후 섹션이 없음 → 기본 템플릿 사용")
+                raise ValueError("유효한 섹션이 없습니다.")
+        
+        toc = {
+            'source': 'template',
+            'source_file': template['file_name'],
+            'extraction_method': 'llm_template_chunks',
+            'sections': final_sections,
+            'total_sections': len(final_sections),
+            'has_page_numbers': False,
+            'extracted_at': datetime.now().isoformat()
+        }
+        
+        state['table_of_contents'] = toc
+        state['status'] = 'toc_extracted'
+        
+        print(f"\n  ✅ 청킹 기반 LLM 추출 완료: {len(final_sections)}개 섹션")
+        for sec in final_sections[:5]:
+            print(f"    • {sec.get('number', '')} {sec.get('title', '')}")
+        if len(final_sections) > 5:
+            print(f"    ... 외 {len(final_sections) - 5}개")
+        
+        return state
+    
+    except Exception as e:
+        print(f"  ✗ 청킹 기반 LLM 추출 실패: {e} → 기본 템플릿 사용")
+        state['table_of_contents'] = create_default_toc()
+        state['status'] = 'toc_extracted'
 
     return state
-
-
-def _find_toc_table(tables: List[Dict]) -> Optional[Dict]:
-    """
-    목차 관련 표 찾기
-
-    조건:
-    - 첫 번째 행에 "목차", "작성항목", "구성", "항목" 등 키워드 포함
-    - 또는 번호(1., 2., 가., 나.) 패턴이 많이 포함된 표
-    """
-    TOC_KEYWORDS = ['목차', '작성항목', '구성', '항목', '내용', '제출서류']
-
-    for table in tables:
-        data = table['data']
-        if not data or len(data) < 2:
-            continue
-
-        # 첫 번째 행 검사
-        first_row = ' '.join([str(cell) for cell in data[0] if cell])
-
-        if any(kw in first_row for kw in TOC_KEYWORDS):
-            return table
-
-        # 전체 데이터에서 번호 패턴 비율 체크
-        all_text = '\n'.join([' '.join([str(cell) for cell in row if cell]) for row in data])
-        number_pattern_count = len(re.findall(r'\d+\.|가\.|나\.|다\.|①|②|③', all_text))
-
-        if number_pattern_count >= len(data) * 0.3:  # 행의 30% 이상이 번호 패턴
-            return table
-
-    return None
-
-
-def _parse_toc_table(table_data: List[List[str]]) -> List[Dict]:
-    """
-    목차 표에서 섹션 정보 추출
-
-    Args:
-        table_data: 2차원 리스트 [[cell, cell, ...], ...]
-
-    Returns:
-        섹션 리스트 [{'number': '1', 'title': '연구목적', 'page': 3}, ...]
-    """
-    sections = []
-
-    # 헤더 스킵 (첫 번째 행)
-    for row_idx, row in enumerate(table_data[1:], start=1):
-        if not row or not any(row):  # 빈 행 스킵
-            continue
-
-        row_text = ' '.join([str(cell).strip() for cell in row if cell])
-
-        # 섹션 번호 추출 (패턴: 1., 1.1., 가., ①, I., 등)
-        number_match = re.search(
-            r'^(\d+\.?\d*\.?|[가-힣]\.?|[①-⑳]|[IVX]+\.?)',
-            row_text
-        )
-
-        if not number_match:
-            continue
-
-        section_number = number_match.group(1).strip('.')
-        remaining_text = row_text[number_match.end():].strip()
-
-        # 제목과 페이지 번호 분리
-        # 패턴: "제목 ... 페이지번호" 또는 "제목"
-        page_match = re.search(r'(\d+)\s*$', remaining_text)
-
-        if page_match:
-            page_number = int(page_match.group(1))
-            title = remaining_text[:page_match.start()].strip()
-        else:
-            page_number = None
-            title = remaining_text
-
-        # 너무 짧거나 의미 없는 제목 필터링
-        if len(title) < 2 or title in ['합계', '계', '비고', '']:
-            continue
-
-        sections.append({
-            'number': section_number,
-            'title': title,
-            'page': page_number,
-            'row_index': row_idx
-        })
-
-    return sections
 
 
 def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchState:
     """
     공고문 + 모든 첨부서류에서 목차 유추 (RAG + LLM) - LangGraph 노드
-
-    ⚠️ 양식이 없는 경우, 공고문과 모든 첨부서류(RFP, 가이드 등)를 함께 분석하여 목차 생성
-
-    방법:
-    1. 공고문에서 "제출서류" feature 찾기
-    2. RAG로 모든 문서(공고+첨부)에서 관련 청크 검색
-    3. LLM으로 목차 구조 생성
-
+    
+    ⚠️ 양식 파일이 없는 경우 사용되는 함수입니다.
+    공고문과 첨부서류를 분석하여 제출해야 할 계획서의 목차를 유추합니다.
+    
+    🔍 추출 과정:
+    1. 제출서류 feature 찾기
+       - 공고문에서 "제출서류" 섹션 추출
+       - 어떤 서류를 제출해야 하는지 확인
+       
+    2. RAG 검색 (Retrieval-Augmented Generation)
+       - 벡터 DB에서 관련 청크 검색
+       - 검색어: "제출서류 작성항목 구성 목차 제안서 계획서..."
+       - 공고문 + 모든 첨부서류에서 검색 (25개 청크)
+       
+    3. LLM으로 목차 생성
+       - 검색된 컨텍스트와 공고문 내용을 GPT에 제공
+       - 공고 유형별 표준 목차 구조 참고
+       - 실제 공고 내용을 반영한 목차 생성
+       
+    📋 생성되는 목차:
+    - 연구개발(R&D) 과제: 연구계획서 목차
+    - 창업지원 사업: 사업계획서 목차
+    - 주관기관 선정: 주관기관 사업계획서 목차
+    - 기타 지원사업: 해당 사업의 계획서 목차
+    
+    Args:
+        state: BatchState - 현재 처리 중인 배치 상태
+        
     Returns:
-        state: table_of_contents 업데이트된 BatchState
+        BatchState: table_of_contents 필드가 업데이트된 상태
+        - 성공 시: LLM이 생성한 목차 구조
+        - 실패 시: 기본 템플릿 목차 사용
     """
     print(f"\n{'='*60}")
     print(f"📑 공고문 + 첨부서류 기반 목차 유추")
     print(f"{'='*60}")
 
     all_features = state.get('extracted_features', [])
-    collection = state['chroma_collection']
+    collection = state.get('chroma_collection')
+    
+    if not collection:
+        print(f"\n  ⚠️  'chroma_collection' 없음 → 기본 템플릿 사용")
+        state['table_of_contents'] = create_default_toc()
+        state['status'] = 'toc_extracted'
+        return state
 
     # 1️⃣ 제출서류 feature 찾기
     submission_features = [
         f for f in all_features
-        if f['feature_code'] == 'submission_docs'
+        if isinstance(f, dict) and f.get('feature_code') == 'submission_docs'
     ]
 
     if not submission_features:
         print(f"\n  ⚠️  '제출서류' feature 없음 → 기본 템플릿 사용")
-        state['table_of_contents'] = _create_default_toc()
+        state['table_of_contents'] = create_default_toc()
         state['status'] = 'toc_extracted'
         return state
 
@@ -297,14 +669,20 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
         )
 
         all_chunks = []
-        if results['ids'][0]:
-            for i in range(len(results['ids'][0])):
-                all_chunks.append({
-                    'text': results['documents'][0][i],
-                    'file': results['metadatas'][0][i]['file_name'],
-                    'section': results['metadatas'][0][i]['section'],
-                    'doc_type': results['metadatas'][0][i].get('document_type', 'UNKNOWN')
-                })
+        if results and results.get('ids') and results['ids'][0]:
+            ids = results['ids'][0]
+            documents = results.get('documents', [[]])[0] if results.get('documents') else []
+            metadatas = results.get('metadatas', [[]])[0] if results.get('metadatas') else []
+            
+            for i in range(len(ids)):
+                if i < len(documents) and i < len(metadatas):
+                    metadata = metadatas[i] if isinstance(metadatas[i], dict) else {}
+                    all_chunks.append({
+                        'text': documents[i] if i < len(documents) else '',
+                        'file': metadata.get('file_name', 'UNKNOWN'),
+                        'section': metadata.get('section', 'UNKNOWN'),
+                        'doc_type': metadata.get('document_type', 'UNKNOWN')
+                    })
             print(f"    ✅ RAG 검색 완료: {len(all_chunks)}개 청크 (공고 + 첨부서류)")
     except Exception as e:
         print(f"    ✗ RAG 검색 실패: {e}")
@@ -422,7 +800,8 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
 - **반드시 10개 이상의 섹션을 생성**하되, 공고 내용에 근거하여 생성하세요"""
 
     # 공고문 전체 내용 가져오기 (첨부파일이 없을 때 대비) - 컨텍스트 확대
-    announcement_docs = [d for d in state['documents'] if d.get('document_type') == 'ANNOUNCEMENT']
+    documents = state.get('documents', [])
+    announcement_docs = [d for d in documents if d.get('document_type') == 'ANNOUNCEMENT']
     announcement_text = ''
     if announcement_docs:
         announcement_text = announcement_docs[0].get('text', '')[:5000]  # 3000 → 5000으로 증가
@@ -500,6 +879,7 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
 위 내용을 종합적으로 분석하여 신청자가 작성해야 할 계획서의 **상세한 목차(최소 10-15개 섹션, 계층 구조 포함)**를 JSON 형식으로 생성해주세요."""
 
     try:
+        import json
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -510,7 +890,17 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
             temperature=0
         )
 
-        result = json.loads(response.choices[0].message.content)
+        # JSON 파싱 (예외 처리)
+        try:
+            content = response.choices[0].message.content
+            if not content:
+                raise ValueError("LLM 응답 내용이 비어있음")
+            result = json.loads(content)
+        except (json.JSONDecodeError, ValueError, AttributeError, IndexError) as e:
+            print(f"\n  ✗ LLM 응답 파싱 실패: {e} → 기본 템플릿 사용")
+            state['table_of_contents'] = create_default_toc()
+            state['status'] = 'toc_extracted'
+            return state
 
         if result.get('sections'):
             toc = {
@@ -534,220 +924,12 @@ def extract_toc_from_announcement_and_attachments(state: BatchState) -> BatchSta
             return state
         else:
             print(f"\n  ✗ LLM 결과에 섹션 없음 → 기본 템플릿 사용")
-            state['table_of_contents'] = _create_default_toc()
+            state['table_of_contents'] = create_default_toc()
             state['status'] = 'toc_extracted'
             return state
 
     except Exception as e:
         print(f"\n  ✗ LLM 호출 실패: {e} → 기본 템플릿 사용")
-        state['table_of_contents'] = _create_default_toc()
-        state['status'] = 'toc_extracted'
-        return state
-
-
-def _create_default_toc() -> Dict:
-    """
-    기본 목차 생성 (추출 실패 시)
-
-    일반적인 R&D 제안서 표준 목차 제공
-    """
-    return {
-        'source': 'default',
-        'extraction_method': 'fallback',
-        'inference_confidence': 0.3,
-        'sections': [
-            {'number': '1', 'title': '연구개발 과제의 개요', 'required': True},
-            {'number': '2', 'title': '연구개발 목표 및 내용', 'required': True},
-            {'number': '3', 'title': '연구개발 추진체계 및 일정', 'required': True},
-            {'number': '4', 'title': '연구개발 성과 활용방안', 'required': True},
-            {'number': '5', 'title': '소요예산', 'required': True},
-        ],
-        'total_sections': 5,
-        'extracted_at': datetime.now().isoformat(),
-        'note': '목차 추출 실패로 기본 템플릿 사용'
-    }
-
-
-def _extract_toc_from_template_with_llm(state: BatchState, template: Dict) -> BatchState:
-    """
-    LLM을 사용하여 양식 텍스트에서 목차 추출 (표 파싱 실패 시)
-
-    Args:
-        state: BatchState
-        template: 양식 문서 정보
-
-    Returns:
-        state: table_of_contents 업데이트된 BatchState
-    """
-    print(f"  🤖 LLM으로 양식 텍스트 분석 중...")
-
-    # 양식 문서에서 텍스트 추출
-    documents = state.get('documents', [])
-    template_doc = None
-
-    template_file_name = unicodedata.normalize('NFC', template['file_name'])
-
-    for doc in documents:
-        doc_file_name = unicodedata.normalize('NFC', doc.get('file_name', ''))
-        if doc_file_name == template_file_name:
-            template_doc = doc
-            break
-
-    if not template_doc or not template_doc.get('full_text'):
-        print(f"  ✗ 양식 텍스트 없음 → 기본 템플릿 사용")
-        state['table_of_contents'] = _create_default_toc()
-        state['status'] = 'toc_extracted'
-        return state
-
-    # 목차 섹션 스마트 추출
-    full_text = template_doc['full_text']
-
-    # 1단계: 목차 시작 키워드 찾기
-    toc_start_keywords = [
-        '< 본문', '<본문', '본문>',
-        '작성 목차', '제출서류 목차', '계획서 목차',
-        '작성항목', '제출항목', '기재사항'
-    ]
-
-    toc_section_start = -1
-    for keyword in toc_start_keywords:
-        idx = full_text.find(keyword)
-        if idx != -1:
-            toc_section_start = idx
-            print(f"    📍 목차 시작 키워드 발견: '{keyword}' (위치: {idx})")
-            break
-
-    # 2단계: 목차 끝 지점 찾기
-    if toc_section_start != -1:
-        # 목차 시작 이후 텍스트
-        text_after_start = full_text[toc_section_start:]
-
-        # 끝 지점 후보 키워드
-        end_keywords = [
-            '< 본문 2', '<본문 2', '본문 2>',
-            '작성요령', '작성 요령', '주의사항', '유의사항',
-            '참고사항', '기재요령', '첨부서류',
-            '※ 참고', '【참고', '[참고'
-        ]
-
-        toc_end = len(text_after_start)  # 기본값: 끝까지
-        for end_kw in end_keywords:
-            end_idx = text_after_start.find(end_kw)
-            if end_idx != -1 and end_idx < toc_end:
-                toc_end = end_idx
-                print(f"    📍 목차 끝 키워드 발견: '{end_kw}' (상대 위치: {end_idx})")
-                break
-
-        # 목차 섹션 추출 (최대 5000자로 제한)
-        template_text = text_after_start[:min(toc_end, 5000)]
-        print(f"    ✅ 목차 섹션 추출 완료 (길이: {len(template_text)}자)")
-    else:
-        # 3단계: 키워드 없으면 번호 패턴으로 목차 구간 찾기
-        print(f"    ⚠️  목차 키워드 미발견 → 번호 패턴 기반 탐지 시도")
-
-        # "1. ", "2. ", "3. " 패턴이 연속으로 나타나는 구간 찾기
-        import re
-        pattern = r'^[1-9]\.\s+[가-힣]{2,}'
-        lines = full_text.split('\n')
-
-        toc_line_start = -1
-        consecutive_numbered = 0
-
-        for i, line in enumerate(lines):
-            if re.search(pattern, line.strip()):
-                if toc_line_start == -1:
-                    toc_line_start = i
-                consecutive_numbered += 1
-
-                # 3개 이상 연속 번호 패턴이면 목차로 판단
-                if consecutive_numbered >= 3:
-                    # 목차 시작부터 최대 100줄 또는 5000자
-                    toc_lines = lines[toc_line_start:toc_line_start + 100]
-                    template_text = '\n'.join(toc_lines)[:5000]
-                    print(f"    ✅ 번호 패턴 기반 목차 발견 (라인: {toc_line_start}, 길이: {len(template_text)}자)")
-                    break
-            else:
-                consecutive_numbered = 0
-        else:
-            # 번호 패턴도 못 찾으면 전체 텍스트 사용
-            template_text = full_text[:15000]  # 15000자로 확대
-            print(f"    ⚠️  목차 패턴 미발견 → 전체 텍스트 사용 (15000자)")
-
-    system_prompt = """당신은 정부 R&D 제안서 양식 분석 전문가입니다.
-
-제안서 작성 양식의 텍스트를 분석하여 **실제 작성해야 할 목차(섹션)**를 추출하세요.
-
-다음 형식으로 JSON 반환:
-{
-  "sections": [
-    {
-      "number": "1",
-      "title": "연구개발과제의 필요성",
-      "required": true,
-      "description": "과제의 필요성 설명"
-    }
-  ]
-}
-
-⚠️ 중요 구분:
-- ✅ 추출할 것: "1. 연구개발과제의 필요성", "2. 연구개발과제의 목표 및 내용" 같은 **본문 작성 목차**
-- ❌ 제외할 것: "사업명", "연구책임자", "연구개발기간" 같은 **폼 입력 필드**
-
-주의사항:
-- 번호가 있는 작성 항목(1., 2., 3. 또는 가., 나., 다.)을 섹션으로 추출
-- 섹션 번호는 "1", "1.1", "가" 등 원문 형식 유지
-- 계층 구조도 포함 (1) → 2) → 3) 등)
-- required는 필수 작성 항목 여부"""
-
-    user_prompt = f"""## 제안서 양식 텍스트
-
-{template_text}
-
-위 양식을 분석하여 **제안서 본문 작성 목차**를 JSON 형식으로 추출해주세요.
-단순 폼 필드가 아닌, 실제로 서술해야 할 섹션들을 추출하세요."""
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            response_format={"type": "json_object"},
-            temperature=0
-        )
-
-        result = json.loads(response.choices[0].message.content)
-
-        if result.get('sections') and len(result['sections']) > 0:
-            toc = {
-                'source': 'template',
-                'source_file': template['file_name'],
-                'extraction_method': 'llm_text_analysis',
-                'inference_confidence': 0.75,  # LLM 기반이므로 중상 신뢰도
-                'sections': result['sections'],
-                'total_sections': len(result['sections']),
-                'extracted_at': datetime.now().isoformat()
-            }
-
-            state['table_of_contents'] = toc
-            state['status'] = 'toc_extracted'
-
-            print(f"  ✅ LLM으로 {len(result['sections'])}개 섹션 추출 완료")
-            for sec in result['sections'][:5]:
-                print(f"    • {sec.get('number', '')} {sec.get('title', '')}")
-            if len(result['sections']) > 5:
-                print(f"    ... 외 {len(result['sections']) - 5}개")
-
-            return state
-        else:
-            print(f"  ✗ LLM 결과에 섹션 없음 → 기본 템플릿 사용")
-            state['table_of_contents'] = _create_default_toc()
-            state['status'] = 'toc_extracted'
-            return state
-
-    except Exception as e:
-        print(f"  ✗ LLM 호출 실패: {e} → 기본 템플릿 사용")
-        state['table_of_contents'] = _create_default_toc()
+        state['table_of_contents'] = create_default_toc()
         state['status'] = 'toc_extracted'
         return state
