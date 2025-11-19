@@ -165,7 +165,7 @@ export default function Sidebar() {
     <Box sx={{ height: "100%", p: 1, overflow: "auto", bgcolor: "background.paper" }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1, pb: 1 }}>
         <Typography variant="subtitle2" sx={{ color: "#374151" }}>프로젝트 관리</Typography>
-        <Upload rootId={rootId} />
+        {/* <Upload rootId={rootId} /> */}
       </Stack>
 
       <SimpleTreeView

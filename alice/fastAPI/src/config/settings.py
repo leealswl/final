@@ -24,8 +24,8 @@ class Settings(BaseSettings):
     API_DESCRIPTION: str = "공고 분석 및 사용자 입력 폼 자동 생성 API"
 
     # 서버 설정
-    HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    HOST: str = "127.0.0.1"
+    PORT: int = 8001
     RELOAD: bool = True  # 개발 모드에서만 True
 
     # 파일 업로드 설정
