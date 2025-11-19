@@ -348,9 +348,12 @@ def extract_features_rag(state: BatchState) -> BatchState:
             query_embedding = [query_response.data[0].embedding]
 
             # 2️⃣ VectorDB 유사도 검색
+            # [2025-11-19 수정] n_results 7 → 10으로 증가
+            # 텍스트 추출 방식 변경으로 청킹이 더 세분화되어
+            # 관련 정보가 더 많은 청크에 분산될 수 있음
             results = collection.query(
                 query_embeddings=query_embedding,
-                n_results=7,  # 상위 7개 (공고 + 첨부 포함)
+                n_results=10,  # 상위 10개 (공고 + 첨부 포함)
                 # where 조건 없음 → 모든 문서 검색 (공고 + 첨부)
             )
 
@@ -362,9 +365,16 @@ def extract_features_rag(state: BatchState) -> BatchState:
             # 3️⃣ 유사도 임계값 체크
             top_distance = results['distances'][0][0]
 
-            if top_distance > 1.2:  # ChromaDB cosine: 0.0-2.0 range
-                print(f"✗ (거리 멀음: {top_distance:.3f})")
+            # [2025-11-19 수정] 임계값 1.2 → 1.4로 완화
+            # 텍스트 추출 방식 변경으로 인해 청킹이 달라져서
+            # "사업명" 같은 메타 정보가 제목이나 본문에 분산됨
+            # → 유사도가 낮아져도 검색되도록 임계값 완화
+            if top_distance > 1.4:  # ChromaDB cosine: 0.0-2.0 range
+                print(f"✗ (거리 멀음: {top_distance:.3f}, 쿼리: '{query_text}')")
                 continue
+
+            # [디버깅] 검색 성공 시 거리 출력 (임계값 조정 참고용)
+            print(f"✓ (거리: {top_distance:.3f})", end=" ")
 
             # 4️⃣ 검색된 chunk 정리
             retrieved_chunks = []
