@@ -258,16 +258,19 @@ def extract_sections_from_symbols(full_text: str) -> List[Dict]:
     total_lines = len(lines)
     
     # 주요 섹션 패턴 (우선순위 순)
+    # [2025-11-19 수정] "숫자)" 패턴은 sub_patterns로 이동 (1), 2)는 보통 하위 섹션)
     main_patterns = [
+        # [2025-11-19 추가] < 본문 1 >, < 본문 2 > 형식 지원
+        (r'^<\s*본문\s*(\d+)\s*>', '<본문>'),  # < 본문 1 >, < 본문 2 >
+        (r'^<본문\s*(\d+)>', '<본문>'),  # <본문 1>, <본문 2>
+
         (r'^□\s*(.+)$', '□'),  # □ 기업 현황
         (r'^■\s*(.+)$', '■'),  # ■ 기업 현황
         (r'^【([^】]+)】\s*(.+)$', '【】'),  # 【1】 기업 현황
         (r'^\[([^\]]+)\]\s*(.+)$', '[]'),  # [1] 기업 현황
-        (r'^([0-9]{1,2})\.\s+(.+)$', '숫자.'),  # 1. 기업 현황
-        (r'^([0-9]{1,2})\)\s+(.+)$', '숫자)'),  # 1) 기업 현황
+        (r'^([0-9]{1,2})\.\s+(.+)$', '숫자.'),  # 1. 기업 현황 (main 섹션)
         (r'^\(([0-9]{1,2})\)\s+(.+)$', '(숫자)'),  # (1) 기업 현황
         (r'^([가-힣])\.\s+(.+)$', '한글.'),  # 가. 기업 현황
-        (r'^([가-힣])\)\s+(.+)$', '한글)'),  # 가) 기업 현황
         (r'^\(([가-힣])\)\s+(.+)$', '(한글)'),  # (가) 기업 현황
         (r'^([IVX]{1,4})\.\s+(.+)$', '로마숫자.'),  # I. 기업 현황
         (r'^([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ])\.\s+(.+)$', '로마숫자한글.'),  # Ⅰ. 기업 현황
@@ -279,12 +282,15 @@ def extract_sections_from_symbols(full_text: str) -> List[Dict]:
         (r'^-\s*(.+)$', '-'),  # - 기업 현황
         (r'^―\s*(.+)$', '―'),  # ― 기업 현황
     ]
-    
+
     # 하위 섹션 패턴
+    # [2025-11-19 추가] "숫자)", "한글)" 패턴 추가 (1), 2), 가), 나) 등은 하위 섹션)
     sub_patterns = [
         (r'^￭\s*(.+)$', '￭'),  # ￭ 제품 서비스의 개요
         (r'^▪\s*(.+)$', '▪'),  # ▪ 제품 서비스의 개요
         (r'^▫\s*(.+)$', '▫'),  # ▫ 제품 서비스의 개요
+        (r'^([0-9]{1,2})\)\s+(.+)$', '숫자)'),  # 1) 연구개발과제의 목표 (sub 섹션)
+        (r'^([가-힣])\)\s+(.+)$', '한글)'),  # 가) 제품 서비스 (sub 섹션)
         (r'^([0-9]{1,2}\.[0-9]{1,2})\.\s+(.+)$', '숫자.숫자.'),  # 1.1. 제품 서비스
         (r'^([0-9]{1,2}\.[0-9]{1,2})\)\s+(.+)$', '숫자.숫자)'),  # 1.1) 제품 서비스
         (r'^\(([0-9]{1,2}\.[0-9]{1,2})\)\s+(.+)$', '(숫자.숫자)'),  # (1.1) 제품 서비스
@@ -296,7 +302,9 @@ def extract_sections_from_symbols(full_text: str) -> List[Dict]:
         '사 업 수 행 계 획 서', '사업 수행 계획서', '사업수행계획서',
         '연구 계획서', '연구계획서', '제안서', '신청서',
         '작성 항목', '작성항목', '제출 항목', '제출항목',
-        '목 차', '목차', '작성 목차', '작성목차'
+        '목 차', '목차', '작성 목차', '작성목차',
+        # [2025-11-19 추가] < 본문 1 >, < 본문 2 > 형식 지원
+        '< 본문 1 >', '<본문 1>', '< 본문', '<본문'
     ]
     
     end_keywords = [
@@ -321,24 +329,39 @@ def extract_sections_from_symbols(full_text: str) -> List[Dict]:
                 if '붙임' in line_clean or '첨부' in line_clean:
                     continue
                 if keyword_no_spaces in line_no_spaces or keyword in line_clean:
-                    # 키워드를 찾았으면 다음 10줄 안에 □ 패턴이 있는지 확인
+                    # [2025-11-19 수정] < 본문 > 패턴은 그 라인 자체가 섹션 시작
+                    # 현재 라인이 < 본문 > 패턴이면 바로 in_proposal_section = True
+                    if (re.match(r'^<\s*본문\s*\d+\s*>', line_clean) or
+                        re.match(r'^<본문\s*\d+>', line_clean)):
+                        in_proposal_section = True
+                        proposal_section_start_line = idx
+                        break
+
+                    # 그 외의 경우는 다음 10줄 안에 섹션 마커가 있는지 확인
                     lookahead_range = min(idx + 10, len(lines))
                     found_section_marker = False
                     for lookahead_idx in range(idx + 1, lookahead_range):
                         if lookahead_idx >= len(lines):
                             break
                         lookahead_line = lines[lookahead_idx].strip()
-                        # □, ■, ● 패턴이 있으면 실제 목차 섹션
-                        if re.match(r'^[□■●○◇◆▲▼]', lookahead_line):
+                        # □, ■, ● 패턴 또는 < 본문 > 패턴이 있으면 실제 목차 섹션
+                        if (re.match(r'^[□■●○◇◆▲▼]', lookahead_line) or
+                            re.match(r'^<\s*본문\s*\d+\s*>', lookahead_line) or
+                            re.match(r'^<본문\s*\d+>', lookahead_line)):
                             found_section_marker = True
                             break
-                    
+
                     if found_section_marker:
                         in_proposal_section = True
                         proposal_section_start_line = idx
                         break
+            # [2025-11-19 수정] < 본문 > 패턴으로 섹션이 시작된 경우는 continue하지 않음
+            # 왜냐하면 그 라인 자체가 섹션 마커이므로 패턴 매칭을 해야 함
             if in_proposal_section:
-                continue
+                # 현재 라인이 < 본문 > 패턴이면 continue하지 않고 패턴 매칭 진행
+                if not (re.match(r'^<\s*본문\s*\d+\s*>', line_clean) or
+                        re.match(r'^<본문\s*\d+>', line_clean)):
+                    continue
         
         # 목차 섹션 종료 확인
         if in_proposal_section:
@@ -351,11 +374,14 @@ def extract_sections_from_symbols(full_text: str) -> List[Dict]:
             # "개인신용정보" + "동의서" 조합이 나타나면 종료
             elif '개인신용정보' in line_clean and '동의서' in line_clean:
                 should_end = True
-            # "개인정보" + "동의서" 조합이 나타나면 종료 (□로 시작하지 않는 경우만)
-            elif '개인정보' in line_clean and '동의서' in line_clean and not re.match(r'^[□■●○◇◆▲▼]', line_clean):
+            # "개인정보" + "동의서" 조합이 나타나면 종료 (□ 또는 < 본문 >로 시작하지 않는 경우만)
+            elif ('개인정보' in line_clean and '동의서' in line_clean and
+                  not re.match(r'^[□■●○◇◆▲▼]', line_clean) and
+                  not re.match(r'^<\s*본문', line_clean)):
                 should_end = True
-            # □로 시작하는 줄은 목차 섹션이므로 종료하지 않음
-            elif re.match(r'^[□■●○◇◆▲▼]', line_clean):
+            # □ 또는 < 본문 >로 시작하는 줄은 목차 섹션이므로 종료하지 않음
+            elif (re.match(r'^[□■●○◇◆▲▼]', line_clean) or
+                  re.match(r'^<\s*본문', line_clean)):
                 should_end = False
             # 그 외 end_keywords가 포함된 경우 (단, □로 시작하지 않는 경우만)
             else:
@@ -377,7 +403,13 @@ def extract_sections_from_symbols(full_text: str) -> List[Dict]:
         for pattern, pattern_type in main_patterns:
             match = re.match(pattern, line_clean)
             if match:
-                if pattern_type in ['【】', '[]']:
+                # [2025-11-19 수정] < 본문 1 >, < 본문 2 >는 양식의 구분자이므로 목차에 포함하지 않음
+                # 이것은 "이 아래부터 본문 작성 항목이 시작됩니다"라는 표시일 뿐
+                if pattern_type == '<본문>':
+                    # < 본문 > 패턴은 in_proposal_section을 활성화시키지만, 섹션으로 추가하지 않음
+                    matched_main = True  # 패턴은 매칭되었지만 섹션으로 추가하지 않음
+                    break
+                elif pattern_type in ['【】', '[]']:
                     # 대괄호 패턴: 번호와 제목 분리
                     number_part = match.group(1).strip()
                     title = match.group(2).strip()
