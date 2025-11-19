@@ -90,7 +90,17 @@ const AnalyzeView = () => {
             navigate('/works/analyze/dashboard', { state: { analysisResult: response.data } });
         } catch (err) {
             console.error('❌ 분석 실패:', err);
-            setError(err.response?.data?.message || '분석 중 오류가 발생했습니다.');
+            
+            // 타임아웃 에러 처리
+            if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+                setError('분석 시간이 초과되었습니다. 파일 크기가 크거나 분석이 오래 걸리는 경우 10분 이상 소요될 수 있습니다. 다시 시도해주세요.');
+            } else if (err.response?.data?.message) {
+                setError(err.response.data.message);
+            } else if (err.message) {
+                setError(`분석 중 오류가 발생했습니다: ${err.message}`);
+            } else {
+                setError('분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+            }
         } finally {
             setLoading(false);
         }

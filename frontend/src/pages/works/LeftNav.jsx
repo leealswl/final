@@ -7,6 +7,7 @@ import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined'; // �
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import LogoutButton from '../../components/LogoutButton';
+import { useLayoutStore } from '../../store/useLayoutStore';
 
 const ITEMS = [
     { key: 'analyze', label: '분석', Icon: InsightsOutlinedIcon },
@@ -19,6 +20,8 @@ export default function LeftNav({ width = 64 }) {
     const nav = useNavigate();
     const { pathname } = useLocation();
     const { docId } = useParams(); // 편집 모드에서만 의미 있음
+    
+    const toggleSidebar = useLayoutStore((s) => s.toggleSidebar);
 
     // key -> 목적지 경로
     const toPath = (key) => {
@@ -27,6 +30,15 @@ export default function LeftNav({ width = 64 }) {
     };
     // key -> 선택 여부
     const isSelected = (key) => pathname.startsWith(`/works/${key}`);
+    
+    // 버튼 클릭 핸들러
+    const handleNavClick = (key) => {
+        nav(toPath(key));
+        // 편집 버튼 클릭 시 사이드바 토글
+        if (key === 'edit') {
+            toggleSidebar();
+        }
+    };
 
     return (
         <Box
@@ -87,7 +99,7 @@ export default function LeftNav({ width = 64 }) {
                     return (
                         <Tooltip key={key} title={label} placement="right">
                             <Box
-                                onClick={() => nav(toPath(key))}
+                                onClick={() => handleNavClick(key)}
                                 sx={{
                                     width: '100%',
                                     display: 'grid',
