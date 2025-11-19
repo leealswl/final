@@ -8,18 +8,24 @@ import LeftNav from './LeftNav';
 import Sidebar from './Sidebar';
 
 import CreateTocSidebar from './CreateTocSidebar';
+import TocSidebar from './edit/TocSidebar';
 
 import { Outlet, useLocation } from 'react-router-dom';
+import { useLayoutStore } from '../../store/useLayoutStore';
 
 export default function Layout() {
     const NAV_W = 64; // 왼쪽 얇은 네비 레일
     const SIDEBAR_W = 280; // 프로젝트 트리
     const ASSIST_W = 360; // 우측 어시스턴트 (열렸을 때)
 
+    // 사이드바 토글 상태
+    const sidebarOpen = useLayoutStore((s) => s.sidebarOpen);
+
     // 데스크톱 우측 패널 열림 상태
     const [assistOpen, setAssistOpen] = useState(true);
     const location = useLocation();
     const isCreateMode = location.pathname.startsWith('/works/create');
+    const isEditMode = location.pathname.startsWith('/works/edit');
 
     // 패널 열고닫을 때 에디터가 즉시 리사이즈되도록 resize 이벤트 발행
     const fireResize = () => window.dispatchEvent(new Event('resize'));
@@ -50,18 +56,31 @@ export default function Layout() {
                     <LeftNav width={NAV_W} />
                 </Box>
 
-                {/* 프로젝트 사이드바 */}
+                {/* 프로젝트 사이드바 / 목차 사이드바 (토글 가능) */}
                 <Paper
                     square
                     elevation={0}
                     sx={{
-                        width: SIDEBAR_W,
+                        width: sidebarOpen ? SIDEBAR_W : 0,
+                        minWidth: sidebarOpen ? SIDEBAR_W : 0,
                         bgcolor: '#fafafa',
-                        borderRight: '1px solid #e5e7eb',
+                        borderRight: sidebarOpen ? '1px solid #e5e7eb' : 'none',
                         overflow: 'hidden',
+                        transition: 'width 0.3s ease, min-width 0.3s ease',
                     }}
+                    onTransitionEnd={fireResize}
                 >
-                    {isCreateMode ? <CreateTocSidebar /> : <Sidebar />}
+                    {sidebarOpen && (
+                        <>
+                            {isEditMode ? (
+                                <TocSidebar />
+                            ) : isCreateMode ? (
+                                <CreateTocSidebar />
+                            ) : (
+                                <Sidebar />
+                            )}
+                        </>
+                    )}
                 </Paper>
 
                 {/* Editor: 항상 중앙 */}

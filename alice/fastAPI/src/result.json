@@ -1,0 +1,117 @@
+{
+  "source": "announcement",
+  "extraction_method": "rag_llm",
+  "inference_confidence": 0.7,
+  "sections": [
+    {
+      "number": "1",
+      "title": "사업 개요",
+      "required": true,
+      "description": "사업의 목적과 필요성"
+    },
+    {
+      "number": "1.1",
+      "title": "사업 배경 및 필요성",
+      "required": true,
+      "description": "사업을 추진하는 배경과 필요성"
+    },
+    {
+      "number": "1.2",
+      "title": "사업 목표",
+      "required": true,
+      "description": "사업의 구체적인 목표 설정"
+    },
+    {
+      "number": "2",
+      "title": "비즈니스 모델",
+      "required": true,
+      "description": "제품 및 서비스의 개요와 수익 모델"
+    },
+    {
+      "number": "2.1",
+      "title": "제품 및 서비스 개요",
+      "required": true,
+      "description": "제공할 제품 및 서비스의 상세 설명"
+    },
+    {
+      "number": "2.2",
+      "title": "핵심 기술 및 혁신성",
+      "required": true,
+      "description": "제품 및 서비스의 핵심 기술과 혁신성"
+    },
+    {
+      "number": "3",
+      "title": "시장 분석",
+      "required": true,
+      "description": "시장 규모, 경쟁 상황 및 마케팅 전략"
+    },
+    {
+      "number": "3.1",
+      "title": "시장 규모 및 성장 전망",
+      "required": true,
+      "description": "국내외 시장 규모 및 성장 가능성"
+    },
+    {
+      "number": "3.2",
+      "title": "경쟁 분석",
+      "required": true,
+      "description": "경쟁사 분석 및 차별화 전략"
+    },
+    {
+      "number": "4",
+      "title": "운영 계획",
+      "required": true,
+      "description": "사업 운영을 위한 구체적인 계획"
+    },
+    {
+      "number": "4.1",
+      "title": "조직 및 인력 구성",
+      "required": true,
+      "description": "조직 구조 및 인력 운영 계획"
+    },
+    {
+      "number": "4.2",
+      "title": "운영 전략",
+      "required": true,
+      "description": "사업 운영을 위한 전략 및 실행 계획"
+    },
+    {
+      "number": "5",
+      "title": "재무 계획",
+      "required": true,
+      "description": "예산 편성 및 자금 조달 계획"
+    },
+    {
+      "number": "5.1",
+      "title": "예산 계획",
+      "required": true,
+      "description": "사업 수행을 위한 예산 계획"
+    },
+    {
+      "number": "5.2",
+      "title": "자금 조달 계획",
+      "required": true,
+      "description": "필요 자금의 조달 방법 및 계획"
+    },
+    {
+      "number": "6",
+      "title": "글로벌 시장 진출 계획",
+      "required": true,
+      "description": "해외 진출 전략 및 목표"
+    },
+    {
+      "number": "6.1",
+      "title": "진출 희망 국가 및 전략",
+      "required": true,
+      "description": "글로벌 시장 진출을 위한 국가 및 전략"
+    },
+    {
+      "number": "7",
+      "title": "성과 관리 및 환류 계획",
+      "required": true,
+      "description": "사업 종료 후 성과 관리 및 국내 생태계 환류 계획"
+    }
+  ],
+  "total_sections": 18,
+  "extracted_at": "2025-11-18T11:55:08.628566"
+}
