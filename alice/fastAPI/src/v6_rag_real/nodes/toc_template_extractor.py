@@ -137,8 +137,8 @@ def build_base_sections(
     """
     패턴 기반으로 추출한 섹션에서 base_sections와 section_contexts 생성
 
-    □ 기업현황 (line 100) ~ □ 대표자 현황 (line 200) 사이의 텍스트를 추출하여
-    LLM에 전달할 준비를 함
+    symbol_sections에 이미 main/sub 섹션이 모두 포함되어 있으므로,
+    각 섹션의 본문 excerpt만 추가하여 반환
 
     Returns:
         (base_sections, section_contexts) 튜플
@@ -147,93 +147,35 @@ def build_base_sections(
     section_contexts: List[Dict] = []
     full_lines = full_text.split('\n')
     total_lines = len(full_lines)
-    main_sections = [sec for sec in symbol_sections if sec.get('level') == 'main']
 
-    if main_sections:
-        for main in main_sections:
-            # 1️⃣ main 섹션의 시작~끝 라인 범위 추출
-            start_line = main.get('line_index', 0)
-            end_line = main.get('next_line_index', total_lines)
-            block_lines = full_lines[start_line:end_line]
-            block_text = '\n'.join(block_lines).strip()
+    # symbol_sections를 그대로 사용하되, excerpt만 추가
+    for sec in symbol_sections:
+        start_line = sec.get('line_index', 0)
+        end_line = sec.get('next_line_index', total_lines)
+        block_lines = full_lines[start_line:end_line]
+        block_text = '\n'.join(block_lines).strip()
 
-            # 2️⃣ main 섹션 정보를 base_sections에 추가
-            main_entry = {
-                'number': main['number'],
-                'title': main['title'],
-                'level': 'main',
-                'parent_number': None,
-                'line_index': start_line,
-                'next_line_index': end_line
-            }
+        # excerpt 추가
+        sec_entry = {
+            'number': sec['number'],
+            'title': sec['title'],
+            'level': sec.get('level', 'main'),
+            'parent_number': sec.get('parent_number'),
+            'line_index': start_line,
+            'next_line_index': end_line
+        }
 
-            # 3️⃣ 본문 발췌를 추가 (LLM에 전달용)
-            if block_text:
-                main_entry['excerpt'] = block_text[:800]
-                section_contexts.append({
-                    'number': main_entry['number'],
-                    'title': main_entry['title'],
-                    'excerpt': main_entry['excerpt']
-                })
-            base_sections.append(main_entry)
+        # 본문 발췌 추가
+        if block_text:
+            max_excerpt = 800 if sec.get('level') == 'main' else 600
+            sec_entry['excerpt'] = block_text[:max_excerpt]
+            section_contexts.append({
+                'number': sec_entry['number'],
+                'title': sec_entry['title'],
+                'excerpt': sec_entry['excerpt']
+            })
 
-            # 4️⃣ 하위 섹션 처리
-            subs = [
-                sec for sec in symbol_sections
-                if sec.get('level') == 'sub' and sec.get('parent_number') == main['number']
-            ]
-
-            if subs:
-                # 4-A. 이미 추출된 하위 섹션이 있는 경우
-                subs.sort(key=lambda s: s.get('line_index', 0))
-                for sub in subs:
-                    sub_start = sub.get('line_index', start_line)
-                    sub_end = sub.get('next_line_index', end_line)
-                    sub_text = '\n'.join(full_lines[sub_start:sub_end]).strip()
-                    sub_entry = {
-                        'number': sub['number'],
-                        'title': sub['title'],
-                        'level': 'sub',
-                        'parent_number': main_entry['number'],
-                        'line_index': sub_start,
-                        'next_line_index': sub_end
-                    }
-                    if sub_text:
-                        sub_entry['excerpt'] = sub_text[:600]
-                        section_contexts.append({
-                            'number': sub_entry['number'],
-                            'title': sub_entry['title'],
-                            'excerpt': sub_entry['excerpt']
-                        })
-                    base_sections.append(sub_entry)
-            else:
-                # 4-B. 하위 섹션이 없으면 패턴으로 직접 추출
-                sub_candidates = extract_subsections_from_range(
-                    block_lines,
-                    main['number'],
-                    start_line,
-                    end_line
-                )
-                for sub in sub_candidates:
-                    sub_start = sub.get('line_index', start_line)
-                    sub_end = sub.get('next_line_index', end_line)
-                    sub_text = '\n'.join(full_lines[sub_start:sub_end]).strip()
-                    sub_entry = {
-                        'number': sub['number'],
-                        'title': sub['title'],
-                        'level': 'sub',
-                        'parent_number': main_entry['number'],
-                        'line_index': sub_start,
-                        'next_line_index': sub_end
-                    }
-                    if sub_text:
-                        sub_entry['excerpt'] = sub_text[:600]
-                        section_contexts.append({
-                            'number': sub_entry['number'],
-                            'title': sub_entry['title'],
-                            'excerpt': sub_entry['excerpt']
-                        })
-                    base_sections.append(sub_entry)
+        base_sections.append(sec_entry)
 
     return base_sections, section_contexts
 
