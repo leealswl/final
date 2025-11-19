@@ -1,6 +1,12 @@
 """
 문서 처리 노드들 (청킹, 임베딩, VectorDB 등)
-노트북에서 추출한 전체 구현
+
+✅ 핵심 노드들:
+  1. chunk_all_documents: 섹션 기반 청킹 (□, ■, ● 마커 인식)
+  2. embed_all_chunks: OpenAI Embedding API로 벡터 변환
+  3. init_and_store_vectordb: Chroma VectorDB 저장
+  4. extract_features_rag: RAG 기반 Feature 추출 (LLM 분석)
+  5. save_to_csv: 로컬 파일 저장 (개발/테스트용)
 """
 
 import json
@@ -30,6 +36,16 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 def chunk_all_documents(state: BatchState) -> BatchState:
     """
     모든 문서를 섹션 기반으로 청킹 (공고문 + 첨부서류)
+
+    ✅ 핵심 기능: 문서를 의미있는 단위(섹션)로 분할
+    📌 청킹 전략:
+      - 섹션 마커 감지 (□, ■, ● 등)
+      - 섹션이 없으면 고정 길이 청킹 (fallback)
+      - MIN_CHUNK_LENGTH(50) 미만은 제외
+
+    Returns:
+        state['all_chunks']: 모든 청크 리스트
+        - 청크마다 문서 메타데이터, 섹션 정보, 페이지 번호 포함
     """
     documents = state['documents']
     all_chunks = []
@@ -125,6 +141,14 @@ def chunk_all_documents(state: BatchState) -> BatchState:
 def embed_all_chunks(state: BatchState) -> BatchState:
     """
     OpenAI Embedding API로 모든 청크를 임베딩 벡터로 변환
+
+    ✅ 핵심 기능: 텍스트를 벡터로 변환하여 의미 검색 가능하게 만듦
+    📌 사용 모델: text-embedding-3-small (1536 차원, $0.02/1M tokens)
+    📌 배치 처리: 최대 2048개/요청으로 효율적 처리
+
+    Returns:
+        state['all_embeddings']: numpy array (shape: [N, 1536])
+        state['embedding_model']: 'text-embedding-3-small'
     """
     all_chunks = state['all_chunks']
 
@@ -185,33 +209,35 @@ def embed_all_chunks(state: BatchState) -> BatchState:
 def init_and_store_vectordb(state: BatchState) -> BatchState:
     """
     Chroma VectorDB 초기화 및 청크 저장
+
+    ✅ 핵심 기능: RAG 검색을 위한 벡터 DB 생성 및 저장 (필수)
     """
     all_chunks = state['all_chunks']
     embeddings = state['all_embeddings']
-    
+
     print(f"\n{'='*60}")
     print(f"💾 Chroma VectorDB 초기화 및 저장")
     print(f"{'='*60}")
 
-    # TODO: FastAPI 연동 시 config.VECTOR_DB_DIR 사용하도록 변경 필요
-    # Chroma DB 경로 설정 (현재 테스트용 하드코딩)
+    # Chroma DB 경로 설정
+    # TODO: 운영 환경에서는 config.VECTOR_DB_DIR 또는 환경변수 사용 권장
     db_path = Path("./chroma_db")
     db_path.mkdir(exist_ok=True)
-    
+
     # Chroma Client 생성
     print(f"\n  📂 VectorDB 경로: {db_path.absolute()}")
     client = chromadb.PersistentClient(path=str(db_path))
-    
+
     # 컬렉션 이름
     collection_name = f"project_{state['project_idx']}"
-    
-    # 기존 컬렉션 삭제 (재실행 시)
+
+    # 기존 컬렉션 삭제 (재실행 시 중복 방지)
     try:
         client.delete_collection(name=collection_name)
         print(f"  🗑️  기존 컬렉션 삭제: {collection_name}")
     except:
         pass
-    
+
     # 새 컬렉션 생성
     collection = client.create_collection(
         name=collection_name,
@@ -222,12 +248,12 @@ def init_and_store_vectordb(state: BatchState) -> BatchState:
             "hnsw:space": "cosine"  # Cosine distance for text similarity
         }
     )
-    
+
     print(f"  ✓ 컬렉션 생성: {collection_name}")
-    
+
     # 청크 + 임베딩 저장
     print(f"\n  💾 {len(all_chunks)}개 청크 저장 중...")
-    
+
     collection.add(
         ids=[chunk['chunk_id'] for chunk in all_chunks],
         embeddings=embeddings.tolist(),
@@ -244,30 +270,41 @@ def init_and_store_vectordb(state: BatchState) -> BatchState:
             for chunk in all_chunks
         ]
     )
-    
+
     state['chroma_client'] = client
     state['chroma_collection'] = collection
     state['vector_db_path'] = str(db_path)
     state['status'] = 'vectordb_ready'
-    
+
     print(f"  ✅ VectorDB 저장 완료")
     print(f"    - 컬렉션: {collection_name}")
     print(f"    - 청크 수: {len(all_chunks)}")
     print(f"    - 경로: {db_path.absolute()}")
-    
+
     return state
 
 
-# 키워드 기반으로 rag검색을해서 llm이 분석한다. 
 def extract_features_rag(state: BatchState) -> BatchState:
     """
     RAG 기반 Feature 추출 (크로스 문서 검색)
-    
-    프로세스:
-    1. Feature 쿼리 임베딩
-    2. VectorDB 유사도 검색 (공고 + 첨부 통합)
-    3. 상위 K개 chunk만 LLM에 전달
-    4. LLM 분석 결과 저장
+
+    ✅ 핵심 기능: 공고문과 첨부서류를 종합적으로 분석하여 핵심 정보 추출
+    📌 RAG 프로세스:
+      1. Feature 키워드로 쿼리 임베딩 생성
+      2. VectorDB 유사도 검색 (공고 + 첨부 통합, 상위 7개)
+      3. 검색된 청크만 LLM에 전달 (토큰 절약)
+      4. LLM이 구조화된 JSON으로 분석 결과 반환
+
+    📋 추출 정보:
+      - 핵심 내용 요약
+      - key_points (요점 리스트)
+      - writing_strategy (작성 전략 - 평가 포인트, 작성 팁, 주의사항)
+
+    Returns:
+        state['extracted_features']: 추출된 Feature 리스트
+        - feature_code, feature_name, summary, full_content
+        - key_points, writing_strategy
+        - RAG 메타데이터 (사용된 청크, 유사도 등)
     """
     collection = state['chroma_collection']
     model = state['embedding_model']
@@ -467,16 +504,19 @@ def extract_features_rag(state: BatchState) -> BatchState:
 
 def save_to_csv(state: BatchState) -> BatchState:
     """
-    분석 결과를 파일로 저장 (오라클 연결 전 테스트용)
+    분석 결과를 로컬 파일로 저장 (개발/테스트용)
+
+    ⚠️ 운영 환경: Backend API 호출(build_response)이 Oracle DB 저장을 담당
+    📁 로컬 저장: 개발 중 디버깅, 테스트 결과 확인용
 
     저장 파일:
     1. ANALYSIS_RESULT_{timestamp}.csv - Feature 추출 결과 (RAG + LLM 분석)
     2. ANALYSIS_RESULT_{timestamp}.json - Feature 추출 결과 (JSON)
     3. table_of_contents_{timestamp}.json - 목차 정보 (JSON)
     """
-    
+
     print(f"\n{'='*60}")
-    print(f"💾 분석 결과 저장 (CSV + JSON)")
+    print(f"💾 분석 결과 로컬 저장 (개발/테스트용)")
     print(f"{'='*60}")
 
     # 저장 디렉토리 생성

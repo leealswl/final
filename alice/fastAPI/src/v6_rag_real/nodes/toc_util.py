@@ -343,8 +343,10 @@ def extract_sections_from_symbols(full_text: str) -> List[Dict]:
         # 목차 섹션 종료 확인
         if in_proposal_section:
             should_end = False
-            # "별지" 키워드가 나타나면 개인정보 동의서 섹션 시작이므로 종료
-            if '별지' in line_clean:
+            # [2025-11-19 수정] "별지" 단독 vs "별지로" 구분
+            # "별지로 작성 가능" 같은 설명은 목차 항목의 일부이므로 제외
+            # "별지" 단독으로 나타나면 개인정보 동의서 섹션 시작이므로 종료
+            if line_clean == '별지' or (line_clean.startswith('별지') and not '별지로' in line_clean):
                 should_end = True
             # "개인신용정보" + "동의서" 조합이 나타나면 종료
             elif '개인신용정보' in line_clean and '동의서' in line_clean:
@@ -388,12 +390,12 @@ def extract_sections_from_symbols(full_text: str) -> List[Dict]:
                         number_part = match.group(1).strip()
                         title = match.group(2).strip()
                 
-                # 필터링: 개인정보, 신용보증 관련 제외
-                if (len(title) > 1 and 
-                    '동의' not in title and 
-                    '수집' not in title and 
-                    '제공' not in title and 
-                    '신용보증' not in title and
+                # [2025-11-19 수정] 필터링: 개인정보 동의서 관련만 제외
+                # "신용보증 신청" 등은 정당한 목차 항목이므로 포함
+                if (len(title) > 1 and
+                    '동의' not in title and
+                    '수집' not in title and
+                    '제공' not in title and
                     '보유' not in title and
                     '거부' not in title and
                     title not in ['합계', '계', '비고', '']):

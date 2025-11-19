@@ -1,6 +1,9 @@
 """
 첨부 양식 감지 모듈
 제안서/계획서 양식 여부를 RAG + 규칙 기반으로 판단
+
+✅ 핵심 기능: 첨부서류 중 어떤 파일이 "작성해야 할 양식"인지 자동 감지
+📌 목적: 양식 기반 목차 추출 vs 공고 기반 목차 유추 분기 결정
 """
 
 from datetime import datetime
@@ -13,16 +16,21 @@ from ..state_types import BatchState
 
 def detect_proposal_templates(state: BatchState) -> BatchState:
     """
-    첨부서류에서 제안서 양식 감지 (RAG 기반)
+    첨부서류에서 제안서 양식 감지 (RAG + 규칙 기반)
 
-    감지 신호:
+    ✅ 필수 노드: 목차 추출 방식 결정의 핵심
+
+    🔍 감지 신호 (다중 신호 융합):
     1. 파일명 키워드 ('계획서', '신청서', '제안서', '양식')
     2. 공고문에서 첨부파일 언급 ('붙임1', '별첨2' 등)
     3. RAG 검색: 양식 관련 키워드 ('양식', '서식', '작성예시')
     4. 표 구조 존재 (입력 칸이 있는 표)
 
-    반환:
-    - state['attachment_templates']: 양식 정보 리스트
+    Returns:
+        state['attachment_templates']: 양식 정보 리스트
+        - has_template: True/False (양식 여부)
+        - confidence_score: 신뢰도 (0.0-1.0)
+        - fields: 추출된 필드 목록
     """
     collection = state['chroma_collection']
     model = state['embedding_model']

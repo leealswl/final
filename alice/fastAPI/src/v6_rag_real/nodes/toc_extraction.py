@@ -115,17 +115,18 @@ def extract_toc_from_template(state: BatchState) -> BatchState:
     templates = state.get('attachment_templates', [])
     template = find_proposal_template(templates)
 
-    # 양식이 감지되지 않았지만, 첨부 파일이 있고 신뢰도가 0.5 이상이면 강제로 시도
+    # [Fallback] detect_templates 노드가 놓친 경우를 위한 긴급 복구 로직
+    # 정상적으로는 detect_templates에서 양식을 감지하지만,
+    # 신뢰도가 낮아 누락된 경우 파일명 키워드로 최종 시도
     if not template:
-        # 신뢰도가 낮아서 양식으로 감지되지 않았지만, 파일명에 키워드가 있으면 시도
         documents = state.get('documents', [])
         attachment_docs = [d for d in documents if d.get('folder') == 2]
-        
+
         for att_doc in attachment_docs:
             file_name = att_doc.get('file_name', '')
             # 신청서, 계획서, 제안서 키워드가 있으면 강제로 시도
             if any(kw in file_name for kw in ['신청서', '계획서', '제안서', '양식']):
-                print(f"\n  ⚠️  양식으로 감지되지 않았지만, 파일명 기반으로 강제 시도: {file_name}")
+                print(f"\n  ⚠️  양식 감지 누락 → 파일명 기반 복구 시도: {file_name}")
                 # 임시 템플릿 정보 생성
                 template = {
                     'file_name': file_name,
@@ -134,7 +135,7 @@ def extract_toc_from_template(state: BatchState) -> BatchState:
                     'has_template': False  # 감지는 안 되었지만 시도
                 }
                 break
-        
+
         if not template:
             print(f"\n  ⚠️  양식을 찾을 수 없음 → 기본 템플릿 사용")
             state['table_of_contents'] = create_default_toc()
@@ -173,40 +174,69 @@ def extract_toc_from_template(state: BatchState) -> BatchState:
         state['status'] = 'toc_extracted'
         return state
 
-    print(f"  🤖 청킹 기반 LLM 추출 시작 (템플릿 전용)")
+    print(f"  🤖 페이지 기반 LLM 추출 시작 (템플릿 전용)")
 
-    all_chunks = state.get('all_chunks', [])
-    template_chunks = []
-    template_file_name_nfc = unicodedata.normalize('NFC', template['file_name'])
-    
-    if all_chunks:
-        for chunk in all_chunks:
-            chunk_file = unicodedata.normalize('NFC', chunk.get('file_name', ''))
-            if chunk_file == template_file_name_nfc:
-                template_chunks.append(chunk)
-    
-    # 페이지 순으로 정렬
-    template_chunks.sort(key=lambda c: (c.get('page', 0) or 0, c.get('chunk_id', '')))
-    
-    # 상위 20개 청크만 사용하여 토큰 절약
-    MAX_TEMPLATE_CHUNKS = 20
-    chunk_context_parts = []
-    for chunk in template_chunks[:MAX_TEMPLATE_CHUNKS]:
-        page = chunk.get('page', '?')
-        section = chunk.get('section', '섹션')
-        text_snippet = chunk.get('text', '')[:800]
-        chunk_context_parts.append(
-            f"[페이지 {page} | {section}]\n{text_snippet}"
-        )
-    
-    chunk_context = '\n\n'.join(chunk_context_parts)
-    
+    # [2025-11-19 개선] page_texts 우선 사용 → all_chunks 대비 구조 보존 우수
+    # page_texts는 페이지별 원본 텍스트를 보존하므로 목차 패턴 인식에 유리
+    # all_chunks는 이미 섹션별로 분할된 조각이라 전체 구조 파악이 어려움
+    page_texts = template_doc.get('page_texts', {})
+    chunk_context = ""
+
+    if page_texts:
+        # page_texts 사용 (권장): 원본 페이지 구조 보존
+        print(f"    ✅ page_texts 사용: {len(page_texts)}개 페이지")
+
+        # 페이지 번호 순으로 정렬하여 텍스트 결합
+        sorted_pages = sorted(page_texts.items(), key=lambda x: x[0])
+        page_context_parts = []
+
+        # 최대 20페이지까지 사용 (토큰 절약)
+        MAX_PAGES = 20
+        for page_num, page_text in sorted_pages[:MAX_PAGES]:
+            # 각 페이지당 최대 1500자까지 사용 (목차 추출에 충분)
+            text_snippet = page_text[:1500]
+            page_context_parts.append(f"[페이지 {page_num}]\n{text_snippet}")
+
+        chunk_context = '\n\n'.join(page_context_parts)
+        print(f"    📄 페이지 텍스트 길이: {len(chunk_context):,}자 (최대 {MAX_PAGES}페이지)")
+
+    # Fallback: page_texts가 없으면 all_chunks 사용
+    if not chunk_context:
+        print(f"    ⚠️  page_texts 없음 → all_chunks fallback 시도")
+        all_chunks = state.get('all_chunks', [])
+        template_chunks = []
+        template_file_name_nfc = unicodedata.normalize('NFC', template['file_name'])
+
+        if all_chunks:
+            for chunk in all_chunks:
+                chunk_file = unicodedata.normalize('NFC', chunk.get('file_name', ''))
+                if chunk_file == template_file_name_nfc:
+                    template_chunks.append(chunk)
+
+        # 페이지 순으로 정렬
+        template_chunks.sort(key=lambda c: (c.get('page', 0) or 0, c.get('chunk_id', '')))
+
+        # 상위 20개 청크만 사용하여 토큰 절약
+        MAX_TEMPLATE_CHUNKS = 20
+        chunk_context_parts = []
+        for chunk in template_chunks[:MAX_TEMPLATE_CHUNKS]:
+            page = chunk.get('page', '?')
+            section = chunk.get('section', '섹션')
+            text_snippet = chunk.get('text', '')[:800]
+            chunk_context_parts.append(
+                f"[페이지 {page} | {section}]\n{text_snippet}"
+            )
+
+        chunk_context = '\n\n'.join(chunk_context_parts)
+        print(f"    📦 청크 텍스트 길이: {len(chunk_context):,}자 ({len(template_chunks)}개 청크)")
+
+    # 최종 fallback: full_text 일부 사용
     if not chunk_context:
         chunk_context = full_text[:5000]
         if chunk_context:
-            print(f"  ⚠️  템플릿 청크 없음 → full_text 일부 사용 (길이 {len(chunk_context)}자)")
+            print(f"    ⚠️  청크 없음 → full_text 일부 사용 (길이 {len(chunk_context):,}자)")
         else:
-            print(f"  ✗ 텍스트 컨텍스트 확보 실패 → 기본 템플릿 사용")
+            print(f"    ✗ 텍스트 컨텍스트 확보 실패 → 기본 템플릿 사용")
             state['table_of_contents'] = create_default_toc()
             state['status'] = 'toc_extracted'
             return state
@@ -321,19 +351,33 @@ def extract_toc_from_template(state: BatchState) -> BatchState:
     ]
     skeleton_json = json.dumps(skeleton_payload, ensure_ascii=False, indent=2) if base_sections else ""
     
-    # 섹션 컨텍스트 추출 로그
-    print(f"    📊 섹션 스켈레톤: {len(base_sections)}개")
-    print(f"    📝 섹션별 본문 발췌: {len(section_contexts)}개")
-    if section_contexts:
-        print(f"    📄 발췌 샘플 (첫 3개):")
-        for ctx in section_contexts[:3]:
-            excerpt_preview = ctx.get('excerpt', '')[:100]
-            print(f"      • {ctx.get('number', '')} {ctx.get('title', '')}: {excerpt_preview}...")
-    
+    # [2025-11-19 개선] 섹션 추출 상세 디버깅
+    print(f"\n    🔍 섹션 추출 결과 상세:")
+    print(f"    📊 base_sections: {len(base_sections)}개")
+    print(f"    📝 section_contexts (본문 발췌): {len(section_contexts)}개")
+
     # base_sections가 비어있으면 경고
     if not base_sections:
         print(f"    ⚠️  경고: base_sections가 비어있습니다. LLM이 전체 텍스트에서 추출 시도 (폼 필드 포함 가능)")
-        print(f"    💡 해결: extract_sections_from_symbols()가 제대로 동작하지 않았을 수 있습니다.")
+    else:
+        # 첫 10개 섹션 출력 (기존 5개 → 10개로 확대하여 더 많은 패턴 확인)
+        print(f"    📋 추출된 섹션 (첫 10개):")
+        for idx, sec in enumerate(base_sections[:10], 1):
+            level_icon = "■" if sec.get('level') == 'main' else "  ○"
+            print(f"      {level_icon} [{idx}] {sec.get('number', '')} {sec.get('title', '')}")
+
+        # 전체 섹션 레벨 분포 확인
+        main_count = sum(1 for sec in base_sections if sec.get('level') == 'main')
+        sub_count = sum(1 for sec in base_sections if sec.get('level') == 'sub')
+        print(f"    📈 레벨 분포: main={main_count}개, sub={sub_count}개")
+
+    # 섹션별 본문 발췌 샘플
+    if section_contexts:
+        print(f"\n    📄 섹션 본문 발췌 샘플 (첫 3개):")
+        for ctx in section_contexts[:3]:
+            excerpt_preview = ctx.get('excerpt', '')[:80]
+            print(f"      • {ctx.get('number', '')} {ctx.get('title', '')}")
+            print(f"        └─ {excerpt_preview}...")
     
     def summarize_sections(sections: List[Dict], label: str, limit: int = 10) -> str:
         if not sections:
@@ -442,7 +486,7 @@ def extract_toc_from_template(state: BatchState) -> BatchState:
 {detected_outline}""",
         f"""## 목차 텍스트 (키워드/패턴 기반)
 {template_text}""",
-        f"""## 첨부 양식 청킹 텍스트 (상위 {min(len(template_chunks), MAX_TEMPLATE_CHUNKS)}개)
+        f"""## 첨부 양식 텍스트 (page_texts 또는 청크)
 {chunk_context}"""
     ]
 
@@ -539,18 +583,28 @@ def extract_toc_from_template(state: BatchState) -> BatchState:
                 final_sections.append(merged)
         else:
             # base_sections가 비어있을 때 폼 필드 필터링
-            form_field_keywords = ['mail', '팩스', '휴대전화', '전화', '주소', '생년월일', '성별', '직위', '부서', 'E-mail', 'E-mail']
+            # ========================================
+            # [2025-11-19 수정] 폼 필드 키워드 중복 제거 및 로직 개선
+            # - 'E-mail' 중복 제거
+            # - 필터링 로직 단순화 (원본 제목 기준으로 체크)
+            # ========================================
+            form_field_keywords = ['mail', 'e-mail', '이메일', '팩스', '휴대전화', '전화', '주소', '생년월일', '성별', '직위', '부서']
             final_sections = []
             for sec in sections:
-                title = sec.get('title', '').lower()
-                # 폼 필드 키워드가 제목에 포함되어 있으면 제외
-                if any(keyword.lower() in title for keyword in form_field_keywords):
+                original_title = sec.get('title', '')
+                title_lower = original_title.lower()
+
+                # 1. 폼 필드 키워드가 제목에 포함되어 있으면 제외
+                if any(keyword in title_lower for keyword in form_field_keywords):
                     continue
-                # □로 시작하지 않는 섹션도 제외 (폼 필드일 가능성)
-                if not any(title.startswith(marker) for marker in ['□', '■', '●', '○']):
-                    # 하지만 "□"가 제목에 포함되어 있으면 포함
-                    if '□' not in sec.get('title', ''):
-                        continue
+
+                # 2. □, ■, ● 등의 마커가 제목에 포함되어 있는지 확인
+                has_marker = any(marker in original_title for marker in ['□', '■', '●', '○'])
+
+                # 마커가 없으면 제외 (폼 필드일 가능성)
+                if not has_marker:
+                    continue
+
                 final_sections.append(sec)
             
             if not final_sections:
