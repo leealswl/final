@@ -198,3 +198,94 @@ def update_chapter_goal(state: ProposalGenerationState) -> Dict[str, Any]:
         "collected_data": "", # 🔑 이전 챕터의 데이터는 이미 저장되었으므로, 새 챕터 데이터 수집을 위해 초기화
         "next_step": "GENERATE_QUERY" 
     }
+
+def confirm_router(state: ProposalGenerationState) -> str:
+    """초안 생성 확인(CONFIRM_GEN) 후 사용자 응답을 처리하는 라우터"""
+    user_final_answer = state.get("current_response", "").strip().upper()
+    return "GENERATE_DRAFT" if user_final_answer == 'Y' else "UPDATE_ATTEMPT" 
+    # 💡 N을 선택하면 UPDATE_ATTEMPT로 돌아가 다시 질문 루프 시작 (Attempt Count 증가)
+
+def review_router(state: ProposalGenerationState) -> str:
+    """초안 검토 후 수정 또는 종료를 결정하는 라우터"""
+    user_feedback = state.get("current_response", "").strip().upper()
+    if '완료' in user_feedback or 'FINISH' in user_feedback:
+        return "FINISH"
+    else:
+        return "REVISE_DRAFT"
+    
+
+def create_proposal_graph() -> StateGraph:
+    """기획서 생성 LangGraph 워크플로우를 정의하고 반환합니다."""
+    
+    workflow = StateGraph(ProposalGenerationState)
+
+    # 3.1. 노드 추가
+    workflow.add_node("FETCH_CONTEXT", fetch_context_for_proposal)
+    workflow.add_node("UPDATE_ATTEMPT", update_attempt_count) 
+    workflow.add_node("GENERATE_QUERY", generate_query)
+    workflow.add_node("ASK_USER", ask_user_and_update_data)
+    workflow.add_node("ASSESS_INFO", assess_info)
+    workflow.add_node("UPDATE_CHAPTER_GOAL", update_chapter_goal)
+    workflow.add_node("CONFIRM_GEN", confirm_generation)
+    workflow.add_node("GENERATE_DRAFT", generate_proposal_draft)
+    workflow.add_node("REVIEW_AND_FIX", review_draft) 
+    workflow.add_node("FIX_DRAFT", fix_draft_via_llm) 
+
+
+    # 3.2. 시작점 설정 (START -> FETCH_CONTEXT)
+    workflow.add_edge(START, "FETCH_CONTEXT")
+
+    # 3.3. 정보 수집 루프 (Gathering Loop) 정의
+    
+    # 1. 컨텍스트 로드 -> 시도 횟수 증가 -> 질문 생성
+    workflow.add_edge("FETCH_CONTEXT", "UPDATE_ATTEMPT")
+    workflow.add_edge("UPDATE_ATTEMPT", "GENERATE_QUERY") 
+    workflow.add_edge("GENERATE_QUERY", "ASK_USER")
+
+    # 2. ASK_USER 이후, 부적합 답변 처리 라우터 연결
+    workflow.add_conditional_edges(
+        "ASK_USER",
+        router_handle_override,
+        {
+            "GENERATE_QUERY": "UPDATE_ATTEMPT", # ❌ 부적합 답변 (재질문, Attempt Count 증가)
+            "ASSESS_INFO": "ASSESS_INFO"      # 🟢 적합 답변 (판단으로 이동)
+        }
+    )
+
+    # 3. ASSESS_INFO 라우팅: 핵심 루프 분기점 (MAX_ATTEMPTS 체크)
+    workflow.add_conditional_edges(
+        "ASSESS_INFO", 
+        router_next_step, 
+        {
+            "GENERATE_QUERY": "UPDATE_ATTEMPT",  # ❌ 불충분: 다시 질문 생성
+            "UPDATE_CHAPTER": "UPDATE_CHAPTER_GOAL", # ✅ 목차 충분: 다음 챕터로 이동
+            "CONFIRM_GEN": "CONFIRM_GEN"  # ✅ 모든 챕터 완료: 최종 확인
+        }
+    )
+
+    workflow.add_edge("UPDATE_CHAPTER_GOAL", "UPDATE_ATTEMPT") # 다음 챕터 시작
+
+    # 3.4. 생성 확인 및 초안 진입
+    workflow.add_conditional_edges(
+        "CONFIRM_GEN",
+        confirm_router,
+        {
+            "GENERATE_DRAFT": "GENERATE_DRAFT",
+            "UPDATE_ATTEMPT": "UPDATE_ATTEMPT" # N을 선택하면 다시 질문 루프로 돌아가 Attempt Count 증가
+        }
+    )
+
+    # 3.5. 초안 생성 및 검토 루프
+    workflow.add_edge("GENERATE_DRAFT", "REVIEW_AND_FIX") 
+
+    workflow.add_conditional_edges(
+        "REVIEW_AND_FIX", 
+        review_router, 
+        {
+            "REVISE_DRAFT": "FIX_DRAFT", 
+            "FINISH": END  
+        }
+    )
+    workflow.add_edge("FIX_DRAFT", "GENERATE_DRAFT") # 수정 후 재생성
+    
+    return workflow
