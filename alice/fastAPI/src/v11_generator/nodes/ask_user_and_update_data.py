@@ -4,7 +4,7 @@
 from ..state_types import ProposalGenerationState
 from typing import Dict, Any
 
-def ask_user_and_update_data(state: ProposalGenerationState) -> Dict[str, Any]:
+def ask_user_and_update_data(state: ProposalGenerationState) -> ProposalGenerationState:
     """
     사용자의 응답을 받아 collected_data에 누적하고, LangGraph의 실행을 일시 정지(END)합니다.
     """
@@ -26,6 +26,7 @@ def ask_user_and_update_data(state: ProposalGenerationState) -> Dict[str, Any]:
     else:
         # 최초 턴에는 기존 데이터를 유지
         updated_data = existing_data
+        # 로드 해줘
         
     # 2. 상태 업데이트 및 제어권 반환
     return {

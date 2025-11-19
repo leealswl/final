@@ -4,13 +4,14 @@ from ..state_types import ProposalGenerationState # 클래스명 변경 적용
 import logging
 from typing import Literal
 
-def review_draft(state: ProposalGenerationState) -> Literal['REVISE', 'FINISH']:
+def review_draft(state: ProposalGenerationState) -> ProposalGenerationState:
     """
     초안을 검토하고 다음 단계를 결정합니다. (LangGraph 조건부 엣지용)
     """
     # ... (로직 및 로그 메시지 내의 상태명 변경 적용) ...
+    print("노드 실행: review_draft")
     
-    return state['next_step'] # REVISE 또는 FINISH 반환
+    return {"next_step": "FINISH" }
 
 
 def fix_draft_via_llm(state: ProposalGenerationState) -> ProposalGenerationState:

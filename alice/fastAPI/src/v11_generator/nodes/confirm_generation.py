@@ -3,11 +3,12 @@
 #       'next_step' 플래그를 State에 설정합니다.
 
 from typing import Dict, Any
+from ..state_types import ProposalGenerationState
 
 # ----------------------------------------------------
 # 노드 함수 정의
 # ----------------------------------------------------
-def confirm_generation(state: Dict[str, Any]) -> Dict[str, Any]:
+def confirm_generation(state: ProposalGenerationState) -> ProposalGenerationState:
     """
     정보 충분성 확인 후, 사용자에게 생성 여부를 묻고 다음 단계(생성 또는 추가 질문)를 결정합니다.
     """
