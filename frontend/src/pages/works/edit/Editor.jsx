@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { useFileStore } from '../../../store/useFileStore';
 import { useDocumentStore } from '../../../store/useDocumentStore';
+import { useTocStore } from '../../../store/useTocStore';
 import TiptapEditor from '../../../components/TiptapEditor';
 
 const toAbs = (p) => (p?.startsWith('http') ? p : `http://localhost:8081${p}`);
@@ -64,6 +65,7 @@ export default function Editor() {
     const kind = pickKind(file);
 
     const { setDocumentId, content: docContent, setContent: setDocumentContent } = useDocumentStore();
+    const setEditorInstance = useTocStore((s) => s.setEditorInstance);
 
     const [initialContent, setInitialContent] = useState('<p></p>');
     const [loading, setLoading] = useState(false);
@@ -201,11 +203,17 @@ export default function Editor() {
             )}
             {!loading && loadError && <Box sx={{ px: 2, py: 1, bgcolor: '#fff4e5', color: '#8a6d3b', borderBottom: '1px solid #f0deb4' }}>{loadError}</Box>}
             <Box sx={{ flex: 1, minHeight: 0 }}>
-                <TiptapEditor initialContent={initialContent} contentKey={file.id} onContentChange={setDocumentContent} readOnly={false} />
+                <TiptapEditor 
+                    initialContent={initialContent} 
+                    contentKey={file.id} 
+                    onContentChange={setDocumentContent} 
+                    readOnly={false}
+                    registerEditor={setEditorInstance}
+                />
             </Box>
             <Box sx={{ px: 2, py: 1, borderTop: '1px solid #e5e7eb', bgcolor: '#fafafa' }}>
                 <Typography variant="caption" color="text.secondary">
-                    Heading 레벨, 목록, 표 삽입과 AI 다듬기가 지원됩니다. 변경 사항 저장 로직은 추후 연동이 필요합니다.
+                    📋 좌측 목차를 클릭하면 해당 섹션으로 이동합니다. Heading 레벨, 목록, 표 삽입이 지원됩니다.
                 </Typography>
             </Box>
         </Box>

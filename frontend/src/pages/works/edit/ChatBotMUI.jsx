@@ -1,15 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Paper, Stack, Typography, TextField, Button } from '@mui/material';
 import useChatbot from '../../../hooks/useChatbot';
+import { useAuthStore } from '../../../store/useAuthStore';
+import { useProjectStore } from '../../../store/useProjectStore';
 
 const ChatBotMUI = () => {
-    const [messages, setMessages] = useState([{ sender: 'bot', text: '안녕하세요! 무엇을 도와드릴까요?' }]);
+    const [messages, setMessages] = useState([{ sender: 'bot', text: '안녕하세요! 기획서 작성을 도와드릴 ai도우미입니다 목차를 보고 원하는 챕터를 알려주세요' }]);
     const [inputValue, setInputValue] = useState('');
     const { mutate: sendChatMessage } = useChatbot();
     const [isLoading, setIsLoading] = useState(false);
 
-    // 여기 수정
-    // 여기 수정 두번째
+    // 사용자 정보 및 프로젝트 정보 가져오기
+    const user = useAuthStore((s) => s.user);
+    const project = useProjectStore((s) => s.project);
 
     const scrollRef = useRef(null);
     const isComposingRef = useRef(false); // IME 조합 중인지 추적
@@ -26,13 +29,18 @@ const ChatBotMUI = () => {
         setIsLoading(true); // 🔹 로딩 시작
 
         sendChatMessage(
-            { userMessage: userText },
+            { 
+                userMessage: userText,
+                userIdx: user?.idx || 1, // 기본값 1
+                projectIdx: project?.projectIdx || 1 // 기본값 1
+            },
             {
                 onSuccess: (data) => {
                     setMessages((prev) => [...prev, { sender: 'bot', text: data.aiResponse }]);
                     setIsLoading(false); // 🔹 로딩 종료
                 },
-                onError: () => {
+                onError: (error) => {
+                    console.error('챗봇 오류:', error);
                     setMessages((prev) => [
                         ...prev,
                         { sender: 'bot', text: '⚠️ 서버 오류가 발생했습니다.' }
