@@ -251,7 +251,6 @@ def extract_sections_from_symbols(full_text: str) -> List[Dict]:
         각 섹션은 다음 필드를 포함:
         - number: 섹션 번호 (예: "1", "1.1")
         - title: 섹션 제목
-        - required: True (필수 항목)
     """
     sections = []
     lines = full_text.split('\n')
@@ -309,7 +308,9 @@ def extract_sections_from_symbols(full_text: str) -> List[Dict]:
     
     end_keywords = [
         '별지', '개인신용정보', '개인정보', '동의서', '동의',
-        '첨부서류', '제출서류', '참고사항', '주의사항'
+        '첨부서류', '제출서류', '참고사항', '주의사항',
+        # [2025-11-19 추가] 작성요령 섹션에서 목차 종료
+        '작성요령', '작성 요령', '기재요령', '기재 요령'
     ]
     
     in_proposal_section = False
@@ -387,8 +388,12 @@ def extract_sections_from_symbols(full_text: str) -> List[Dict]:
             else:
                 for keyword in end_keywords:
                     if keyword in line_clean and not re.match(r'^[□■●○◇◆▲▼]', line_clean):
+                        # [2025-11-19 수정] 작성요령은 무조건 종료
+                        if keyword in ['작성요령', '작성 요령', '기재요령', '기재 요령']:
+                            should_end = True
+                            break
                         # "첨부서류", "제출서류" 등이 나타나면 종료
-                        if keyword in ['첨부서류', '제출서류', '참고사항', '주의사항']:
+                        elif keyword in ['첨부서류', '제출서류', '참고사항', '주의사항']:
                             should_end = True
                             break
             
@@ -487,7 +492,6 @@ def extract_sections_from_symbols(full_text: str) -> List[Dict]:
         sortable_entries.append({
             'number': section['number'],
             'title': section['title'],
-            'required': True,
             'level': section.get('level', 'main'),
             'parent_number': None,
             'line_index': section.get('line_index', 0)
@@ -496,7 +500,6 @@ def extract_sections_from_symbols(full_text: str) -> List[Dict]:
             sortable_entries.append({
                 'number': sub['number'],
                 'title': sub['title'],
-                'required': True,
                 'level': sub.get('level', 'sub'),
                 'parent_number': sub.get('parent_number', section['number']),
                 'line_index': sub.get('line_index', section.get('line_index', 0))
@@ -541,11 +544,11 @@ def create_default_toc() -> Dict:
         'extraction_method': 'fallback',
         'inference_confidence': 0.3,
         'sections': [
-            {'number': '1', 'title': '연구개발 과제의 개요', 'required': True},
-            {'number': '2', 'title': '연구개발 목표 및 내용', 'required': True},
-            {'number': '3', 'title': '연구개발 추진체계 및 일정', 'required': True},
-            {'number': '4', 'title': '연구개발 성과 활용방안', 'required': True},
-            {'number': '5', 'title': '소요예산', 'required': True},
+            {'number': '1', 'title': '연구개발 과제의 개요'},
+            {'number': '2', 'title': '연구개발 목표 및 내용'},
+            {'number': '3', 'title': '연구개발 추진체계 및 일정'},
+            {'number': '4', 'title': '연구개발 성과 활용방안'},
+            {'number': '5', 'title': '소요예산'},
         ],
         'total_sections': 5,
         'extracted_at': datetime.now().isoformat(),

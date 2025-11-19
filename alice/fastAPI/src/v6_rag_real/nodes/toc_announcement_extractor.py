@@ -154,19 +154,16 @@ def build_announcement_prompt(
     {
       "number": "1",
       "title": "사업 추진 개요",
-      "required": true,
       "description": "사업의 목적과 필요성"
     },
     {
       "number": "1.1",
       "title": "사업 배경 및 필요성",
-      "required": true,
       "description": "사업을 추진하는 배경과 필요성"
     },
     {
       "number": "2",
       "title": "운영 계획 및 전략",
-      "required": true,
       "description": "구체적인 운영 방안과 추진 전략"
     }
   ]
@@ -176,7 +173,6 @@ def build_announcement_prompt(
 - 제출 서류의 "이름"이 아닌, 서류 "내부의 작성 항목"을 추출하세요
 - 공고의 실제 내용(연구개발/창업지원/주관기관선정 등)을 반영한 목차를 생성하세요
 - 섹션 번호는 "1", "1.1", "1.2", "2", "가" 등 계층 구조 형식 유지
-- required는 필수 작성 항목 여부
 - **반드시 10개 이상의 섹션을 생성**하되, 공고 내용에 근거하여 생성하세요"""
 
     submission_text_limit = submission_content[:3000]

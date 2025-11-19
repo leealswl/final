@@ -57,7 +57,6 @@ def extract_subsections_from_range(
                 subsections.append({
                     'number': subsection_number,
                     'title': title,
-                    'required': True,
                     'level': 'sub',
                     'parent_number': parent_number,
                     'line_index': absolute_index
@@ -162,7 +161,6 @@ def build_base_sections(
             main_entry = {
                 'number': main['number'],
                 'title': main['title'],
-                'required': True,
                 'level': 'main',
                 'parent_number': None,
                 'line_index': start_line,
@@ -195,7 +193,6 @@ def build_base_sections(
                     sub_entry = {
                         'number': sub['number'],
                         'title': sub['title'],
-                        'required': True,
                         'level': 'sub',
                         'parent_number': main_entry['number'],
                         'line_index': sub_start,
@@ -224,7 +221,6 @@ def build_base_sections(
                     sub_entry = {
                         'number': sub['number'],
                         'title': sub['title'],
-                        'required': True,
                         'level': 'sub',
                         'parent_number': main_entry['number'],
                         'line_index': sub_start,
@@ -329,18 +325,29 @@ def build_llm_prompt(
    - ✅ 포함: "□ 기업현황", "□ 대표자 및 경영진 현황", "□ 목표" 같은 본문 작성 섹션
 
 2. **본문 작성 항목만 목차로 추출:**
-   - □, ■, ￭로 시작하는 섹션만 추출
+   - □, ■, ●, ￭ 같은 기호로 시작하는 섹션 추출
+   - "1.", "2.", "3." 같은 숫자+점 형식도 주요 섹션
+   - **❌ 제외: "< 본문 1 >", "< 본문 2 >" 같은 양식 구분자**는 목차가 아님
+   - **❌ 제외: "작성요령", "작성 요령", "기재요령" 섹션**
    - 각 섹션은 실제로 서술해야 할 내용을 요구하는 항목이어야 함
 
 3. **계층 구조:**
-   - □, ■, ●는 주요 섹션 (1, 2, 3...)
-   - ￭, ▪, ▫, 1), (가) 등은 하위 섹션 (1.1, 1.2...)
+   - **주요 섹션 (main)**: "1.", "2.", "3." 또는 □, ■, ●
+   - **하위 섹션 (sub)**: "1)", "2)", "3)" 또는 "가)", "나)", "다)" 또는 ￭, ▪, ▫
+   - **예시:**
+     ```
+     1. 연구개발과제의 목표 및 내용  ← main
+        1) 연구개발과제의 목표        ← sub
+        2) 연구개발과제의 내용        ← sub
+     2. 연구개발성과의 활용방안      ← main
+        1) 활용방안                   ← sub
+     ```
 
 4. **JSON 형식을 반드시 지키고, 섹션은 최소 10개 이상 출력하세요.**
 """
 
     if skeleton_json:
-        system_prompt += "\n\n⚠️ 매우 중요: 제공된 스켈레톤의 number/title 순서를 반드시 그대로 유지하고, 스켈레톤에 없는 섹션은 추가하지 마세요. 스켈레톤에 있는 섹션만 목차로 반환하세요."
+        system_prompt += "\n\n⚠️ 매우 중요: 제공된 스켈레톤을 참고하되, 중복이나 잘못된 계층 구조가 있으면 수정하세요. 스켈레톤의 number/title을 기반으로 하되, description을 추가하고 필요시 계층을 조정하세요."
     else:
         system_prompt += "\n\n⚠️ 매우 중요: 스켈레톤이 제공되지 않았습니다. 텍스트에서 □, ■, ●로 시작하는 본문 작성 섹션만 추출하세요. 폼 입력 필드(기업명, 대표자, 연락처, mail, 팩스, 휴대전화 등)는 절대 포함하지 마세요."
 
@@ -404,28 +411,49 @@ def build_llm_prompt(
 {context_json}""")
 
     user_prompt_parts.append("""---
-요구 사항:
+📋 요구 사항:
+
 1. **폼 입력 필드는 절대 포함하지 마세요:**
    - ❌ 제외: "기업명", "대표자", "연락처", "주소", "전화", "팩스", "mail", "휴대전화", "생년월일", "성별", "직위", "부서", "E-mail" 등
    - ❌ 제외: "1)기업현황", "2)대표자", "3)실무책임자" 같은 폼 섹션 번호
    - ✅ 포함: "□ 기업현황", "□ 대표자 및 경영진 현황", "□ 목표" 같은 본문 작성 섹션
 
-2. 상기 텍스트에서 본문 작성 항목만 추출하여 목차를 생성하세요.
+2. **양식 구분자 및 작성요령 제외:**
+   - ❌ 제외: "< 본문 1 >", "< 본문 2 >" (이것은 양식의 구분자일 뿐, 목차 항목이 아님)
+   - ❌ 제외: "작성요령", "작성 요령", "기재요령" 섹션
 
-3. "섹션별 본문 발췌"가 제공된 경우, 각 섹션의 excerpt 텍스트를 반드시 읽어서 해당 구간의 실제 내용과 하위 항목을 파악하세요.
+3. **계층 구조 명확히:**
+   - "1."로 시작하면 주요 섹션 (number: "1", "2", "3" ...)
+   - "1)"로 시작하면 하위 섹션 (number: "1.1", "1.2" ...)
+   - "가)"로 시작하면 하위 섹션 (number: "1.1.1", "1.2.1" ...)
+   - **중복 제거**: 같은 제목이 여러 번 나오면 하나만 포함
 
-4. 계층 구조는 "1 → 1.1 → 1.1.1" 형식을 사용하세요.
+4. **"섹션별 본문 발췌" 활용:**
+   - 제공된 경우, 각 섹션의 excerpt 텍스트를 반드시 읽어서 description 작성
+   - excerpt에서 하위 항목(1), 2), 가), 나) 등)을 확인하여 정확한 계층 구조 생성
 
-5. 각 항목에 'required' 여부와 간단한 설명을 포함하세요.
+5. **각 항목에 포함할 정보:**
+   - number: 계층 구조를 반영한 번호 ("1", "1.1", "1.1.1" 형식)
+   - title: 섹션 제목 (기호 제거, 예: "□ 기업현황" → "기업현황")
+   - description: 해당 섹션에서 요구하는 작성 내용 요약 (1-2문장)
 
-6. 출력 형식은 아래 JSON 스키마를 따르세요:
+6. **출력 형식 (JSON):**
 {
   "sections": [
     {
       "number": "1",
-      "title": "사업 개요",
-      "required": true,
-      "description": "사업 추진 배경과 목적"
+      "title": "연구개발과제의 필요성",
+      "description": "연구개발과제와 관련되는 국내외 현황 및 문제점, 전망, 필요성"
+    },
+    {
+      "number": "2",
+      "title": "연구개발과제의 목표 및 내용",
+      "description": "연구개발 목표, 내용, 수행일정 및 결과물"
+    },
+    {
+      "number": "2.1",
+      "title": "연구개발과제의 목표",
+      "description": "연구개발하고자 하는 지식, 기술의 정성적/정량적 목표"
     }
   ]
 }""")
@@ -455,7 +483,6 @@ def process_llm_response(
             merged = {
                 'number': base['number'],
                 'title': base['title'],
-                'required': llm_candidate.get('required', base.get('required', True)),
                 'description': description.strip()
             }
             final_sections.append(merged)

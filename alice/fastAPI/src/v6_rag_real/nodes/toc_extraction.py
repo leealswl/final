@@ -193,7 +193,7 @@ def extract_toc_from_template(state: BatchState) -> BatchState:
     # 7️⃣ 스켈레톤 생성
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     skeleton_payload = [
-        {'number': sec['number'], 'title': sec['title'], 'required': sec.get('required', True)}
+        {'number': sec['number'], 'title': sec['title']}
         for sec in base_sections
     ]
     skeleton_json = json.dumps(skeleton_payload, ensure_ascii=False, indent=2) if base_sections else ""
