@@ -22,8 +22,8 @@ import com.example.backend.service.AiChatService;
 @RequestMapping("/api/ai-chat")
 public class AiChatController {
 
-    @Autowired
-    FastAPIService fastApi;
+    // @Autowired
+    // FastAPIService fastApi;
 
     private final AiChatService aiChatService;
 
@@ -41,7 +41,12 @@ public class AiChatController {
      */
     @PostMapping("/response")
     public AiChat sendMessage(@RequestBody AiChat chatRequest){
-        return fastApi.ChatbotMessage(chatRequest.getUserMessage());
+        System.out.println("💬 Chat 요청 수신: " + chatRequest.getUserMessage());
+        return aiChatService.processChat(
+            chatRequest.getUserMessage(),
+            chatRequest.getUserIdx(),
+            chatRequest.getProjectIdx()
+        );
     }
 
     /**

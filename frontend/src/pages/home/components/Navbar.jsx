@@ -3,18 +3,25 @@ import { Button, Grid, Stack, Box, Typography } from '@mui/material';
 import logo from '../img/nav_logo.png';
 import { useAuthStore } from '../../../store/useAuthStore';
 import LogoutButton from '../../../components/LogoutButton';
+import { useNavigate } from 'react-router';
 
 const Navbar = () => {
     const user = useAuthStore((s) => s.user);
     console.log(user);
+    const navigate = useNavigate();
 
-    const main = () => {
-        window.location.href = '/main';
-    };
+    const main =() =>{
+        navigate('/main');
+    }
 
     const login = () => {
-        window.location.href = '/login';
-    };
+        navigate('/login');
+    }
+
+    const home=() =>{
+        navigate('/');
+    }
+    //네비수정
 
     return (
         <Grid container pt={3} mx={30}>
@@ -29,7 +36,7 @@ const Navbar = () => {
                         height: 'auto',
                     }}
                 />
-                <Typography fontSize={24} fontWeight={'bold'}>
+                <Typography fontSize={24} onClick={home} fontWeight={'bold'} sx={{ cursor:'pointer' }}>
                     Paladoc
                 </Typography>
             </Grid>
@@ -53,7 +60,7 @@ const Navbar = () => {
                 </Stack>
             </Grid>
             <Grid size={2} display="flex" justifyContent="center" alignItems="center">
-                <Stack direction="row" spacing={2} alignItems='center'>
+                <Stack direction="row" spacing={2} alignItems="center">
                     {user ? (
                         <>
                             <Typography>{user.userName}님</Typography>

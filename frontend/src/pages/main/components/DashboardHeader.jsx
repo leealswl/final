@@ -3,11 +3,17 @@ import { Box, Button, Typography, Stack, IconButton } from '@mui/material';
 import { FileText, Grid3x3, List, ChevronDown } from 'lucide-react';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useNavigate } from 'react-router';
+import logo from '../../home/img/nav_logo.png';
+
 import UseProject from '../../../hooks/useProject';
 
 export function DashboardHeader() {
     const user = useAuthStore((state) => state.user);
     const navigate = useNavigate();
+
+    const home=() =>{
+        navigate('/');
+    }
 
     const { mutate: project, inPending } = UseProject({
         onSuccess: () => {
@@ -43,13 +49,20 @@ export function DashboardHeader() {
         >
             
             {/* 왼쪽: 로고 + 네비게이션 */}
-            <Stack direction="row" spacing={3} alignItems="center">
-                <Stack direction="row" spacing={1} alignItems="center">
-                    <FileText size={24} style={{ color: '#1a73e8' }} />
-                    <Typography variant="h6" sx={{ color: '#202124' }}>
-                        Paladoc
-                    </Typography>
-                </Stack>
+            <Stack direction="row" spacing={1} alignItems="center">
+                <Box
+                    component="img"
+                    src={logo}
+                    alt="logo"
+                    sx={{
+                        mr: '10px',
+                        width: 30,
+                        height: 'auto',
+                    }}
+                />
+                <Typography onClick={home} fontSize={20} fontWeight={'bold'} sx={{ cursor:'pointer' }}>
+                    Paladoc
+                </Typography>
 
                 <Stack direction="row" spacing={1}>
                     <Button

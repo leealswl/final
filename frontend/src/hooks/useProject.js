@@ -6,7 +6,7 @@ export default function UseProject(opts = {}) {
     const setProject = useProjectStore((s) => s.setProject);
 
     return useMutation({
-        mutationKey: ['use', 'project'],
+        mutationKey: ['user', 'project'],
         mutationFn: async ({ userIdx }) => {
             const res = await api.post('/api/project/insert', { userIdx }, { withCredentials: true });
             return res.data;

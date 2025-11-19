@@ -266,6 +266,49 @@ public class AnalysisController {
     }
 
     /**
+     * 2025-11-17: 프로젝트의 분석 결과 목차(TOC) 조회 API
+     * FastAPI의 result.json에서 sections 정보를 가져와 편집 페이지 좌측 패널에 표시
+     * 
+     * @param projectIdx 프로젝트 ID
+     * @return 목차 데이터 (sections 배열)
+     */
+    @GetMapping("/toc")
+    public ResponseEntity<Map<String, Object>> getTableOfContents(
+        @RequestParam("projectIdx") Long projectIdx
+    ) {
+        System.out.println("📚 목차 조회 API 호출: projectIdx=" + projectIdx);
+        
+        try {
+            // FastAPI에서 목차 데이터 가져오기
+            Map<String, Object> tocData = fastApi.getTocData(projectIdx);
+            
+            if (tocData == null || !tocData.containsKey("sections")) {
+                return ResponseEntity.ok(Map.of(
+                    "status", "error",
+                    "message", "목차 데이터가 없습니다.",
+                    "sections", List.of()
+                ));
+            }
+            
+            return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "message", "목차 데이터 조회 성공",
+                "data", tocData
+            ));
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("❌ 목차 조회 실패: " + e.getMessage());
+            return ResponseEntity.internalServerError()
+                .body(Map.of(
+                    "status", "error",
+                    "message", "목차 조회 중 오류가 발생했습니다: " + e.getMessage(),
+                    "sections", List.of()
+                ));
+        }
+    }
+
+    /**
      * 2025-11-09 수연 추가: 파일 경로로 파일을 읽어서 MultipartFile로 변환하는 헬퍼 메서드
      *
      * @param filePath 서버에 저장된 파일 경로

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export const useAuthStore = create(
     persist(
@@ -10,7 +10,8 @@ export const useAuthStore = create(
             isAuthed: () => !!get().user, // 파생 상태(로그인 여부)
         }),
         {
-            name: 'auth-store', // localStorage key
+            name: 'auth-store', // Storage key
+            storage: createJSONStorage(() => sessionStorage),
             partialize: (state) => ({ user: state.user }), // user만 저장
         },
     ),

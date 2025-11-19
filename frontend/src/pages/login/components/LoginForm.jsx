@@ -12,13 +12,13 @@ const LoginForm = () => {
     const redirectTo = location.state?.from || '/'; // 이전 페이지 or 홈
 
     const home = () => {
-        window.location.href = '/';
+        navigate('/');
     };
 
     const { mutate: signIn, isPending } = useSignIn({
         onSuccess: () => {
             alert('로그인 성공!');
-            navigate(redirectTo, { replace: true });
+            navigate('/');
         },
         onError: (error) => {
             // console.log('전체 error 객체:', error);
@@ -62,6 +62,7 @@ const LoginForm = () => {
     };
 
     return (
+        <Box sx={{ position: "fixed", inset: 0, bgcolor: "#f1f3f5", display: "grid", placeItems: "center", p: { xs: 2, sm: 4 }, overflow: "hidden" }}>
         <Grid display={'flex'} justifyContent={'center'} alignItems={'center'} sx={{ height: '100vh' }}>
             <Box
                 display={'flex'}
@@ -70,10 +71,12 @@ const LoginForm = () => {
                 alignItems={'center'}
                 border={1}
                 component="form"
+                bgcolor={'white'}
                 onSubmit={handleSubmit}
-                sx={{ '& .MuiTextField-root': {}, width: '400px', height: '600px' }}
+                sx={{ '& .MuiTextField-root': {}, width: '400px', height: '600px', borderRadius: 2  }}
                 noValidate
                 autoComplete="off"
+                
             >
                 <Box
                     onClick={home}
@@ -132,9 +135,15 @@ const LoginForm = () => {
                             비밀번호 찾기
                         </Typography>
                     </Grid>
+                    <Grid>
+                        <Typography onClick={home} sx={{ cursor: 'pointer', marginRight: '5px' }}>
+                            아이디가 없으신가요? 회원가입
+                        </Typography>
+                    </Grid>
                 </Stack>
             </Box>
         </Grid>
+        </Box>
     );
 };
 

@@ -105,7 +105,7 @@ function slugify(text) {
 }
 
 // ---------------------- Component ----------------------
-export default function TiptapEditor({ initialContent, contentKey, onContentChange, onHeadingsChange, onActiveHeadingChange, readOnly = false }) {
+export default function TiptapEditor({ initialContent, contentKey, onContentChange, onHeadingsChange, onActiveHeadingChange, readOnly = false, registerEditor }) {
     const [snackbar, setSnackbar] = useState(null);
     const [tableMenu, setTableMenu] = useState(null);
     const hydrateKeyRef = useRef(null);
@@ -125,6 +125,13 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
             emitActive(editor);
         },
     });
+
+    // 2025-11-17: 에디터 인스턴스를 외부에 등록 (목차 스크롤 기능을 위해)
+    useEffect(() => {
+        if (editor && registerEditor) {
+            registerEditor(editor);
+        }
+    }, [editor, registerEditor]);
 
     // ---------------------- 파일/JSON 변경 즉시 반영 ----------------------
     useEffect(() => {
