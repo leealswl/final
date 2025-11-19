@@ -9,6 +9,7 @@ from fastapi.concurrency import run_in_threadpool
 from typing import List
 from pathlib import Path
 
+
 from v11_generator.ai_generator import generate_proposal
 
 # 설정 import
@@ -23,8 +24,14 @@ from pydantic import BaseModel
 import openai
 import json
 
+from pydantic import BaseModel
+from law_rag import rag_chain
+
 # 설정 로드
 settings = get_settings()
+
+class VerifyRequest(BaseModel):
+    text: str   # 검증할 초안 문장/문단
 
 class ChatRequest(BaseModel):
     userMessage: str
@@ -229,6 +236,41 @@ async def chat(request: ChatRequest):
     except Exception as e:
         return {"error": str(e)}
     
+# @app.post("/verify")
+# async def verify_text(req: VerifyRequest):
+#     """
+#     초안 문단을 문장별로 분리하여
+#     법령 RAG 기반으로 '적합/부적합' 검증해주는 API
+#     """
+#     try:
+#         print("🔍 검증 요청:", req.text[:50], "...")
+
+#         import re
+#         sentences = re.split(r'(?<=[.!?])\s+', req.text.strip())
+
+#         results = []
+#         for s in sentences:
+#             if not s.strip():
+#                 continue
+#             rag_res = rag_chain.invoke(s)
+#             results.append({
+#                 "sentence": s,
+#                 "result": rag_res.content
+#             })
+
+#         return {
+#             "status": "ok",
+#             "count": len(results),
+#             "results": results
+#         }
+
+#     except Exception as e:
+#         print("❌ 검증 오류:", e)
+#         return {
+#             "status": "error",
+#             "message": str(e)
+#         }
+    
 
 # ========================================
 # 실행 (개발용)
@@ -236,8 +278,9 @@ async def chat(request: ChatRequest):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        app,
+        "fastAPI_v6_integrated:app",
         host=settings.HOST,
         port=settings.PORT,
         reload=settings.RELOAD
     )
+
