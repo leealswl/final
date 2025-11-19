@@ -202,16 +202,18 @@ def update_chapter_goal(state: ProposalGenerationState) -> Dict[str, Any]:
 def confirm_router(state: ProposalGenerationState) -> str:
     """초안 생성 확인(CONFIRM_GEN) 후 사용자 응답을 처리하는 라우터"""
     user_final_answer = state.get("current_response", "").strip().upper()
-    return "GENERATE_DRAFT" if user_final_answer == 'Y' else "UPDATE_ATTEMPT" 
+    # return "GENERATE_DRAFT" if user_final_answer == 'Y' else "UPDATE_ATTEMPT" 
+    return "GENERATE_DRAFT"
     # 💡 N을 선택하면 UPDATE_ATTEMPT로 돌아가 다시 질문 루프 시작 (Attempt Count 증가)
 
 def review_router(state: ProposalGenerationState) -> str:
-    """초안 검토 후 수정 또는 종료를 결정하는 라우터"""
-    user_feedback = state.get("current_response", "").strip().upper()
-    if '완료' in user_feedback or 'FINISH' in user_feedback:
-        return "FINISH"
-    else:
-        return "REVISE_DRAFT"
+    # """초안 검토 후 수정 또는 종료를 결정하는 라우터"""
+    # user_feedback = state.get("current_response", "").strip().upper()
+    # if '완료' in user_feedback or 'FINISH' in user_feedback:
+    #     return "FINISH"
+    # else:
+    #     return "REVISE_DRAFT"
+    return state.get("next_step")
     
 
 def create_proposal_graph() -> StateGraph:

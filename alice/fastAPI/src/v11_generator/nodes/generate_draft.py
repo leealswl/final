@@ -10,18 +10,24 @@ import logging
 
 LLM_CLIENT = ChatOpenAI(temperature=0.3, model="gpt-4o") # LLM 클라이언트 가정
 
-def generate_proposal_draft(state: ProposalGenerationState) -> Dict[str, Any]:
+def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGenerationState:
     """
     수집된 정보(collected_data)와 목차 구조/분석 전략을 기반으로 기획서 초안을 생성합니다.
     """
+
+    print("노드 실행: generate_proposal_draft")
     logging.info(f"📝 generate_draft 노드 실행 (시도: {state.get('attempt_count', 0) + 1})")
     
     # --- 1. 상태에서 필요한 정보 추출 ---
     
     # 📚 목차 구조 (작성할 내용의 뼈대)
     toc_structure = state.get("draft_toc_structure", [])
+
+    print('toc_structure: ', toc_structure)
     toc_text = "\n".join([f"- {item.get('title', '제목 없음')}: {item.get('description', '설명 없음')}" 
                           for item in toc_structure])
+    
+    print('toc_text: ', toc_text)
 
     # 💡 분석 전략 (작성 톤 및 강조점)
     strategy = state.get("draft_strategy", "명확하고 논리적인 표준 보고서 형식으로 작성합니다.")

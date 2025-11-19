@@ -2,6 +2,9 @@
 from typing import Dict, Any, Optional
 from pydantic import BaseModel # ChatRequest, ResumeRequest 정의를 위해 필요
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+# from langgraph.checkpoint.memory import MemorySaver
+# from langgraph.checkpoint.sqlite import SqliteSaver
+
 
 import sys
 from pathlib import Path
@@ -14,7 +17,7 @@ from fastapi.concurrency import run_in_threadpool
 from typing import List
 
 
-from v11_generator.ai_generator import generate_proposal
+# from v11_generator.ai_generator import generate_proposal
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -39,13 +42,14 @@ from law_rag import rag_chain
 
 # 설정 로드
 settings = get_settings()
+settings = get_settings()
 
 class VerifyRequest(BaseModel):
     text: str   # 검증할 초안 문장/문단
 PROJECT_ROOT = project_root.parent
 print('PROJECT_ROOT: ', PROJECT_ROOT)
 
-# 💡 AsyncSqliteSaver 설정 (영구 상태 저장소)
+# 💡 MemorySaver 설정 (영구 상태 저장소)
 
 NEW_DB_PATH = PROJECT_ROOT / "final" / "alice" / "db" / "checkpoints.db"
 DB_PATH = str(NEW_DB_PATH)
@@ -202,6 +206,7 @@ async def root():
 
 @app.post("/generate")
 async def generate_content(request: ChatRequest):
+    from IPython.display import Image, display
     try:
         print("📢 기획서 생성 (LangGraph) 최초 요청 수신:", request.userMessage)
         
@@ -259,18 +264,19 @@ async def generate_content(request: ChatRequest):
         # 💡 3. AsyncSqliteSaver 초기화 및 그래프 실행
         async with AsyncSqliteSaver.from_conn_string(DB_PATH) as saver:
             proposal_app = proposal_graph.compile(checkpointer=saver)
+            # display(Image(proposal_app.get_graph().draw_mermaid_png()))
             result = await proposal_app.ainvoke(
                 initial_state,
                 config={"configurable": {"thread_id": "alice"}}
             )
 
-            print("--- 전체 히스토리 확인 ---")
-            final_state = await proposal_app.aget_state({"configurable": {"thread_id": "alice"}})
-            print('final_state: ', final_state)
-            # for i, msg in enumerate(final_state["messages"], 1):
-            #     # print(f"{i}. [{msg['role']}] {msg['content']}")
-            #     print(msg)
-            print("--- 전체 히스토리 확인 ---")
+            # print("--- 전체 히스토리 확인 ---")
+            # final_state = await proposal_app.aget_state({"configurable": {"thread_id": "alice"}})
+            # print('final_state: ', final_state)
+            # # for i, msg in enumerate(final_state["messages"], 1):
+            # #     # print(f"{i}. [{msg['role']}] {msg['content']}")
+            # #     print(msg)
+            # print("--- 전체 히스토리 확인 ---")
         
         # --- 4. 결과 반환 ---
         current_query = result.get("current_query")
@@ -324,7 +330,7 @@ async def resume_content(request: ResumeRequest):
             "current_response": request.userMessage 
         }
         
-        # 2. AsyncSqliteSaver로 이전 상태 로드 및 실행 재개
+        # 2. AsyncSqliteSaver 이전 상태 로드 및 실행 재개
         async with AsyncSqliteSaver.from_conn_string(DB_PATH) as saver:
             proposal_app = proposal_graph.compile(checkpointer=saver)
             result = await proposal_app.ainvoke(
