@@ -1,6 +1,6 @@
 // 📄 AnalyzeView.jsx
 import { Box, Button, Grid, Stack, Typography, CircularProgress, Paper, Chip, Modal } from '@mui/material';
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFileStore } from '../../../store/useFileStore';
 import { useAnalysisStore } from '../../../store/useAnalysisStore';
