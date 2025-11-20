@@ -62,7 +62,7 @@ DB_PATH = str(NEW_DB_PATH)
 
 # 그래프 생성 (설계도만 가져옴)
 proposal_graph = create_proposal_graph()
-# batch_app = create_batch_graph()
+batch_app = create_batch_graph()
 
 # Request 모델들
 class ResumeRequest(BaseModel):
@@ -170,9 +170,6 @@ async def analyze_documents(
 
         print(f"✅ 파일 변환 완료: {len(saved_files)}개")
 
-        # ========================================
-        # 3단계: AI 분석을 위한 State 생성
-        # ========================================
         state = {
             "files": saved_files,
             "user_id": userid,
@@ -425,15 +422,52 @@ async def get_table_of_contents(projectidx: int | None = None):
         )
 
     except Exception as e:
-        print(f"❌ /toc 처리 중 기타 서버 오류: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status": "error",
-                "message": f"FastAPI 내부 오류: {str(e)}",
-                "sections": []
-            }
-        )
+        return {"error": str(e)}
+    
+# @app.post("/verify")
+# async def verify_text(req: VerifyRequest):
+#     """
+#     초안 문단을 문장별로 분리하여
+#     법령 RAG 기반으로 '적합/부적합' 검증해주는 API
+#     """
+#     try:
+#         print("🔍 검증 요청:", req.text[:50], "...")
+
+#         import re
+#         sentences = re.split(r'(?<=[.!?])\s+', req.text.strip())
+
+#         results = []
+#         for s in sentences:
+#             if not s.strip():
+#                 continue
+#             rag_res = rag_chain.invoke(s)
+#             results.append({
+#                 "sentence": s,
+#                 "result": rag_res.content
+#             })
+
+#         return {
+#             "status": "ok",
+#             "count": len(results),
+#             "results": results
+#         }
+
+#     except Exception as e:
+#         print("❌ 검증 오류:", e)
+#         return {
+#             "status": "error",
+#             "message": str(e)
+#         }
+    
+        # print(f"❌ /toc 처리 중 기타 서버 오류: {str(e)}")
+        # return JSONResponse(
+        #     status_code=500,
+        #     content={
+        #         "status": "error",
+        #         "message": f"FastAPI 내부 오류: {str(e)}",
+        #         "sections": []
+        #     }
+        # )
 
 # ========================================
 # 실행 (개발용)
