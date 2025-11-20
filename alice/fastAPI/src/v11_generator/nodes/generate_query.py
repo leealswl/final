@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 PROMPT_TEMPLATE_CONSULTANT = """
 당신은 정부 지원사업 합격을 돕는 '전략기획 파트너'입니다.
 사용자와 대화하고 있지만, 당신의 최우선 목표는 [판사의 평가]를 반영하여 
@@ -150,7 +151,14 @@ def generate_query(state: ProposalGenerationState) -> Dict[str, Any]:
     history = state.get("messages", [])
     history.append({"role": "assistant", "content": final_response})
 
+    # 📌 [디버그] — score가 정상적으로 넘어오는지 확인
+    print("DEBUG >>> generate_query received state keys:", state.keys())
+    print("DEBUG >>> generate_query completeness_score:", state.get("completeness_score"))
+    print("DEBUG >>> generate_query section_scores:", section_scores)
+    print("DEBUG >>> generate_query focused score:", focused_subchapter_score)
+
     return {
+        **state,
         "current_query": final_response,
         "messages": history,
     }
