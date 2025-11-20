@@ -98,12 +98,53 @@ async def analyze_documents(
     userid: str = Form(...),
     projectidx: int = Form(...)
 ):
+    
+    """
+    ✅ MVP1: 공고 + 첨부서류 분석 및 사용자 입력 폼 자동 생성
+
+    디버깅: 422 에러가 발생하면 받은 파라미터를 로그로 출력
+
+    Backend에서 받는 데이터 구조:
+    - files: 업로드된 파일 리스트 (UploadFile 객체, 실제 파일 바이너리 포함)
+    - folders: 각 파일이 속한 폴더 ID 리스트 (files와 1:1 매칭)
+    - userid: 사용자 ID
+    - projectidx: 프로젝트 ID
+
+    예시:
+    files[0] = UploadFile("2024_사업공고.pdf")  → folders[0] = "1" (공고 폴더)
+    files[1] = UploadFile("붙임1_신청서.hwp")   → folders[1] = "2" (첨부서류 폴더)
+    files[2] = UploadFile("붙임2_양식.xlsx")    → folders[2] = "2" (첨부서류 폴더)
+
+    Returns:
+    - form_source: 'TEMPLATE' (첨부 양식) or 'TOC' (공고 목차)
+    - user_form: 사용자 입력 폼 스키마
+    - documents: 분석된 문서 정보
+    """
+
+
+
     try:
+        # ========================================
+        # 1단계: Backend에서 받은 데이터 검증
+        # ========================================
+
         if len(files) != len(folders):
             raise ValueError(f"파일 개수({len(files)})와 폴더 개수({len(folders)})가 일치하지 않습니다.")
 
         print(f"📥 수신 데이터: userid={userid}, projectidx={projectidx}")
         print(f"📁 파일 개수: {len(files)}개")
+
+        # ========================================
+        # 2단계: 파일 바이트 변환 (디스크 저장 없이 메모리에서 처리)
+        # ========================================
+        # Backend가 이미 파일을 저장했으므로, FastAPI는 저장하지 않고
+        # 바이트 데이터만 추출하여 LangGraph로 전달
+        #
+        # Backend가 보낸 files[i]와 folders[i]는 1:1 매칭됨
+        # 예시:
+        #   files[0] = UploadFile("공고.pdf")      folders[0] = "1"
+        #   files[1] = UploadFile("붙임1.hwp")     folders[1] = "2"
+        #   files[2] = UploadFile("붙임2.xlsx")    folders[2] = "2"
 
         saved_files = []
         for i, file in enumerate(files):
@@ -140,22 +181,28 @@ async def analyze_documents(
             "errors": []
         }
 
-        base_dir = Path(__file__).resolve().parent.parent
-        json_file_path = base_dir / "result.json"
-        response_data = {}
-        if json_file_path.exists():
-            try:
-                with open(json_file_path, 'r', encoding='utf-8') as f:
-                    response_data = json.load(f)
-                print(f"✅ 'result.json' 파일 로드 완료. (경로: {json_file_path})")
-            except Exception as e:
-                print(f"❌ 'result.json' 로드 중 오류 발생: {e}")
-                response_data = {"status": "error", "message": "JSON 파일 로드 오류"}
-        else:
-            print(f"⚠️ 'result.json' 파일을 찾을 수 없습니다. 시도된 경로: {json_file_path}")
-            response_data = {"status": "warning", "message": "'result.json' 파일 없음"}
+        # ========================================
+        # 4단계: LangGraph AI 분석 실행
+        # ========================================
+        # v6_rag의 batch_app이 saved_files를 분석하여:
+        # 1. folder=1 파일들 → 공고 분석 (TOC 추출)
+        # 2. folder=2 파일들 → 첨부서류 분석 (양식 추출)
+        # 3. 사용자 입력 폼 자동 생성
+        print(f"🚀 LangGraph 분석 시작: project_idx={projectidx}")
+        result = await run_in_threadpool(batch_app.invoke, state)
+        print(f"✅ LangGraph 분석 완료")
 
-        return JSONResponse(status_code=200, content=response_data)
+        # ========================================
+        # 5단계 LLM 호출 → JSON Plan 생성 [분리함]
+        # ========================================
+       
+        # ========================================
+        # 6단계: 분석 결과 반환
+        # ========================================
+        return JSONResponse(
+            status_code=200,
+            content=result['response_data']
+        )
 
     except Exception as e:
         print(f"❌ 에러 발생: {str(e)}")
@@ -281,28 +328,36 @@ async def generate_content(request: ChatRequest):
         # --- 4. 결과 반환 ---
         current_query = result.get("current_query")
         
-        if current_query and result.get("next_step") == "ASK_USER":
-            # LangGraph가 사용자에게 질문을 던지기 위해 멈춘 상태
-            response_content = {
-                "status": "waiting_for_input",
-                "message": current_query,
-                "full_process_result": result,
-                "thread_id": new_thread_id, # thread_id 반환
-            }
-        elif result.get("next_step") == "FINISH":
-            # 루프 완료 후 END에 도달했을 때
-            response_content = {
+        # if current_query and result.get("next_step") == "ASK_USER":
+        #     # LangGraph가 사용자에게 질문을 던지기 위해 멈춘 상태
+        #     response_content = {
+        #         "status": "waiting_for_input",
+        #         "message": current_query,
+        #         "full_process_result": result,
+        #         "thread_id": new_thread_id, # thread_id 반환
+        #     }
+        # elif result.get("next_step") == "FINISH":
+        #     # 루프 완료 후 END에 도달했을 때
+        #     response_content = {
+        #         "status": "completed",
+        #         "message": result.get("generated_text", "처리 완료."),
+        #         "generated_content": result.get("generated_text", ""),
+        #         "thread_id": new_thread_id, # thread_id 반환
+        #         "full_process_result": result
+        #     }
+        # else:
+        #     # 기타 오류 또는 예상치 못한 종료
+        #     response_content = {
+        #         "status": "error_unexpected",
+        #         "message": "LangGraph 실행 중 예상치 못한 상태로 멈췄습니다.",
+        #         "thread_id": new_thread_id, # thread_id 반환
+        #         "full_process_result": result
+        #     }
+
+        response_content = {
                 "status": "completed",
                 "message": result.get("generated_text", "처리 완료."),
                 "generated_content": result.get("generated_text", ""),
-                "thread_id": new_thread_id, # thread_id 반환
-                "full_process_result": result
-            }
-        else:
-            # 기타 오류 또는 예상치 못한 종료
-            response_content = {
-                "status": "error_unexpected",
-                "message": "LangGraph 실행 중 예상치 못한 상태로 멈췄습니다.",
                 "thread_id": new_thread_id, # thread_id 반환
                 "full_process_result": result
             }
