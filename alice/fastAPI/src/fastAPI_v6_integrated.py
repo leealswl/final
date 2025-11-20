@@ -516,15 +516,15 @@ async def get_table_of_contents(projectidx: int | None = None):
 #             "message": str(e)
 #         }
     
-        print(f"❌ /toc 처리 중 기타 서버 오류: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status": "error",
-                "message": f"FastAPI 내부 오류: {str(e)}",
-                "sections": []
-            }
-        )
+        # print(f"❌ /toc 처리 중 기타 서버 오류: {str(e)}")
+        # return JSONResponse(
+        #     status_code=500,
+        #     content={
+        #         "status": "error",
+        #         "message": f"FastAPI 내부 오류: {str(e)}",
+        #         "sections": []
+        #     }
+        # )
 
 
 # ========================================

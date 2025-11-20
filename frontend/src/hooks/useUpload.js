@@ -12,10 +12,10 @@ export default function useUpload() {
     const user = useAuthStore((s) => s.user);
 
     const mutation = useMutation({
-        mutationKey: ['upload', project.projectIdx, user.idx],
+        mutationKey: ['upload', project.projectIdx, user.userId],
         mutationFn: async ({ files, rootId }) => {
             if (project.projectIdx == null) throw new Error('프로젝트 컨텍스트가 없습니다.');
-            if (user.idx == null || String(user.idx) === '') throw new Error('유저 컨텍스트가 없습니다.');
+            if (user.userId == null || String(user.userId) === '') throw new Error('유저 컨텍스트가 없습니다.');
             const arr = Array.from(files || []);
             if (!arr.length) return { status: 'skip', message: 'no files' };
 
@@ -25,7 +25,7 @@ export default function useUpload() {
             // folders 키는 파일 개수만큼 반복
             for (let i = 0; i < arr.length; i++) formdata.append('folders', String(folderNum));
             formdata.append('projectidx', String(project.projectIdx));
-            formdata.append('userid', String(user.idx));
+            formdata.append('userid', String(user.userId));
 
             // /api/analysis 와 /api/analysis/ 모두 시도
             const tryPost = async (url) => {
