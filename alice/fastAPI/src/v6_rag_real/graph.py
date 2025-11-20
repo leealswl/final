@@ -1,5 +1,30 @@
 """
 LangGraph 구성
+
+📊 전체 파이프라인 흐름:
+  START
+    ↓
+  1. extract_all_texts (PDF 텍스트/표 추출) ✅ 필수
+    ↓
+  2. chunk_all_documents (섹션 기반 청킹) ✅ 필수
+    ↓
+  3. embed_all_chunks (임베딩 생성) ✅ 필수
+    ↓
+  4. init_and_store_vectordb (VectorDB 저장) ✅ 필수
+    ↓
+  5. extract_features_rag (RAG 기반 Feature 추출) ✅ 필수
+    ↓
+  6. detect_templates (첨부 양식 감지) ✅ 필수
+    ↓
+  7. 조건부 라우팅 (TOC_ROUTER) ⚡
+    ├─ extract_toc_from_template (양식 O) ✅
+    └─ extract_toc_from_announcement_and_attachments (양식 X) ✅
+    ↓
+  8. save_to_csv (로컬 저장 - 개발용) ⚠️ 선택
+    ↓
+  9. build_response (최종 응답 + Backend API 호출) ✅ 필수
+    ↓
+  END
 """
 
 from langgraph.graph import StateGraph, START, END
@@ -11,8 +36,11 @@ def create_batch_graph():
     """
     LangGraph 생성 및 컴파일
 
+    ✅ 9단계 분석 파이프라인 구성
+    📌 조건부 라우팅: 양식 유무에 따라 목차 추출 방식 자동 선택
+
     Returns:
-        compiled graph
+        compiled graph (LangGraph 실행 가능 객체)
     """
     # 그래프 생성
     graph = StateGraph(BatchState)
@@ -28,9 +56,6 @@ def create_batch_graph():
     # ✨ 조건부 목차 추출 노드 (라우팅 기반)
     graph.add_node("extract_toc_from_template", nodes.extract_toc_from_template)  # 양식 기반
     graph.add_node("extract_toc_from_announcement_and_attachments", nodes.extract_toc_from_announcement_and_attachments)  # 공고+첨부 기반
-
-    # 🔖 MVP2: match_cross_references 노드 제거 (현재 미사용, MVP2에서 재구현 예정)
-    # graph.add_node("match_cross_references", nodes.match_cross_references)
 
     # ✨ 저장 노드: CSV (개발/테스트용)
     graph.add_node("save_to_csv", nodes.save_to_csv)
