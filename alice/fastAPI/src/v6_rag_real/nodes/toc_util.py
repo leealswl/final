@@ -468,15 +468,17 @@ def extract_sections_from_symbols(full_text: str) -> List[Dict]:
                         sub_title = match.group(2).strip()
                     
                     # 필터링: 보완사항, 별지 관련 제외
-                    if (len(sub_title) > 2 and 
-                        '보완사항' not in sub_title and 
+                    if (len(sub_title) > 2 and
+                        '보완사항' not in sub_title and
                         '별지' not in sub_title and
                         '☞' not in sub_title and
                         '참고' not in sub_title):
-                        
+
                         sub_counter = len(current_main_section['subs']) + 1
-                        sub_section_number = sub_number if sub_number else f"{current_main_section['number']}.{sub_counter}"
-                        
+                        # [2025-11-19 수정] sub_number가 있어도 parent 번호를 앞에 붙임
+                        # "1) 목표" → "2.1" (parent가 2일 때)
+                        sub_section_number = f"{current_main_section['number']}.{sub_counter}"
+
                         current_main_section['subs'].append({
                             'number': sub_section_number,
                             'title': sub_title,
