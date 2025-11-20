@@ -29,43 +29,42 @@ from typing import List
 
 
 
-# LangGraph 통합
-from v11_generator import create_proposal_graph
-from alice.fastAPI.src.ai_chat import handle_chat_message #챗봇
+# 경로 설정
+current_file_path = Path(__file__).resolve()
+source_root = current_file_path.parent.parent.parent.parent
+sys.path.append(str(source_root))
 
-# 설정 import
+from fastapi import FastAPI, File, Form, UploadFile
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from fastapi.concurrency import run_in_threadpool
+
+# [주석 처리] DB 저장소 (단순 실행 모드에서는 필요 없음)
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+
+from dotenv import load_dotenv
+
+# 모듈 임포트
+from v11_generator import create_proposal_graph
 from config import get_settings
 
 # v6_rag_real 모듈 import (프로덕션 전용)
 from v6_rag_real import create_batch_graph
 
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-
-from pydantic import BaseModel
-from law_rag import rag_chain
-
-# 설정 로드
-settings = get_settings()
+load_dotenv()
 settings = get_settings()
 
-class VerifyRequest(BaseModel):
-    text: str   # 검증할 초안 문장/문단
-PROJECT_ROOT = project_root.parent
-print('PROJECT_ROOT: ', PROJECT_ROOT)
-
-# 💡 MemorySaver 설정 (영구 상태 저장소)
-
+# 경로 관련 (주석 처리된 DB 경로 등은 유지하거나 무시)
+PROJECT_ROOT = source_root.parent
 NEW_DB_PATH = PROJECT_ROOT / "final" / "alice" / "db" / "checkpoints.db"
 DB_PATH = str(NEW_DB_PATH)
-# DB_PATH = "alice/db/checkpoints.db"
-checkpointer = None  # 나중에 async 함수에서 초기화
 
-# 앱 시작 시 그래프 한 번만 생성
-batch_app = create_batch_graph()
-# proposal_app은 checkpointer 없이 먼저 생성
+# 그래프 생성 (설계도만 가져옴)
 proposal_graph = create_proposal_graph()
+# batch_app = create_batch_graph()
 
+# Request 모델들
 class ResumeRequest(BaseModel):
     thread_id: str
     userMessage: str
@@ -74,20 +73,10 @@ class ResumeRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     userMessage: str
+    thread_id: Optional[str] = None # [추가] 대화 이어서 하려면 이게 필요함
     userIdx: int | None = None
     projectIdx: int | None = None
 
-class SectionGenerateRequest(BaseModel):
-    """
-    편집 탭에서 '특정 섹션'에 대해 대화 → 초안 생성할 때 사용하는 요청 스키마
-    """
-    userMessage: str                      # 사용자가 챗봇에 보낸 마지막 메시지
-    sectionNumber: str                    # 예: "1.1"
-    sectionTitle: str                     # 예: "사업 배경 및 필요성"
-    userIdx: int | None = None
-    projectIdx: int | None = None
-
-# FastAPI 앱 초기화
 app = FastAPI(
     title=settings.API_TITLE,
     version=settings.API_VERSION,
@@ -248,167 +237,135 @@ async def root():
     return {
         "message": settings.API_TITLE,
         "version": settings.API_VERSION,
-        "mvp1": "사용자 입력 폼 자동 생성",
         "endpoints": {
             "POST /analyze": "공고 및 첨부서류 분석",
-            "GET /health": "헬스 체크"
+            "GET /health": "헬스 체크",
+            "POST /generate": "기획서 질문 생성 (간소화)"
         }
     }
 
-
-# @app.post("/chat")
-# async def chat(request: ChatRequest):
-#     try:
-#         print("📢 Chat 요청 수신:", request.userMessage)
-#         response_data = await handle_chat_message(
-#             request.userMessage,
-#             request.userIdx,
-#             request.projectIdx,
-#             os.getenv("OPENAI_API_KEY")
-#         )
-#         return response_data
-#     except Exception as e:
-#         return {"error": str(e)}
-
-
-# 파일: fastAPI_v6_integrated....py (또는 app.py)
+# ------------------------------------------------------------------------
+# [신규] 간소화된 Generate 엔드포인트 (1회성 질문 생성 후 종료)
+# ------------------------------------------------------------------------
 @app.post("/generate")
 async def generate_content(request: ChatRequest):
-    """
-    기존 LangGraph 전체 기획서 생성 대신,
-    - anal.json + result.json 로드
-    - 사용자가 쓴 문장 보고 '어느 섹션일 것 같다' 대략 추론
-    - 해당 섹션 기준으로 assess_info → generate_section_draft 실행
-
-    ※ 편집 탭에서는 가능하면 /generate/section 을 쓰고,
-       이 /generate 는 '섹션 번호 안 준 자유 질문'용이라고 생각하면 됨.
-    """
     try:
-        print("📢 섹션 기반 기획서 생성 요청:", request.userMessage)
-
-        # -------------------------------
-        # 1) 분석 컨텍스트 가져오기 (anal.json + result.json)
-        #    → 우리가 만든 fetch_context_for_proposal 재사용
-        # -------------------------------
-        base_state = fetch_context_for_proposal({})  # state 인자는 안 쓰니까 빈 dict로 OK
-
-        toc = base_state.get("draft_toc_structure", [])
-        if not toc:
-            print("⚠️ TOC(목차)가 비어 있습니다.")
-            return JSONResponse(
-                status_code=500,
-                content={
-                    "status": "error",
-                    "message": "목차 데이터가 없어 섹션을 선택할 수 없습니다.",
-                },
-            )
-
-            # print("--- 전체 히스토리 확인 ---")
-            # final_state = await proposal_app.aget_state({"configurable": {"thread_id": "alice"}})
-            # print('final_state: ', final_state)
-            # # for i, msg in enumerate(final_state["messages"], 1):
-            # #     # print(f"{i}. [{msg['role']}] {msg['content']}")
-            # #     print(msg)
-            # print("--- 전체 히스토리 확인 ---")
+        print(f"📢 요청 수신: '{request.userMessage}' (Thread: {request.thread_id})")
         
-        # --- 4. 결과 반환 ---
+        # 1. 컨텍스트 파일 로드
+        base_dir = Path(__file__).resolve().parent.parent 
+        context_data = {}
+        try:
+            # anal.json은 현재 로직에서 안 쓰더라도 일단 로드는 유지하거나 생략 가능
+            # with open(base_dir / "src/anal.json", 'r', encoding='utf-8') as f:
+            #     context_data['anal_guide'] = json.load(f)
+            with open(base_dir / "src/result.json", 'r', encoding='utf-8') as f:
+                context_data['result_toc'] = json.load(f)
+        except Exception as e:
+            print(f"⚠️ 파일 로드 경고: {e}")
+
+        new_thread_id = str(uuid.uuid4()) # 로그용 ID
+        current_thread_id = request.thread_id if request.thread_id else str(uuid.uuid4())
+        # 2. 초기 상태 설정
+        input_state = {
+                    "user_id": str(request.userIdx) if request.userIdx else "unknown",
+                    "project_idx": request.projectIdx,
+                    
+                    # 🚨 [수정] generate_query 노드가 'user_prompt'를 참조하므로 이 키를 꼭 넣어줘야 합니다!
+                    "user_prompt": request.userMessage, 
+                    
+                    "fetched_context": context_data,
+                    # "draft_toc_structure": [], 
+                    # "collected_data": "",
+                # draft_toc_structure, collected_data 등은 
+                # DB에 있으면 그걸 쓰고, 없으면 노드에서 처리하도록 input에서 뺍니다.
+                    # "accumulated_data": "", 
+                    "attempt_count": 0,
+                    "current_chapter_index": 0,
+                }
+        # initial_state = {
+        #     "user_id": str(request.userIdx) if request.userIdx else "unknown",
+        #     "project_idx": request.projectIdx,
+        #     "user_prompt": request.userMessage, # 예: "1번 목차 작성할래"
+        #     "fetched_context": context_data,
+        #     "draft_toc_structure": [], # fetch_context 노드에서 채워짐
+        #     # 나머지 필드는 현재 로직에서 안 쓰이므로 생략 가능하거나 빈 값
+        #     "collected_data": "",
+        #     "accumulated_data": "", 
+        #     "attempt_count": 0,
+        #     "current_chapter_index": 0,
+        # }
+        
+        # 3. 그래프 실행 (단순 실행 모드)
+        # ---------------------------------------------------------------------
+        # [주석 처리] 기존의 복잡한 DB 저장 및 Interrupt 방식
+        # ---------------------------------------------------------------------
+        async with AsyncSqliteSaver.from_conn_string(DB_PATH) as saver:
+            app_run = proposal_graph.compile(checkpointer=saver)
+                # app_run = proposal_graph.compile() # 옵션 없음
+            result = await app_run.ainvoke(input_state,
+            config={"configurable": {"thread_id": "suyeonjoe"}}
+            )
+        
+        # ---------------------------------------------------------------------
+        # [활성화] 단순 메모리 실행 (DB 없이 1회성 실행)
+        # ---------------------------------------------------------------------
+        # app_run = proposal_graph.compile() # 옵션 없음
+        # result = await app_run.ainvoke(initial_state)
+
+        # 4. 결과 추출 (GENERATE_QUERY 노드가 만든 질문)
         current_query = result.get("current_query")
         
-        # if current_query and result.get("next_step") == "ASK_USER":
-        #     # LangGraph가 사용자에게 질문을 던지기 위해 멈춘 상태
-        #     response_content = {
-        #         "status": "waiting_for_input",
-        #         "message": current_query,
-        #         "full_process_result": result,
-        #         "thread_id": new_thread_id, # thread_id 반환
-        #     }
-        # elif result.get("next_step") == "FINISH":
-        #     # 루프 완료 후 END에 도달했을 때
-        #     response_content = {
-        #         "status": "completed",
-        #         "message": result.get("generated_text", "처리 완료."),
-        #         "generated_content": result.get("generated_text", ""),
-        #         "thread_id": new_thread_id, # thread_id 반환
-        #         "full_process_result": result
-        #     }
-        # else:
-        #     # 기타 오류 또는 예상치 못한 종료
-        #     response_content = {
-        #         "status": "error_unexpected",
-        #         "message": "LangGraph 실행 중 예상치 못한 상태로 멈췄습니다.",
-        #         "thread_id": new_thread_id, # thread_id 반환
-        #         "full_process_result": result
-        #     }
-
-        response_content = {
-                "status": "completed",
-                "message": result.get("generated_text", "처리 완료."),
-                "generated_content": result.get("generated_text", ""),
-                "thread_id": new_thread_id, # thread_id 반환
-                "full_process_result": result
-            }
-
+        print(f"📤 응답 전송: {current_query}")
+        
+        # 5. 프론트엔드로 질문 반환
+        return JSONResponse({
+            "status": "waiting_for_input", 
+            "message": current_query,
+            "thread_id": new_thread_id 
+        })
+        
     except Exception as e:
-        print(f"❌ /generate 처리 중 오류: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status": "error",
-                "message": "섹션 초안 생성 중 서버 오류 발생",
-                "detail": str(e),
-            },
-        )
+            print(f"❌ /generate 처리 중 오류: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={"error": str(e), "message": "기획서 생성 중 서버 오류 발생"}
+            )
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 
-
+# ------------------------------------------------------------------------
+# [주석 처리] 기존의 Resume 엔드포인트 (현재 상태 저장소가 없으므로 동작 불가)
+# ------------------------------------------------------------------------
 @app.post("/resume_generation")
 async def resume_content(request: ResumeRequest):
     try:
-        print(f"📢 LangGraph 재개 요청 수신: thread_id={request.thread_id}, message={request.userMessage}")
-
-        thread_id = request.thread_id
+        # print(f"📢 LangGraph 재개 요청 수신: thread_id={request.thread_id}, message={request.userMessage}")
+        # 
+        # thread_id = request.thread_id
+        # 
+        # # 1. 재개 시 전달할 입력 상태 구성 (사용자 메시지)
+        # input_state = {
+        #     # "user_prompt": request.userMessage, 
+        #     "current_response": request.userMessage 
+        # }
+        # 
+        # # 2. AsyncSqliteSaver 이전 상태 로드 및 실행 재개
+        # async with AsyncSqliteSaver.from_conn_string(DB_PATH) as saver:
+        #     proposal_app = proposal_graph.compile(checkpointer=saver)
+        #     result = await proposal_app.ainvoke(
+        #         input_state, 
+        #         config={"configurable": {"thread_id": thread_id}}
+        #     )
+        # 
+        # # ... (결과 처리 로직) ...
         
-        # 1. 재개 시 전달할 입력 상태 구성 (사용자 메시지)
-        input_state = {
-            "user_prompt": request.userMessage, 
-            "current_response": request.userMessage 
-        }
-        
-        # 2. AsyncSqliteSaver 이전 상태 로드 및 실행 재개
-        async with AsyncSqliteSaver.from_conn_string(DB_PATH) as saver:
-            proposal_app = proposal_graph.compile(checkpointer=saver)
-            result = await proposal_app.ainvoke(
-                input_state, 
-                config={"configurable": {"thread_id": "asdf"}}
-            )
-
-        # 3. 결과 반환 (LangGraph가 멈춘 지점의 상태 반환)
-        current_query = result.get("current_query")
-        
-        if current_query and result.get("next_step") == "ASK_USER":
-            response_content = {
-                "status": "waiting_for_input",
-                "message": current_query,
-                "thread_id": thread_id, 
-                "full_process_result": result
-            }
-        elif result.get("next_step") == "FINISH":
-            response_content = {
-                "status": "completed",
-                "message": result.get("generated_text", "처리 완료."),
-                "generated_content": result.get("generated_text", ""),
-                "thread_id": thread_id, 
-                "full_process_result": result
-            }
-        else:
-             response_content = {
-                "status": "error_unexpected",
-                "message": "LangGraph 실행 중 예상치 못한 상태로 멈췄습니다.",
-                "thread_id": thread_id, 
-                "full_process_result": result
-            }
-            
-        return JSONResponse(status_code=200, content=response_content)
+        return JSONResponse(status_code=200, content={
+            "status": "error",
+            "message": "현재 간소화 모드에서는 대화 재개 기능을 지원하지 않습니다. /generate를 이용해 주세요."
+        })
 
     except Exception as e:
         print(f"❌ /resume_generation 처리 중 오류: {str(e)}")
@@ -468,158 +425,6 @@ async def get_table_of_contents(projectidx: int | None = None):
         )
 
     except Exception as e:
-        return {"error": str(e)}
-    
-@app.post("/generate/section")
-async def generate_section(request: SectionGenerateRequest):
-    """
-    편집 탭에서 '특정 섹션'만 놓고 대화 → 초안 생성하는 엔드포인트
-
-    흐름:
-    1) anal.json + result.json 읽어서 컨텍스트(state) 구성
-    2) sectionNumber로 해당 섹션을 찾아 current_chapter_index / target_chapter 세팅
-    3) assess_info 로 정보 충분성 평가
-       - 부족: missing_items 기반으로 추가 질문 문장 만들어서 반환
-       - 충분: generate_section_draft 호출해서 그 섹션 초안만 생성
-    """
-    try:
-        print(
-            f"📢 섹션 초안 생성 요청: "
-            f"[{request.sectionNumber} {request.sectionTitle}] "
-            f"msg='{request.userMessage[:30]}...' "
-            f"userIdx={request.userIdx}, projectIdx={request.projectIdx}"
-        )
-
-        # -------------------------------
-        # 1) anal.json / result.json 컨텍스트 불러오기
-        #    (기존 fetch_context_for_proposal 재사용)
-        # -------------------------------
-        base_state = fetch_context_for_proposal({})  # 빈 state 넣어도 됨 (state 안 씀)
-
-        toc = base_state.get("draft_toc_structure", [])
-        section_idx = 0
-
-        # 섹션 번호로 index 찾기 (없으면 0번 유지)
-        for i, sec in enumerate(toc):
-            if str(sec.get("number")) == str(request.sectionNumber):
-                section_idx = i
-                break
-
-        # 선택된 섹션으로 포커싱
-        base_state["current_chapter_index"] = section_idx
-        base_state["target_chapter"] = request.sectionTitle
-
-        # -------------------------------
-        # 2) 사용자 입력을 state에 주입
-        #    (여기서는 프론트에서 누적해서 보내준다고 가정)
-        # -------------------------------
-        user_text = request.userMessage
-
-        working_state: Dict[str, Any] = {
-            **base_state,
-            "user_prompt": user_text,
-            "collected_data": user_text,
-            "user_id": str(request.userIdx) if request.userIdx else "unknown",
-            "project_idx": request.projectIdx,
-        }
-
-        # -------------------------------
-        # 3) 정보 충분성 평가 (assess_info)
-        # -------------------------------
-        assess_result = assess_info(working_state)
-        working_state.update(assess_result)
-
-        is_sufficient = working_state.get("is_sufficient", False)
-        missing_items = working_state.get("missing_items", [])
-
-        if not is_sufficient:
-            # ❗ 아직 정보 부족 → 어떤 정보를 더 써야 하는지 질문 문장 만들어서 반환
-            bullets = (
-                "\n".join(f"- {item}" for item in missing_items)
-                if missing_items else "- (추가로 필요한 항목이 명시되지 않았습니다.)"
-            )
-
-            msg = (
-                f"지금까지 알려주신 내용만으로는 '{request.sectionTitle}' 섹션을 작성하기에 조금 부족합니다.\n\n"
-                f"특히 아래 항목들을 더 구체적으로 알려주시면 좋아요:\n{bullets}\n\n"
-                "위 항목들을 참고해서 내용을 더 자세히 써 주시겠어요?"
-            )
-
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "status": "need_more_info",
-                    "message": msg,
-                    "missing_items": missing_items,
-                    "sectionNumber": request.sectionNumber,
-                    "sectionTitle": request.sectionTitle,
-                },
-            )
-
-        # -------------------------------
-        # 4) 충분하면 → 섹션 초안 생성 (generate_section_draft)
-        # -------------------------------
-        draft_result = generate_section_draft(working_state)
-        section_text = draft_result.get("generated_section_text", "")
-
-        return JSONResponse(
-            status_code=200,
-            content={
-                "status": "completed",
-                "sectionNumber": request.sectionNumber,
-                "sectionTitle": request.sectionTitle,
-                "generated_content": section_text,
-            },
-        )
-
-    except Exception as e:
-        print(f"❌ /generate/section 처리 중 오류: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status": "error",
-                "message": "섹션 초안 생성 중 서버 오류 발생",
-                "detail": str(e),
-            },
-        )
-
-
-    
-# @app.post("/verify")
-# async def verify_text(req: VerifyRequest):
-#     """
-#     초안 문단을 문장별로 분리하여
-#     법령 RAG 기반으로 '적합/부적합' 검증해주는 API
-#     """
-#     try:
-#         print("🔍 검증 요청:", req.text[:50], "...")
-
-#         import re
-#         sentences = re.split(r'(?<=[.!?])\s+', req.text.strip())
-
-#         results = []
-#         for s in sentences:
-#             if not s.strip():
-#                 continue
-#             rag_res = rag_chain.invoke(s)
-#             results.append({
-#                 "sentence": s,
-#                 "result": rag_res.content
-#             })
-
-#         return {
-#             "status": "ok",
-#             "count": len(results),
-#             "results": results
-#         }
-
-#     except Exception as e:
-#         print("❌ 검증 오류:", e)
-#         return {
-#             "status": "error",
-#             "message": str(e)
-#         }
-    
         print(f"❌ /toc 처리 중 기타 서버 오류: {str(e)}")
         return JSONResponse(
             status_code=500,
@@ -629,7 +434,6 @@ async def generate_section(request: SectionGenerateRequest):
                 "sections": []
             }
         )
-
 
 # ========================================
 # 실행 (개발용)
