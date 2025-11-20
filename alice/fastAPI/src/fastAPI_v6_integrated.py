@@ -141,7 +141,6 @@ async def analyze_documents(
 
         print(f"✅ 파일 변환 완료: {len(saved_files)}개")
 
-<<<<<<< HEAD
         # (기존 분석 로직 유지)
         base_dir = Path(__file__).resolve().parent.parent
         json_file_path = base_dir / "result.json"
@@ -157,38 +156,6 @@ async def analyze_documents(
         else:
             print(f"⚠️ 'result.json' 파일을 찾을 수 없습니다. 시도된 경로: {json_file_path}")
             response_data = {"status": "warning", "message": "'result.json' 파일 없음"}
-=======
-        state = {
-            "files": saved_files,
-            "user_id": userid,
-            "project_idx": projectidx,
-            "documents": [],
-            "all_chunks": [],
-            "all_embeddings": None,
-            "embedding_model": None,
-            "chroma_client": None,
-            "chroma_collection": None,
-            "vector_db_path": "",
-            "extracted_features": [],
-            "attachment_templates": [],
-            "csv_paths": None,
-            "oracle_ids": None,
-            "response_data": {},
-            "status": "initialized",
-            "errors": []
-        }
-
-        # ========================================
-        # 4단계: LangGraph AI 분석 실행
-        # ========================================
-        # v6_rag의 batch_app이 saved_files를 분석하여:
-        # 1. folder=1 파일들 → 공고 분석 (TOC 추출)
-        # 2. folder=2 파일들 → 첨부서류 분석 (양식 추출)
-        # 3. 사용자 입력 폼 자동 생성
-        print(f"🚀 LangGraph 분석 시작: project_idx={projectidx}")
-        result = await run_in_threadpool(batch_app.invoke, state)
-        print(f"✅ LangGraph 분석 완료")
->>>>>>> d3d29032659909ce8798eab2f7561a48a9a3bbd6
 
         # ========================================
         # 5단계 LLM 호출 → JSON Plan 생성 [분리함]
