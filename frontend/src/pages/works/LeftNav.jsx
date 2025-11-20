@@ -11,7 +11,7 @@ import { useLayoutStore } from '../../store/useLayoutStore';
 
 const ITEMS = [
     { key: 'analyze', label: '분석', Icon: InsightsOutlinedIcon },
-    { key: 'create', label: '생성', Icon: EditNoteOutlinedIcon },
+    // { key: 'create', label: '생성', Icon: EditNoteOutlinedIcon },
     { key: 'edit', label: '편집', Icon: EditOutlinedIcon },
     { key: 'verify', label: '검증', Icon: FactCheckOutlinedIcon },
 ];

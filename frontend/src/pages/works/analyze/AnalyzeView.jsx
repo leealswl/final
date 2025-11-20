@@ -14,12 +14,21 @@ import { useAuthStore } from '../../../store/useAuthStore';
 const AnalyzeView = () => {
     const navigate = useNavigate();
     const { tree } = useFileStore();
+<<<<<<< HEAD
+    const analysisResult = useAnalysisStore((state)=> state.analysisResult);
+    const setAnalysisResult = useAnalysisStore((state) => state.setAnalysisResult);
+
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    //const [analyzeResult, setAnalyzeResult] = useState(true);
+=======
     const setAnalysisResult = useAnalysisStore((state) => state.setAnalysisResult);
     // const [analysisResult, setAnalysisResult] = useState(null);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     // const [analyzeResult, setAnalyzeResult] = useState(true);
+>>>>>>> dev
 
     const user = useAuthStore((s) => s.user);
     const project = useProjectStore((s) => s.project);
@@ -90,7 +99,11 @@ const AnalyzeView = () => {
 
             setAnalysisResult(response.data);
 
+<<<<<<< HEAD
+            //setAnalyzeResult(false);
+=======
             // setAnalyzeResult(false);
+>>>>>>> dev
 
             navigate('/works/analyze/dashboard', { state: { analysisResult: response.data } });
         } catch (err) {
@@ -111,7 +124,11 @@ const AnalyzeView = () => {
         }
     };
 
+<<<<<<< HEAD
+    return analysisResult==null ? (
+=======
     return (
+>>>>>>> dev
         <Stack sx={{ backgroundColor: '#F4F7F9' }} height={'100vh'} justifyContent={'center'}>
             <Stack spacing={3} mb={5} alignItems={'center'}>
                 <Typography fontSize={'2rem'} fontFamily={'Isamanru-Bold'}>
