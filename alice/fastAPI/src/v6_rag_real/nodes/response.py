@@ -2,6 +2,11 @@
 응답 생성 노드
 ✅ MVP1: form_source 결정 및 사용자 폼 데이터 생성
 ✅ 2025-11-09 suyeon: Backend API 호출하여 Oracle DB 저장
+
+📌 핵심 기능:
+1. 최종 분석 결과 JSON 생성
+2. Backend API 호출 → Oracle DB 저장
+3. FastAPI 응답 데이터 반환
 """
 
 import os
@@ -11,10 +16,16 @@ from ..state_types import BatchState
 
 def build_response(state: BatchState) -> BatchState:
     """
-    FastAPI 응답용 JSON 데이터 생성
-    - 첨부 템플릿 우선순위 결정
-    - form_source: 'TEMPLATE' (첨부 양식) 또는 'TOC' (공고 목차)
-    - 목차 정보 포함
+    최종 응답 데이터 생성 및 Backend DB 저장
+
+    ✅ 필수 기능:
+    1. form_source 결정: 'TEMPLATE' (첨부 양식) 또는 'TOC' (공고 목차)
+    2. 사용자 폼 데이터 생성
+    3. Backend API 호출 → Oracle DB 저장 (운영 환경)
+
+    Returns:
+        state['response_data']: FastAPI 응답용 JSON
+        state['backend_save_status']: Backend 저장 결과
     """
     documents = state['documents']
     all_features = state['extracted_features']
