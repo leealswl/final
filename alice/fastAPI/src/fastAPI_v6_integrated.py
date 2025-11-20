@@ -273,7 +273,7 @@ async def generate_content(request: ChatRequest):
             app_run = proposal_graph.compile(checkpointer=saver)
                 # app_run = proposal_graph.compile() # 옵션 없음
             result = await app_run.ainvoke(input_state,
-            config={"configurable": {"thread_id": "suyeonjoe"}}
+            config={"configurable": {"thread_id": "joesuyeon"}}
             )
         
         # ---------------------------------------------------------------------
