@@ -39,3 +39,8 @@ class ProposalGenerationState(TypedDict):
     
     # === 7. 기타 루프 제어 (옵션) ===
     messages: List[Dict[str, str]] # (선택적) 챗봇과 사용자 간의 대화 히스토리 저장
+
+
+    pending_questions: List[str]
+
+    guide: List[Dict[str, Any]]

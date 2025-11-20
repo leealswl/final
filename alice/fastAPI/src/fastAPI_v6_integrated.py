@@ -113,15 +113,31 @@ async def analyze_documents(
     userid: str = Form(...),
     projectidx: int = Form(...)
 ):
+    
     """
     ✅ MVP1: 공고 + 첨부서류 분석 및 사용자 입력 폼 자동 생성
+
+    디버깅: 422 에러가 발생하면 받은 파라미터를 로그로 출력
 
     Backend에서 받는 데이터 구조:
     - files: 업로드된 파일 리스트 (UploadFile 객체, 실제 파일 바이너리 포함)
     - folders: 각 파일이 속한 폴더 ID 리스트 (files와 1:1 매칭)
     - userid: 사용자 ID
     - projectidx: 프로젝트 ID
+
+    예시:
+    files[0] = UploadFile("2024_사업공고.pdf")  → folders[0] = "1" (공고 폴더)
+    files[1] = UploadFile("붙임1_신청서.hwp")   → folders[1] = "2" (첨부서류 폴더)
+    files[2] = UploadFile("붙임2_양식.xlsx")    → folders[2] = "2" (첨부서류 폴더)
+
+    Returns:
+    - form_source: 'TEMPLATE' (첨부 양식) or 'TOC' (공고 목차)
+    - user_form: 사용자 입력 폼 스키마
+    - documents: 분석된 문서 정보
     """
+
+
+
     try:
         # ========================================
         # 1단계: Backend에서 받은 데이터 검증
@@ -137,6 +153,15 @@ async def analyze_documents(
         # ========================================
         # 2단계: 파일 바이트 변환 (디스크 저장 없이 메모리에서 처리)
         # ========================================
+        # Backend가 이미 파일을 저장했으므로, FastAPI는 저장하지 않고
+        # 바이트 데이터만 추출하여 LangGraph로 전달
+        #
+        # Backend가 보낸 files[i]와 folders[i]는 1:1 매칭됨
+        # 예시:
+        #   files[0] = UploadFile("공고.pdf")      folders[0] = "1"
+        #   files[1] = UploadFile("붙임1.hwp")     folders[1] = "2"
+        #   files[2] = UploadFile("붙임2.xlsx")    folders[2] = "2"
+
         saved_files = []
         for i, file in enumerate(files):
             folder_id = int(folders[i])  # "1" → 1, "2" → 2
@@ -182,22 +207,24 @@ async def analyze_documents(
         # ========================================
         # 4단계: LangGraph AI 분석 실행
         # ========================================
+        # v6_rag의 batch_app이 saved_files를 분석하여:
+        # 1. folder=1 파일들 → 공고 분석 (TOC 추출)
+        # 2. folder=2 파일들 → 첨부서류 분석 (양식 추출)
+        # 3. 사용자 입력 폼 자동 생성
         print(f"🚀 LangGraph 분석 시작: project_idx={projectidx}")
         result = await run_in_threadpool(batch_app.invoke, state)
         print(f"✅ LangGraph 분석 완료")
 
-        # 방어 코드: response_data 없으면 에러 던지지 말고 기본 구조 보장
-        response_data = result.get("response_data", {})
-        if not response_data:
-            print("⚠️ result['response_data']가 비어 있음. result 전체를 로그로 출력:")
-            print(result)
-
         # ========================================
-        # 5단계: 분석 결과 반환
+        # 5단계 LLM 호출 → JSON Plan 생성 [분리함]
+        # ========================================
+       
+        # ========================================
+        # 6단계: 분석 결과 반환
         # ========================================
         return JSONResponse(
             status_code=200,
-            content=response_data
+            content=result['response_data']
         )
 
     except Exception as e:
@@ -276,100 +303,50 @@ async def generate_content(request: ChatRequest):
                 },
             )
 
-        # -------------------------------
-        # 2) 유저 메시지 기반으로 '어느 섹션인지' 대략 추론
-        #    (임시 규칙: 키워드 매칭, 없으면 1번 섹션)
-        # -------------------------------
-        msg: str = request.userMessage or ""
-        msg_lower = msg.lower()
+            # print("--- 전체 히스토리 확인 ---")
+            # final_state = await proposal_app.aget_state({"configurable": {"thread_id": "alice"}})
+            # print('final_state: ', final_state)
+            # # for i, msg in enumerate(final_state["messages"], 1):
+            # #     # print(f"{i}. [{msg['role']}] {msg['content']}")
+            # #     print(msg)
+            # print("--- 전체 히스토리 확인 ---")
+        
+        # --- 4. 결과 반환 ---
+        current_query = result.get("current_query")
+        
+        # if current_query and result.get("next_step") == "ASK_USER":
+        #     # LangGraph가 사용자에게 질문을 던지기 위해 멈춘 상태
+        #     response_content = {
+        #         "status": "waiting_for_input",
+        #         "message": current_query,
+        #         "full_process_result": result,
+        #         "thread_id": new_thread_id, # thread_id 반환
+        #     }
+        # elif result.get("next_step") == "FINISH":
+        #     # 루프 완료 후 END에 도달했을 때
+        #     response_content = {
+        #         "status": "completed",
+        #         "message": result.get("generated_text", "처리 완료."),
+        #         "generated_content": result.get("generated_text", ""),
+        #         "thread_id": new_thread_id, # thread_id 반환
+        #         "full_process_result": result
+        #     }
+        # else:
+        #     # 기타 오류 또는 예상치 못한 종료
+        #     response_content = {
+        #         "status": "error_unexpected",
+        #         "message": "LangGraph 실행 중 예상치 못한 상태로 멈췄습니다.",
+        #         "thread_id": new_thread_id, # thread_id 반환
+        #         "full_process_result": result
+        #     }
 
-        section_idx = 0
-        section_title = toc[0].get("title", "")
-
-        for i, sec in enumerate(toc):
-            title = sec.get("title", "") or ""
-            # 간단 키워드 룰 (필요하면 여기 계속 추가 가능)
-            if ("배경" in msg or "필요성" in msg) and ("배경" in title or "필요성" in title):
-                section_idx = i
-                section_title = title
-                break
-            if "목표" in msg and "목표" in title:
-                section_idx = i
-                section_title = title
-                break
-            if "시장" in msg and ("시장" in title or "분석" in title):
-                section_idx = i
-                section_title = title
-                break
-            # etc... (추가 패턴 넣고 싶으면 여기다)
-
-        print(f"🎯 선택된 섹션: index={section_idx}, title='{section_title}'")
-
-        # -------------------------------
-        # 3) 섹션 포커싱 + 유저 텍스트 주입
-        # -------------------------------
-        base_state["current_chapter_index"] = section_idx
-        base_state["target_chapter"] = section_title
-
-        user_text = msg
-
-        working_state: Dict[str, Any] = {
-            **base_state,
-            "user_prompt": user_text,
-            "collected_data": user_text,
-            "user_id": str(request.userIdx) if request.userIdx else "unknown",
-            "project_idx": request.projectIdx,
-        }
-
-        # -------------------------------
-        # 4) 정보 충분성 평가 (assess_info)
-        # -------------------------------
-        assess_result = assess_info(working_state)
-        working_state.update(assess_result)
-
-        is_sufficient = working_state.get("is_sufficient", False)
-        missing_items = working_state.get("missing_items", [])
-
-        if not is_sufficient:
-            # ❗ 아직 정보 부족 → 어떤 정보를 더 써야 하는지 안내
-            bullets = (
-                "\n".join(f"- {item}" for item in missing_items)
-                if missing_items
-                else "- (추가로 필요한 항목이 명시되지 않았습니다.)"
-            )
-
-            guide_msg = (
-                f"지금까지 알려주신 내용만으로는 '{section_title}' 섹션을 작성하기에 조금 부족합니다.\n\n"
-                f"특히 아래 항목들을 더 구체적으로 알려주시면 좋아요:\n{bullets}\n\n"
-                "위 항목들을 참고해서 내용을 더 자세히 써 주시겠어요?"
-            )
-
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "status": "need_more_info",
-                    "message": guide_msg,
-                    "missing_items": missing_items,
-                    "sectionTitle": section_title,
-                    "sectionIndex": section_idx,
-                },
-            )
-
-        # -------------------------------
-        # 5) 충분하면 → 섹션 초안 생성 (generate_section_draft)
-        # -------------------------------
-        draft_result = generate_section_draft(working_state)
-        section_text = draft_result.get("generated_section_text", "")
-
-        return JSONResponse(
-            status_code=200,
-            content={
+        response_content = {
                 "status": "completed",
-                "sectionTitle": section_title,
-                "sectionIndex": section_idx,
-                "generated_content": section_text,
-            },
-        )
+                "message": result.get("generated_text", "처리 완료."),
+                "generated_content": result.get("generated_text", ""),
+                "thread_id": new_thread_id, # thread_id 반환
+                "full_process_result": result
+            }
 
     except Exception as e:
         print(f"❌ /generate 처리 중 오류: {e}")
