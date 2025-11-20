@@ -4,6 +4,8 @@ import { useFileStore } from '../store/useFileStore';
 import { filesToNodes } from '../utils/fileToNodes';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@mui/material';
+import { useAuthStore } from '../store/useAuthStore';
+import { useProjectStore } from '../store/useProjectStore';
 
 // forwardRef로 감싸고 내부 input 클릭을 외부로 노출
 const Upload = forwardRef(function Upload({ rootId, asButton = true, onUploadComplete }, ref) {
@@ -11,8 +13,10 @@ const Upload = forwardRef(function Upload({ rootId, asButton = true, onUploadCom
     const { uploadAsync, isUploading } = useUpload();
     const addNodes = useFileStore((s) => s.addUploadedFileNodes);
     const selectNode = useFileStore((s) => s.selectNode);
-    const projectId = useFileStore((s) => s.currentProjectId);
-    const userId = useFileStore((s) => s.currentUserId);
+    // const projectId = useFileStore((s) => s.currentProjectId);
+    const project = useProjectStore((s) => s.project);
+    const user = useAuthStore((s) => s.user);
+    // const userId = useFileStore((s) => s.currentUserId);
     const navigate = useNavigate();
 
     // 외부에서 사용할 수 있도록 API 노출
@@ -28,11 +32,10 @@ const Upload = forwardRef(function Upload({ rootId, asButton = true, onUploadCom
         }),
         [],
     );
-
     const onChange = async (e) => {
         const files = e.target.files;
         if (!files?.length) return;
-        if (!projectId || !userId) {
+        if (!project.projectIdx || !user.userId) {
             alert('컨텍스트가 없습니다.');
             e.target.value = '';
             return;
@@ -40,7 +43,7 @@ const Upload = forwardRef(function Upload({ rootId, asButton = true, onUploadCom
 
         try {
             // 1) 서버 업로드 (Backend에서 파일 정보 받기)
-            const response = await uploadAsync({ files, rootId, userId: String(userId) });
+            const response = await uploadAsync({ files, rootId, userId: String(user.userId) });
 
             // 2) Backend에서 반환한 파일 정보를 트리 노드로 변환
             // response.files 구조: [{ id, name, path, folder, size }, ...]
@@ -57,7 +60,7 @@ const Upload = forwardRef(function Upload({ rootId, asButton = true, onUploadCom
                 }));
             } else {
                 // Fallback: 기존 방식 (파일 정보가 없을 때)
-                nodes = filesToNodes({ files, rootId, projectId, userId: String(userId) });
+                nodes = filesToNodes({ files, rootId, projectId: project.projectIdx, userId: String(user.userId) });
             }
 
             // 3) 트리에 노드 추가

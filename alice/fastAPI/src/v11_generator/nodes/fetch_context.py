@@ -27,11 +27,11 @@ def fetch_context_for_proposal(state: ProposalGenerationState) -> Dict[str, Any]
     toc_structure = result_toc.get("sections", [])
     
     # 2. --- anal.json (분석 전략) 추출 및 정리 ---
-    # anal_guide = context_data.get('anal_guide', {})
-    # generation_strategy = anal_guide.get(
-    #     "generation_strategy", 
-    #     "공고문 분석 전략이 없으므로, 목차를 작성하는 데 필요한 일반적인 정보를 수집합니다."
-    # )
+    anal_guide = context_data.get('anal_guide', {})
+    generation_strategy = anal_guide.get(
+        "generation_strategy", 
+        "공고문 분석 전략이 없으므로, 목차를 작성하는 데 필요한 일반적인 정보를 수집합니다."
+    )
     
     # 3. --- 루프 초기 목표 및 하위 항목 목록 설정 (수정된 부분) ---
     initial_chapter_index = 0

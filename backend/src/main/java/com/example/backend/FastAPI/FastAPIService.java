@@ -45,7 +45,7 @@ public class FastAPIService {
     public FastAPIService(
         @Value("${fastapi.base-url:http://localhost:8001}") String baseUrl,
         @Value("${fastapi.path:/analyze}") String analyzePath,
-        @Value("${fastapi.timeout-seconds:300}") long timeoutSeconds
+        @Value("${fastapi.timeout-seconds:600}") long timeoutSeconds
     ) {
         this.analyzePath = analyzePath;
         // WebClient 설정: 타임아웃, 메모리 버퍼 크기 등
@@ -73,9 +73,45 @@ public class FastAPIService {
         System.out.println("fastapi 작동 시작");
 
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        // ... (파일 전송 로직 생략) ...
+        
+        // 파일과 폴더 정보를 하나씩 multipart body에 추가
+        for (int i = 0; i < files.size(); i++) {
+            MultipartFile f = files.get(i);
+            String folder = folders.get(i).toString();
+
+            // 파일 파트 (filename 보장)
+            // ByteArrayResource로 파일 데이터를 변환하며 원본 파일명 유지
+            ByteArrayResource resource = new ByteArrayResource(f.getBytes()) {
+                @Override
+                public String getFilename() {
+                    return f.getOriginalFilename();
+                }
+            };
+
+            // files 파트: 파일 데이터와 메타정보 (파일명, Content-Type) 추가
+            builder.part("files", resource)
+                   .filename(f.getOriginalFilename())
+                   .contentType(MediaType.parseMediaType(
+                       f.getContentType() != null ? f.getContentType() : "application/octet-stream"
+                   ));
+
+            // folders는 파일 개수만큼 반복
+            // 각 파일이 어느 폴더에 속하는지 정보 추가
+            builder.part("folders", folder);
+        }
+
+        // ✅ 키 이름 꼭 'userid' (소문자)로 맞추기
+        // FastAPI 측에서 사용자별 분석 결과 관리에 사용
+        // 데이터들 추가가 다 이루어짐.
+        builder.part("userid", userid);
+
+        // ✅ 프로젝트 ID 추가 (FastAPI 필수 파라미터)
+        builder.part("projectidx", projectidx.toString());
+
+
 
         try {
+            System.out.println("fastapi 보내기 전");
             Map<String, Object> result = webClient.post()
                 .uri(analyzePath)
                 .contentType(MediaType.MULTIPART_FORM_DATA)

@@ -7,20 +7,20 @@ import { useNavigate } from 'react-router';
 
 const Navbar = () => {
     const user = useAuthStore((s) => s.user);
-    console.log(user);
+    console.log('user: ', user);
     const navigate = useNavigate();
 
-    const main =() =>{
+    const main = () => {
         navigate('/main');
-    }
+    };
 
     const login = () => {
         navigate('/login');
-    }
+    };
 
-    const home=() =>{
+    const home = () => {
         navigate('/');
-    }
+    };
     //네비수정
 
     return (
@@ -36,7 +36,7 @@ const Navbar = () => {
                         height: 'auto',
                     }}
                 />
-                <Typography fontSize={24} onClick={home} fontWeight={'bold'} sx={{ cursor:'pointer' }}>
+                <Typography fontSize={24} onClick={home} fontWeight={'bold'} sx={{ cursor: 'pointer' }}>
                     Paladoc
                 </Typography>
             </Grid>
