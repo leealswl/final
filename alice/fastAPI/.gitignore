@@ -17,6 +17,7 @@ env/
 
 # Vector DB
 chroma_db/
+alice/db/
 
 # CSV Output
 csv_output/
