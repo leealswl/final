@@ -1,293 +1,187 @@
-# 기획서 생성을 위한 LangGraph의 구조를 정의하고, 노드들을 연결하여 컴파일하는 함수를 정의합니다.
-
-# 파일: v11_generator/graph_builder.py
-
 from typing import Dict, Any, List
 from langgraph.graph import StateGraph, END, START
 from .state_types import ProposalGenerationState 
 
-# --- A. 노드 함수 임포트 (모두 유지) ---
+# --- 사용하는 노드만 임포트 ---
 from .nodes.fetch_context import fetch_context_for_proposal
 from .nodes.generate_query import generate_query
 from .nodes.ask_user_and_update_data import ask_user_and_update_data 
 from .nodes.assess_sufficiency import assess_info
-from .nodes.confirm_generation import confirm_generation
-from .nodes.generate_draft import generate_proposal_draft
-from .nodes.review_and_fix import review_draft, fix_draft_via_llm # review_draft를 라우터로 사용
+from .nodes.manage_progression import manage_progression
 
-# 💡 [안정성 상수] 한 챕터당 최대 질문/답변 루프 횟수
-MAX_ATTEMPTS = 5
+# --- 사용하지 않는 노드들은 주석 처리 (나중에 복구 가능) ---
+# from .nodes.generate_draft import generate_proposal_draft
+# from .nodes.review_and_fix import review_draft, fix_draft_via_llm
+# from .nodes.confirm_generation import confirm_generation
 
-def update_attempt_count(state: ProposalGenerationState) -> Dict[str, Any]:
-    """질문 루프가 시작될 때마다 attempt_count를 증가시킵니다."""
-    new_count = state.get("attempt_count", 0) + 1
-    return {
-        "attempt_count": new_count
-    }
-
-
-def router_handle_override(state: ProposalGenerationState) -> str:
-    """
-    ASK_USER 노드 이후, ask_user_and_update_data.py에서 설정한 강제 오버라이드 플래그를 처리합니다.
-    (예: 부적합 답변 시 바로 GENERATE_QUERY로 회귀)
-    """
-    # [추후연결] ask_user_and_update_data.py에서 설정된 강제 이동 플래그
-    override_step = state.get("next_step_override", "ASSESS_INFO") 
-    
-    # 🔑 플래그를 읽었으니 초기화하여 다음 턴에 영향을 주지 않도록 합니다.
-    state["next_step_override"] = "ASSESS_INFO" 
-    
-    return override_step
-
-
-def router_next_step(state: ProposalGenerationState) -> str:
-    """
-    충분성 판단 후, 다음 챕터로 진행할지, 다시 질문할지, 루프를 탈출할지 결정합니다.
-    (MAX_ATTEMPTS를 활용하여 무한 루프를 방지합니다.)
-    """
-    is_sufficient = state.get("sufficiency", False)
-    current_idx = state.get("current_chapter_index", 0)
-    toc_structure = state.get("draft_toc_structure", [])
-    attempt_count = state.get("attempt_count", 0)
-
-    # 🛑 [핵심 안정성]: 무한 루프 방지 (최대 횟수 초과 시 강제 탈출)
-    if not is_sufficient and attempt_count >= MAX_ATTEMPTS:
-        print(f"🛑 챕터 {current_idx}에 대한 최대 질문 횟수({MAX_ATTEMPTS}회) 초과. 강제 초안 생성으로 이동.")
-        return "CONFIRM_GEN" # 강제로 초안 생성 확인 단계로 이동
-
-    # 1. 충분성 판단
-    if is_sufficient:
-        # 2. 다음 챕터가 남아 있는지 확인
-        if current_idx + 1 < len(toc_structure):
-            return "UPDATE_CHAPTER" # ✅ 다음 챕터로 목표 업데이트
-        else:
-            return "CONFIRM_GEN" # ✅ 모든 챕터 완료: 최종 생성 확인으로 이동
-    else:
-        # ❌ 불충분: 다시 질문 생성 루프 (Attempt Count 증가 필요)
-        return "GENERATE_QUERY"
-
-
-def update_chapter_goal(state: ProposalGenerationState) -> Dict[str, Any]:
-    """
-    다음 챕터로 목표를 업데이트하고 attempt_count 및 collected_data를 초기화합니다.
-    """
-    current_idx = state['current_chapter_index']
-    toc_structure = state['draft_toc_structure']
-    
-    next_idx = current_idx + 1
-    next_chapter_title = toc_structure[next_idx].get("title", "목차 이름 없음")
-    next_chapter_number = toc_structure[next_idx].get("number", str(next_idx + 1))
-    
-    # 🔑 다음 챕터의 하위 항목 목록 추출 (통일된 'description' 이름 사용)
-    next_subchapters_list = []
-    for item in toc_structure:
-        item_number = item.get('number', '')
-        # 다음 챕터 번호로 시작하는 모든 하위 항목을 찾습니다.
-        if '.' in item_number and item_number.startswith(next_chapter_number + '.'):
-            next_subchapters_list.append({
-                "number": item_number,
-                "title": item.get('title'),
-                "description": item.get('description') 
-            })
-    
-    return {
-        "current_chapter_index": next_idx,
-        "target_chapter": next_chapter_title,
-        "target_subchapters": next_subchapters_list, # 다음 챕터의 요구사항
-        "attempt_count": 0, # 🔑 루프 카운터 초기화
-        "collected_data": "", # 🔑 새 챕터 데이터 수집을 위해 초기화
-        "next_step": "GENERATE_QUERY" 
-    }
-
-
-def router_handle_override(state: ProposalGenerationState) -> str:
-    """
-    ASK_USER 노드 이후, ask_user_and_update_data.py에서 설정한 강제 오버라이드 플래그를 처리합니다.
-    (부적합 답변 시 ASSESS_INFO를 건너뛰고 재질문 루프를 강제합니다.)
-    """
-    # [추후연결] ask_user_and_update_data.py에서 부적절한 답변(예: "배고파요")을 받았을 때 설정됨.
-    override_step = state.get("next_step_override", "ASSESS_INFO") 
-    
-    # 🔑 [핵심]: 플래그를 읽었으니 초기화하여 다음 턴에 영향을 주지 않도록 즉시 값을 돌려놓습니다.
-    state["next_step_override"] = "ASSESS_INFO" 
-    
-    # 🔑 반환: 만약 부적절했다면 "GENERATE_QUERY"가 반환되어 assess_info를 우회하고 재질문합니다.
-    return override_step
-    # override step = 부적절한답, ASSESS_INFO = 통과여부 결정자
-    # 이 함수는 state에 담긴 부적절한 답을 받았을때 ASSESS_INFO우회하고 재질문루프로 돌아가게함 
-    # ASK_USER 노드 이후, ask_user_and_update_data.py에서 설정한 강제 오버라이드 플래그를 처리합니다.
-    # 즉 부적합 답변 시 ASSESS_INFO를 건너뛰고 재질문 루프를 강제함
+# ---------------------------------------------------------
+# [주석 처리] 1. 엣지 로직 (데이터 백업 및 흐름 제어)
+# ---------------------------------------------------------
+# MAX_ATTEMPTS = 5 
+# 
+# def update_attempt_count(state: ProposalGenerationState) -> Dict[str, Any]:
+#     """질문 횟수 증가"""
+#     return {"attempt_count": state.get("attempt_count", 0) + 1}
+# 
+# def route_after_assessment(state: ProposalGenerationState) -> str:
+#     """판단 결과: 부족하면 질문, 충분하면 챕터넘기기"""
+#     is_sufficient = state.get("sufficiency", False)
+#     attempt_count = state.get("attempt_count", 0)
+#     
+#     if is_sufficient or attempt_count >= MAX_ATTEMPTS:
+#         return "UPDATE_CHAPTER" # 충분 -> 챕터 넘기기
+#     return "GENERATE_QUERY"     # 부족 -> 질문하기
+# 
+# def update_chapter_and_loop(state: ProposalGenerationState) -> Dict[str, Any]:
+#     """챕터 데이터 백업 및 다음 챕터 설정"""
+#     current_idx = state.get('current_chapter_index', 0)
+#     toc_structure = state.get('draft_toc_structure', [])
+#     
+#     # 데이터 백업
+#     previous_accumulated = state.get("accumulated_data", "")
+#     current_collected = state.get("collected_data", "")
+#     
+#     if current_collected.strip():
+#         new_accumulated = f"{previous_accumulated}\n\n=== Chapter {current_idx + 1} Data ===\n{current_collected}"
+#     else:
+#         new_accumulated = previous_accumulated
+# 
+#     # 다음 챕터 계산
+#     next_idx = current_idx + 1
+#     
+#     if next_idx >= len(toc_structure):
+#         return {
+#             "accumulated_data": new_accumulated,
+#             "collected_data": "",
+#             "next_step": "ALL_DONE" # 끝!
+#         }
+# 
+#     # 다음 챕터 설정
+#     next_chapter = toc_structure[next_idx]
+#     next_chapter_number = next_chapter.get("number", str(next_idx + 1))
+#     
+#     next_subchapters_list = []
+#     for item in toc_structure:
+#         item_number = item.get('number', '')
+#         if '.' in item_number and item_number.startswith(next_chapter_number + '.'):
+#             next_subchapters_list.append({
+#                 "number": item_number,
+#                 "title": item.get('title'),
+#                 "description": item.get('description')
+#             })
+# 
+#     print(f"🔄 챕터 전환: {next_idx + 1}장 ({next_chapter.get('title')}) 진입")
+# 
+#     return {
+#         "current_chapter_index": next_idx,
+#         "target_chapter": next_chapter.get("title"),
+#         "target_subchapters": next_subchapters_list,
+#         "missing_subsections": [sub['title'] for sub in next_subchapters_list],
+#         "attempt_count": 0,
+#         "collected_data": "",
+#         "sufficiency": False,
+#         "accumulated_data": new_accumulated,
+#         "next_step": "Assess_Next"
+#     }
+# 
+# def route_chapter_manager(state: ProposalGenerationState) -> str:
+#     """모든 챕터 끝났으면 바로 생성"""
+#     if state.get("next_step") == "ALL_DONE":
+#         return "GENERATE_DRAFT"
+#     return "ASSESS_INFO"
+# 
+# def confirm_router(state: ProposalGenerationState) -> str:
+#     return "GENERATE_DRAFT"
+# 
+# def review_router(state: ProposalGenerationState) -> str:
+#     return "FINISH"
 
 
-def update_attempt_count(state: ProposalGenerationState) -> Dict[str, Any]:
-    """
-    질문 루프가 시작될 때마다 attempt_count를 증가시킵니다.
-    """
-    # 🔑 역할: GENERATE_QUERY 노드 직전에 실행되어, 현재 챕터에 대한 시도 횟수를 new_count에 기록합니다.
-    new_count = state.get("attempt_count", 0) + 1
-    return {
-        "attempt_count": new_count
-    }
-    # 카운트를 세기 위한 함수
+# ---------------------------------------------------------
+# 1. [라우터] 판결에 따라 갈림길
+# ---------------------------------------------------------
+def route_after_assessment(state: ProposalGenerationState) -> str:
+    if state.get("sufficiency", False):
+        return "MANAGE_PROGRESSION" # 합격 -> 바로 매니저에게 (작가는 건너뜀)
+    return "GENERATE_QUERY"         # 불합격 -> 더 질문해
 
-    # 💡 [안정성 상수] 한 챕터당 최대 질문/답변 루프 횟수
-MAX_ATTEMPTS = 5 # 🔑 무한 루프 방지: 한 챕터에 대해 최대 5번의 질문/답변만 허용합니다.
-
-def router_next_step(state: ProposalGenerationState) -> str:
-    """
-    충분성 판단(assess_info) 후, 다음 챕터로 진행할지, 다시 질문할지, 루프를 탈출할지 결정합니다.
-    (MAX_ATTEMPTS를 활용하여 무한 루프를 방지하는 최종 결정권자입니다.)
-    """
-    is_sufficient = state.get("sufficiency", False)
-    current_idx = state.get("current_chapter_index", 0)
-    toc_structure = state.get("draft_toc_structure", [])
-    attempt_count = state.get("attempt_count", 0)
-
-    # 🛑 [핵심 안정성]: 무한 루프 방지 - 5회 질문 후에도 불충분하면 강제 탈출!
-    if not is_sufficient and attempt_count >= MAX_ATTEMPTS:
-        print(f"🛑 챕터 {current_idx}에 대한 최대 질문 횟수({MAX_ATTEMPTS}회) 초과. 강제 초안 생성으로 이동.")
-        # 🔑 LLM이 완벽한 답변을 얻지 못했더라도, 더 이상 시간을 낭비하지 않고 현재 데이터로 초안을 만들도록 강제함.
-        return "CONFIRM_GEN" 
-
-    # 1. 충분성 판단
-    if is_sufficient:
-        # 2. 다음 챕터가 남아 있는지 확인
-        if current_idx + 1 < len(toc_structure):
-            # 🔑 다음 챕터가 남아있음: 목표 업데이트로 이동
-            return "UPDATE_CHAPTER" 
-        else:
-            # 🔑 모든 챕터 완료: 최종 초안 생성 확인 단계로 이동
-            return "CONFIRM_GEN" 
-    else:
-        # ❌ 불충분: 다시 질문 생성 루프로 회귀 (Attempt Count는 UPDATE_ATTEMPT에서 증가함)
-        return "GENERATE_QUERY"
-    #무한루프 방지를 위한 함수
-
-def update_chapter_goal(state: ProposalGenerationState) -> Dict[str, Any]:
-    """
-    챕터가 완료되었을 때 다음 챕터로 목표를 업데이트하고 모든 카운터를 초기화합니다.
-    """
-    # 🔑 입력 변수 추출 (현재 상태를 기반으로 다음 상태를 계산)
-    # 이 두 값은 이전 노드(fetch_context.py)에서 State에 저장된 값을 읽어와 
-    # 현재 챕터의 완료 상태를 확인하고 다음 챕터의 목표를 계산하는 데 사용됩니다.
-    current_idx = state['current_chapter_index'] # 현재 완료된 챕터의 인덱스 (예: 0) 
-    toc_structure = state['draft_toc_structure'] # 전체 목차 구조 (result.json에서 로드됨)
-
-    next_idx = current_idx + 1
-    next_chapter_title = toc_structure[next_idx].get("title", "목차 이름 없음")
-    next_chapter_number = toc_structure[next_idx].get("number", str(next_idx + 1))
-    
-    # 🔑 다음 챕터의 하위 항목 목록 추출 (통일된 'description' 이름 사용)
-    # result.json에서 다음 챕터의 모든 sub-section 요구사항을 추출합니다.
-    next_subchapters_list = []
-    for item in toc_structure:
-        item_number = item.get('number', '')
-        # 다음 챕터 번호로 시작하는 모든 하위 항목(예: "2.1", "2.2")을 찾습니다.
-        if '.' in item_number and item_number.startswith(next_chapter_number + '.'):
-            next_subchapters_list.append({
-                "number": item_number,
-                "title": item.get('title'),
-                "description": item.get('description') # 🔑 description (작성 요구사항)을 그대로 사용
-            })
-    
-    return {
-        "current_chapter_index": next_idx,
-        "target_chapter": next_chapter_title,
-        "target_subchapters": next_subchapters_list, # 다음 챕터의 요구사항을 새 목표로 설정
-        "attempt_count": 0, # 🔑 루프 카운터 초기화 (새 챕터는 0부터 시작)
-        "collected_data": "", # 🔑 이전 챕터의 데이터는 이미 저장되었으므로, 새 챕터 데이터 수집을 위해 초기화
-        "next_step": "GENERATE_QUERY" 
-    }
-
-def confirm_router(state: ProposalGenerationState) -> str:
-    """초안 생성 확인(CONFIRM_GEN) 후 사용자 응답을 처리하는 라우터"""
-    user_final_answer = state.get("current_response", "").strip().upper()
-    # return "GENERATE_DRAFT" if user_final_answer == 'Y' else "UPDATE_ATTEMPT" 
-    return "GENERATE_DRAFT"
-    # 💡 N을 선택하면 UPDATE_ATTEMPT로 돌아가 다시 질문 루프 시작 (Attempt Count 증가)
-
-def review_router(state: ProposalGenerationState) -> str:
-    # """초안 검토 후 수정 또는 종료를 결정하는 라우터"""
-    # user_feedback = state.get("current_response", "").strip().upper()
-    # if '완료' in user_feedback or 'FINISH' in user_feedback:
-    #     return "FINISH"
-    # else:
-    #     return "REVISE_DRAFT"
-    return state.get("next_step")
-    
+# ---------------------------------------------------------
+# 2. 그래프 구축 (간소화 버전)
+# ---------------------------------------------------------
 
 def create_proposal_graph() -> StateGraph:
-    """기획서 생성 LangGraph 워크플로우를 정의하고 반환합니다."""
-    
     workflow = StateGraph(ProposalGenerationState)
 
-    # 3.1. 노드 추가
+    # === 1. 노드 추가 (사용하는 것만 활성화) ===
     workflow.add_node("FETCH_CONTEXT", fetch_context_for_proposal)
-    workflow.add_node("UPDATE_ATTEMPT", update_attempt_count) 
+        # 답변 저장 노드 추가 (이름: SAVE_USER)
+    workflow.add_node("SAVE_USER", ask_user_and_update_data)
+        # 질문 생성 노드 추가
     workflow.add_node("GENERATE_QUERY", generate_query)
-    workflow.add_node("ASK_USER", ask_user_and_update_data)
+        # 판사 노드 추가
     workflow.add_node("ASSESS_INFO", assess_info)
-    workflow.add_node("UPDATE_CHAPTER_GOAL", update_chapter_goal)
-    workflow.add_node("CONFIRM_GEN", confirm_generation)
-    workflow.add_node("GENERATE_DRAFT", generate_proposal_draft)
-    workflow.add_node("REVIEW_AND_FIX", review_draft) 
-    workflow.add_node("FIX_DRAFT", fix_draft_via_llm) 
-
-
-    # 3.2. 시작점 설정 (START -> FETCH_CONTEXT)
-    workflow.add_edge(START, "FETCH_CONTEXT")
-
-    # 3.3. 정보 수집 루프 (Gathering Loop) 정의
+        # 매니저 노드 추가
+    workflow.add_node("MANAGE_PROGRESSION", manage_progression) 
     
-    # 1. 컨텍스트 로드 -> 시도 횟수 증가 -> 질문 생성
-    workflow.add_edge("FETCH_CONTEXT", "UPDATE_ATTEMPT")
-    workflow.add_edge("UPDATE_ATTEMPT", "GENERATE_QUERY") 
-    workflow.add_edge("GENERATE_QUERY", "ASK_USER")
+    
+    # [주석 처리된 기존 노드들]
+    # workflow.add_node("ASSESS_INFO", assess_info)
+    # workflow.add_node("UPDATE_ATTEMPT", update_attempt_count)
+    # workflow.add_node("UPDATE_CHAPTER", update_chapter_and_loop)
+    # workflow.add_node("CONFIRM_GEN", confirm_generation)
+    # workflow.add_node("GENERATE_DRAFT", generate_proposal_draft)
+    # workflow.add_node("REVIEW_AND_FIX", review_draft) 
+    # workflow.add_node("FIX_DRAFT", fix_draft_via_llm) 
 
-    # 2. ASK_USER 이후, 부적합 답변 처리 라우터 연결
+    # === 2. 엣지 연결 (직선 흐름: Start -> Fetch -> Save -> Query -> End) ===
+# 시작 -> 설정
+    workflow.add_edge(START, "FETCH_CONTEXT")
+    
+    # 설정 -> 저장
+    workflow.add_edge("FETCH_CONTEXT", "SAVE_USER")
+    # [핵심] 저장 -> 평가(채점)
+    workflow.add_edge("SAVE_USER", "ASSESS_INFO")
+    # 평가 -> (조건부) -> 매니저 OR 질문자
     workflow.add_conditional_edges(
-        "ASK_USER",
-        router_handle_override,
+        "ASSESS_INFO",
+        route_after_assessment,
         {
-            "GENERATE_QUERY": "UPDATE_ATTEMPT", # ❌ 부적합 답변 (재질문, Attempt Count 증가)
-            "ASSESS_INFO": "ASSESS_INFO"      # 🟢 적합 답변 (판단으로 이동)
+            "MANAGE_PROGRESSION": "MANAGE_PROGRESSION", # 합격 시 매니저로
+            "GENERATE_QUERY": "GENERATE_QUERY"          # 불합격 시 질문자로
         }
     )
+    # 매니저(정리 끝) -> 질문자(다음 챕터 질문해)
+    workflow.add_edge("MANAGE_PROGRESSION", "GENERATE_QUERY")
+    
+    workflow.add_edge("GENERATE_QUERY", END)
+    
+    return workflow
 
-    # 3. ASSESS_INFO 라우팅: 핵심 루프 분기점 (MAX_ATTEMPTS 체크)
-    workflow.add_conditional_edges(
-        "ASSESS_INFO", 
-        router_next_step, 
-        {
-            "GENERATE_QUERY": "UPDATE_ATTEMPT",  # ❌ 불충분: 다시 질문 생성
-            "UPDATE_CHAPTER": "UPDATE_CHAPTER_GOAL", # ✅ 목차 충분: 다음 챕터로 이동
-            "CONFIRM_GEN": "CONFIRM_GEN"  # ✅ 모든 챕터 완료: 최종 확인
-        }
-    )
-
-    workflow.add_edge("UPDATE_CHAPTER_GOAL", "UPDATE_ATTEMPT") # 다음 챕터 시작
-
-    # 3.4. 생성 확인 및 초안 진입
-    workflow.add_conditional_edges(
-        "CONFIRM_GEN",
-        confirm_router,
-        {
-            "GENERATE_DRAFT": "GENERATE_DRAFT",
-            "UPDATE_ATTEMPT": "UPDATE_ATTEMPT" # N을 선택하면 다시 질문 루프로 돌아가 Attempt Count 증가
-        }
-    )
-
-    # 3.5. 초안 생성 및 검토 루프
-    workflow.add_edge("GENERATE_DRAFT", "REVIEW_AND_FIX") 
-
-    workflow.add_conditional_edges(
-        "REVIEW_AND_FIX", 
-        review_router, 
-        {
-            "REVISE_DRAFT": "FIX_DRAFT", 
-            "FINISH": END  
-        }
-    )
-    workflow.add_edge("FIX_DRAFT", "GENERATE_DRAFT") # 수정 후 재생성
+    # [주석 처리된 기존 엣지 연결]
+    # workflow.add_edge("FETCH_CONTEXT", "ASSESS_INFO")
+    # 
+    # workflow.add_conditional_edges(
+    #     "ASSESS_INFO",
+    #     route_after_assessment,
+    #     {
+    #         "GENERATE_QUERY": "UPDATE_ATTEMPT",
+    #         "UPDATE_CHAPTER": "UPDATE_CHAPTER"
+    #     }
+    # )
+    # 
+    # workflow.add_edge("UPDATE_ATTEMPT", "GENERATE_QUERY")
+    # workflow.add_edge("GENERATE_QUERY", "ASK_USER")
+    # workflow.add_edge("ASK_USER", "ASSESS_INFO")
+    # 
+    # workflow.add_conditional_edges(
+    #     "UPDATE_CHAPTER",
+    #     route_chapter_manager,
+    #     {
+    #         "ASSESS_INFO": "ASSESS_INFO",
+    #         "GENERATE_DRAFT": "GENERATE_DRAFT" # 나중에 CONFIRM_GEN으로 변경 가능
+    #     }
+    # )
+    # 
+    # # ... 나머지 엣지들도 생략됨
     
     return workflow

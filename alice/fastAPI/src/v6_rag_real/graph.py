@@ -91,14 +91,14 @@ def create_batch_graph():
     batch_app = graph.compile()
 
     # Mermaid 다이어그램을 PNG로 저장
-    try:
-        png_data = batch_app.get_graph().draw_mermaid_png()
-        output_path = "langgraph_diagram.png"
-        with open(output_path, "wb") as f:
-            f.write(png_data)
-        print(f"✅ Mermaid 다이어그램 PNG 저장: {output_path}")
-    except Exception as e:
-        print(f"⚠️ Mermaid 다이어그램 PNG 저장 실패: {e}")
+    # try:
+    #     png_data = batch_app.get_graph().draw_mermaid_png()
+    #     output_path = "langgraph_diagram.png"
+    #     with open(output_path, "wb") as f:
+    #         f.write(png_data)
+    #     print(f"✅ Mermaid 다이어그램 PNG 저장: {output_path}")
+    # except Exception as e:
+    #     print(f"⚠️ Mermaid 다이어그램 PNG 저장 실패: {e}")
 
     print("✅ LangGraph 컴파일 완료")
     print(f"\n📊 노드 구성:")
