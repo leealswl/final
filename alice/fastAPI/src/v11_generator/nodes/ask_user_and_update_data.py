@@ -19,6 +19,9 @@ def ask_user_and_update_data(state: ProposalGenerationState) -> Dict[str, Any]:
     # 2. 데이터 업데이트 로직
     updated_data = existing_data
     
+    print(f"DEBUG: 📝 기존 데이터 길이 (DB 로드): {len(existing_data)}자")
+    print(f"DEBUG: 📩 새 사용자 입력 길이: {len(user_input)}자")
+
     if user_input:
         # 중복 방지: 방금 한 말이 이미 저장되어 있는지 간단히 체크 (선택 사항)
         if user_input not in existing_data:

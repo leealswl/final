@@ -235,7 +235,7 @@ async def generate_content(request: ChatRequest):
                 # DB에 있으면 그걸 쓰고, 없으면 노드에서 처리하도록 input에서 뺍니다.
                     # "accumulated_data": "", 
                     "attempt_count": 0,
-                    "current_chapter_index": 0,
+                    "current_chapter_index": 0, # 새로운 스레드일 때만 0을 강제합니다.
                 }
         # initial_state = {
         #     "user_id": str(request.userIdx) if request.userIdx else "unknown",
@@ -254,11 +254,14 @@ async def generate_content(request: ChatRequest):
         # ---------------------------------------------------------------------
         # [주석 처리] 기존의 복잡한 DB 저장 및 Interrupt 방식
         # ---------------------------------------------------------------------
+        # thread_id_to_use = request.thread_id if request.thread_id else str(uuid.uuid4())
+        thread_id_to_use = "suyeonpigggggg" # str값이 바로넘어가서 오류생겨서 이렇게바꿈
+
         async with AsyncSqliteSaver.from_conn_string(DB_PATH) as saver:
             app_run = proposal_graph.compile(checkpointer=saver)
                 # app_run = proposal_graph.compile() # 옵션 없음
             result = await app_run.ainvoke(input_state,
-            config={"configurable": {"thread_id": "suyeonjoe"}}
+            config={"configurable": {"thread_id": thread_id_to_use}}
             )
         
         # ---------------------------------------------------------------------
@@ -272,11 +275,11 @@ async def generate_content(request: ChatRequest):
         
         print(f"📤 응답 전송: {current_query}")
         
-        # 5. 프론트엔드로 질문 반환
+        # 5. 프론트엔드로 질문 반환 여기도 thread_id_to_use쓰게 변경
         return JSONResponse({
             "status": "waiting_for_input", 
             "message": current_query,
-            "thread_id": new_thread_id 
+            "thread_id": thread_id_to_use 
         })
         
     except Exception as e:
@@ -285,10 +288,6 @@ async def generate_content(request: ChatRequest):
                 status_code=500,
                 content={"error": str(e), "message": "기획서 생성 중 서버 오류 발생"}
             )
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-
 
 # ------------------------------------------------------------------------
 # [주석 처리] 기존의 Resume 엔드포인트 (현재 상태 저장소가 없으므로 동작 불가)
