@@ -1,6 +1,6 @@
 // 📄 AnalyzeView.jsx
 import { Box, Button, Grid, Stack, Typography, CircularProgress } from '@mui/material';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFileStore } from '../../../store/useFileStore';
 import { useAnalysisStore } from '../../../store/useAnalysisStore';
@@ -14,6 +14,7 @@ import { useAuthStore } from '../../../store/useAuthStore';
 const AnalyzeView = () => {
     const navigate = useNavigate();
     const { tree } = useFileStore();
+    const setCurrentContext = useFileStore((s) => s.setCurrentContext);
     const setAnalysisResult = useAnalysisStore((state) => state.setAnalysisResult);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -23,6 +24,21 @@ const AnalyzeView = () => {
 
     console.log('projectIdx: ', project.projectIdx);
     console.log('user: ', user.userId);
+
+    /**
+     * 2025-11-20: 파일 업로드 시 "컨텍스트가 없습니다" 모달 경고 해결
+     * 근거: Upload.jsx:36에서 currentProjectId, currentUserId가 없으면 경고 표시
+     * useFileStore.setCurrentContext를 호출하여 projectId, userId 설정 필요
+     */
+    useEffect(() => {
+        if (project?.projectIdx && user?.userId) {
+            setCurrentContext({
+                projectId: project.projectIdx,
+                userId: user.userId
+            });
+            console.log('✅ 파일 업로드 컨텍스트 설정:', { projectId: project.projectIdx, userId: user.userId });
+        }
+    }, [project?.projectIdx, user?.userId, setCurrentContext]);
 
     // ✅ 업로드 컴포넌트 각각 제어할 Ref
     const rfpUploadRef = useRef(null);
