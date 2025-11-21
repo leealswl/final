@@ -87,7 +87,7 @@ def manage_progression(state: ProposalGenerationState) -> Dict[str, Any]:
         return {
             "current_chapter_index": next_idx,
             "target_chapter": next_chapter.get("title", "목표 없음"),
-            "accumulated_data": new_accumulated,
+            # "accumulated_data": new_accumulated,
             "collected_data": "", # 다음 챕터를 위해 데이터 초기화
             "completeness_score": 0, # 다음 챕터 점수 초기화
             "next_step": "GENERATE_QUERY"
@@ -97,7 +97,7 @@ def manage_progression(state: ProposalGenerationState) -> Dict[str, Any]:
         print("🎉 모든 섹션 완료: 최종 초안 생성 단계로 이동합니다.")
         return {
             "next_step": "FINISH_DRAFT", # (추후 generate_draft 노드로 연결)
-            "accumulated_data": new_accumulated,
+            # "accumulated_data": new_accumulated,
             "collected_data": "", 
             "current_draft": f"최종 초안을 생성하기 위한 정보가 모두 수집되었습니다. 수집된 총 정보 길이: {len(new_accumulated)}자",
             "completeness_score": 100
