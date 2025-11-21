@@ -9,56 +9,61 @@ def history_checker(state: ProposalGenerationState) -> ProposalGenerationState:
 
     HISTORY_PROMPT = """
 
-        [목차 전체(TOC)]
+        [목차 데이터 (JSON List)]
         {toc_structure}
 
-        [사용자 메시지]
-        {user_prompt}
+        [현재 작업 중인 목차 (Current State)]
+        {target_chapter}
 
-        [이미 충분히 작성된 목차 목록]
+        [이미 작성 완료된 목차 리스트]
         {accumulated_data}
 
-        당신은 '사업계획서 자동 생성 에이전트'이며, 현재 단계는
-        "다음에 작성해야 할 목차를 정확하게 선택하는 단계"입니다.
+        당신은 '사업계획서 자동 생성 에이전트'의 두뇌로서, 다음 단계에 작성할 목차를 결정하는 **논리 판단 모듈**입니다.
+        당신의 목표는 **작업의 연속성을 유지**하면서, 순차적으로 **'최하위 목차(Leaf Node)'**를 하나씩 선택하는 것입니다.
 
-        아래 규칙을 순차적으로 적용하여 단 하나의 목차만 선택하세요.
-
-        ────────────────────────────────
-        [다음 목차 선택 규칙]
-
-        1. **사용자 직접 선택 우선 규칙**
-        - 사용자 메시지({user_prompt})에 특정 목차명이 명시적으로 등장한다면,
-            해당 목차를 최우선으로 선택합니다.
-        - 부분 일치가 아닌, 의미적으로 명확한 일치를 기준으로 합니다.
-        - 이때 사용자가 선택한 목차가 이미 작성 완료(accumulated_data)에 포함되어 있어도,
-            사용자의 선택을 우선합니다.
-
-        2. **작성 완료 제외 규칙**
-        - 사용자가 특정 목차를 선택하지 않았다면,
-            이미 충분히 작성된 목차({accumulated_data})는 모두 제외합니다.
-        - 제외 후 남은 목차({toc_structure} - {accumulated_data})만 후보군으로 사용합니다.
-
-        3. **논리적 순서 기반 규칙**
-        - 후보군 중에서 다음 기준을 만족하는 목차를 선택합니다:
-            a) 상위 단계의 목차 → 하위 단계의 목차 순
-            b) 일반적 정보 → 구체적 정보 순
-            c) 사업계획서의 자연스러운 작성 흐름을 따름
-                (예: 개요 → 시장 분석 → 제품/서비스 → 비즈니스 모델 → 전략 → 실행 계획 → 재무 → 기대효과 등)
-
-        4. **정보 공백 최소화 규칙**
-        - 이미 작성된 정보(accumulated_data)와 사용자 메시지의 흐름을 고려하여,
-            "전체 문서 완성도에 중요한 연결 역할을 하는 목차"를 우선 선택합니다.
-
-        5. **단일 출력 규칙**
-        - 최종적으로 선택된 목차명만 출력합니다.
-        - 부가 설명, 메타 발화, 판단 근거는 절대 포함하지 않습니다.
+        아래 우선순위 규칙을 순차적으로 적용하여 단 하나의 목차를 선택하십시오.
 
         ────────────────────────────────
-        [출력 형식]
+        [목차 선택 우선순위 규칙]
+
+        1. **작업 연속성 유지 규칙 (최우선 순위)**
+           - 만약 **[현재 작업 중인 목차]** 값이 존재하고,
+           - 그 목차가 **[이미 작성 완료된 목차 리스트]에 포함되어 있지 않다면**,
+           - 다른 조건을 따지지 말고 **무조건 [현재 작업 중인 목차]를 그대로 다시 선택**하십시오.
+           - (이유: 아직 해당 목차의 작성이 완료되지 않았으므로, 작업을 계속 이어서 해야 함)
+
+        2. **상위 목차(Container) 자동 건너뛰기**
+           - 규칙 1에 해당하지 않아 새로운 목차를 선택해야 할 경우,
+           - 목차 번호가 다른 번호의 접두사(Prefix)로 쓰이는 **'상위 목차'는 절대 선택하지 마십시오.**
+           - 반드시 더 이상 쪼개지지 않는 **'최하위 목차(Leaf Node)'** 단위로만 선택해야 합니다.
+
+        3. **논리적 순차 진행 (Next Step)**
+           - 규칙 1(연속성 유지)이 적용되지 않는 경우(즉, 현재 목차가 비어있거나 작성이 완료된 경우),
+           - 전체 목차 구조상 **[이미 작성 완료된 목차 리스트]에 없는** 가장 **앞선 순서의 최하위 목차**를 선택하십시오.
+           - (예: 1.1이 완료되었으면 1.2를 선택)
+
+        ────────────────────────────────
+        [Thinking Process (내부 판단 예시)]
+
+        Case A: 현재 작업 중인 목차가 "1.1 사업 배경"인데, 아직 완료 목록에 없음.
+        - 판단: 아직 쓰는 중이다.
+        - 결정: **"1.1 사업 배경"** 유지.
+
+        Case B: 현재 작업 중인 목차가 "1.1 사업 배경"이고, 완료 목록에 "1.1 사업 배경"이 있음.
+        - 판단: 1.1은 다 썼다. 다음 안 쓴 걸 찾자.
+        - 구조 확인: 1.2가 있고 안 썼음.
+        - 결정: **"1.2 사업 목표"** 선택.
+
+        Case C: 현재 작업 중인 목차가 없고(null/empty), 1번(개요)은 상위 목차임.
+        - 판단: 처음 시작하거나 리셋됨. 1번은 상위니까 건너뜀.
+        - 결정: 1번 하위의 첫 번째인 **"1.1 사업 배경"** 선택.
+
+        ────────────────────────────────
+        [최종 출력 형식]
 
         <선택된 목차명>
 
-        (형식을 절대 변경하지 말 것)
+        (주의: 번호, 설명 없이 오직 목차의 Title 텍스트만 출력할 것)
         ────────────────────────────────
 
         """
@@ -69,6 +74,8 @@ def history_checker(state: ProposalGenerationState) -> ProposalGenerationState:
     user_prompt = state.get('user_prompt')
     accumulated_data = state.get('accumulated_data', [])
 
+    target_chapter = state.get('target_chapter', [])
+
     llm = ChatOpenAI( model="gpt-4o")
 
     prompt = PromptTemplate.from_template(HISTORY_PROMPT)
@@ -77,7 +84,7 @@ def history_checker(state: ProposalGenerationState) -> ProposalGenerationState:
     # chain.invoke()의 결과는 이제 순수한 파싱된 스트링입니다.
     result = chain.invoke({
         'toc_structure': toc_structure,
-        'user_prompt': user_prompt,
+        'target_chapter': target_chapter,
         'accumulated_data': accumulated_data
     })
     
@@ -86,12 +93,12 @@ def history_checker(state: ProposalGenerationState) -> ProposalGenerationState:
     print('-----------------')
 
     # 만약 accumulated_data가 문자열이면 리스트로 변환
-    if isinstance(accumulated_data, str):
-        accumulated_data = [accumulated_data]
+    # if isinstance(accumulated_data, str):
+    #     accumulated_data = [accumulated_data]
 
-    accumulated_data.append(result)
+    # accumulated_data.append(result)
 
-    print('accumulated_data: ', accumulated_data)
+    # print('accumulated_data: ', accumulated_data)
 
     return{ 'target_chapter': result,
            "accumulated_data": accumulated_data}

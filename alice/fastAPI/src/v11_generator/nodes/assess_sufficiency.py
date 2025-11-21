@@ -12,7 +12,7 @@ def assess_info(state: ProposalGenerationState) -> Dict[str, Any]:
     print("--- 노드 실행: assess_sufficiency (Section Scoring) ---")
 
     # 1. 'anal_guide' 변수 준비
-    fetched_context = state.get("fetched_context", {})
+    # fetched_context = state.get("fetched_context", {})
     # 💡 draft_strategy에서 전략을 가져옴 (상태의 다른 필드를 참조할 경우 수정 필요)
     anal_guide = str(state.get("draft_strategy", "특별한 공고문 분석 전략 없음.")) 
     
@@ -36,7 +36,7 @@ def assess_info(state: ProposalGenerationState) -> Dict[str, Any]:
         [평가 기준: '생성 적합성']
         1. **정량적 데이터 포함 여부:** (예: 연 매출 목표, 시장 규모, % 성장률 등) 구체적인 수치와 데이터가 포함되어 있는가? (기획서의 설득력을 높이는 핵심 요소)
         2. **논리적 연결성:** 수집된 정보가 목표 목차의 요구 사항을 논리적으로 뒷받침하며 최종 기획서에 그대로 활용될 수 있는가?
-        3. **완료 기준:** 80점 이상이면 '초안 생성에 필요한 정보가 확보됨'으로 판단합니다. 80점 미만이면 추가적인, 더욱 구체적인 정보가 필요합니다.
+        3. **완료 기준:** 100점 만점에 80점 이상이면 '초안 생성에 필요한 정보가 확보됨'으로 판단합니다. 80점 미만이면 추가적인, 더욱 구체적인 정보가 필요합니다.
         
         [출력 형식]
         - 점수는 반드시 <score> 태그 안에 숫자(정수)만 넣어주세요.
@@ -58,26 +58,33 @@ def assess_info(state: ProposalGenerationState) -> Dict[str, Any]:
 
     # 2. 현재 목표 섹션 정보 설정 (history_checker의 결정 반영 로직)
     collected_data = state.get("collected_data", "")
-    print(f"--- 📊 ASSESS_INFO 수신 데이터 길이: {len(collected_data)}자 ---")
+    # print('collected_data: ', collected_data)
+    # print(f"--- 📊 ASSESS_INFO 수신 데이터 길이: {len(collected_data)}자 ---")
     
     toc_structure = state.get("draft_toc_structure", [])
     target_title = state.get("target_chapter", "")
     current_idx = state.get("current_chapter_index", 0) 
+
+    # print('toc_structure: ', toc_structure)
     
     # 🔑 history_checker의 결정을 반영하여 current_idx를 덮어씁니다.
     found_idx = -1
     for i, item in enumerate(toc_structure):
         item_title = item.get("title", "")
         if item_title == target_title or target_title in item_title:
+            print(item_title)
+            print(i)
             found_idx = i
             break
             
     if found_idx != -1:
         current_idx = found_idx
+
+    # print('current_idx: ', current_idx)
     
     # 목차 끝에 도달했거나 유효하지 않은 인덱스인 경우 완료 처리
-    if not toc_structure or current_idx >= len(toc_structure):
-        return {"sufficiency": True, "completeness_score": 100, "grading_reason": "모든 목차 항목 완료", "next_step": "FINISH"}
+    # if not toc_structure or current_idx >= len(toc_structure):
+    #     return {"sufficiency": True, "completeness_score": 100, "grading_reason": "모든 목차 항목 완료", "next_step": "FINISH"}
 
     current_section_item = toc_structure[current_idx]
     current_number = current_section_item.get("number", "0")
@@ -105,7 +112,7 @@ def assess_info(state: ProposalGenerationState) -> Dict[str, Any]:
             try:
                 response_text = chain.invoke({
                     "chapter_number": current_number,
-                    "chapter_title": current_title,
+                    "chapter_title": current_title, # target으로 바꾸기
                     "chapter_description": current_description,
                     "collected_data": collected_data,
                     "anal_guide": anal_guide 
@@ -121,6 +128,9 @@ def assess_info(state: ProposalGenerationState) -> Dict[str, Any]:
                 print(f"📊 LLM 평가 결과: {final_score}점 - {grading_reason[:50]}...")
             except Exception as e:
                 print(f"❌ LLM 호출/파싱 오류: {e}")
+
+    print('response_text: ', response_text)
+    print('final_score: ', final_score)
                 
     # 4. --- 결과 반환 (80점 기준 분기 로직 구현 및 점수 영속화) ---
     is_sufficient = final_score >= 80 
@@ -129,7 +139,7 @@ def assess_info(state: ProposalGenerationState) -> Dict[str, Any]:
     section_scores = state.get("section_scores", {})
     section_scores[f"{current_number}"] = final_score
     
-    print(f"✅ 평가 완료: [{current_number} {current_title}] 필요정보: {final_score}%")
+    # print(f"✅ 평가 완료: [{current_number} {current_title}] 필요정보: {final_score}%")
     if is_sufficient:
         print(f"🎯 충분성 판단: 80점 이상 → MANAGE_PROGRESSION으로 분기")
     else:
@@ -139,10 +149,8 @@ def assess_info(state: ProposalGenerationState) -> Dict[str, Any]:
         "sufficiency": is_sufficient,
         "completeness_score": final_score,  # 🔑 점수 영속화를 위해 상태에 저장
         "grading_reason": grading_reason,
-        "missing_subsections": [],
-        "current_chapter_index": current_idx, 
-        "target_chapter": current_title,      
+        "current_chapter_index": current_idx,  
         "section_scores": section_scores,  # 🔑 업데이트된 점수 저장
         # 🔑 80점 이상이면 MANAGE_PROGRESSION, 아니면 GENERATE_QUERY
-        "next_step": "MANAGE_PROGRESSION" if is_sufficient else "GENERATE_QUERY"
+        # "next_step": "MANAGE_PROGRESSION" if is_sufficient else "GENERATE_QUERY"
     }
