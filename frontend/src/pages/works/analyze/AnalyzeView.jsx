@@ -10,24 +10,32 @@ import Upload from '../../../components/Upload';
 import { useProjectStore } from '../../../store/useProjectStore';
 import { useAuthStore } from '../../../store/useAuthStore';
 
+/**
+ * 프로젝트 분석 페이지 (분석 전/후 통합 컴포넌트)
+ * - analysisResult가 null이면: 파일 업로드 및 분석 시작 화면
+ * - analysisResult가 있으면: 분석 결과 카드 표시 화면
+ */
 const AnalyzeView = () => {
     const navigate = useNavigate();
-    const { tree } = useFileStore();
-    const setAnalysisResult = useAnalysisStore((state) => state.setAnalysisResult);
-    const analysisResult = useAnalysisStore((state) => state.analysisResult);
-    const analysisData = analysisResult?.data || {};
 
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+    // 전역 상태 관리
+    const { tree } = useFileStore(); // 업로드된 파일 트리 구조
+    const setAnalysisResult = useAnalysisStore((state) => state.setAnalysisResult); // 분석 결과 저장 함수
+    const analysisResult = useAnalysisStore((state) => state.analysisResult); // 분석 결과 데이터
+    const analysisData = analysisResult?.data || {}; // 분석 결과 내부 data 객체
 
+    // 로컬 상태 관리
+    const [loading, setLoading] = useState(false); // 분석 진행 중 상태
+    const [error, setError] = useState(null); // 에러 메시지 상태
+
+    // 사용자 및 프로젝트 정보
     const user = useAuthStore((s) => s.user);
     const project = useProjectStore((s) => s.project);
 
     console.log('projectIdx: ', project.projectIdx);
     console.log('user: ', user.userId);
 
-<<<<<<< HEAD
-=======
+    // 분석 결과의 features 배열을 카드 데이터로 변환
     const featureCards = useMemo(() => {
         return (analysisData.features || []).map((feature, index) => {
             const resultId = feature.result_id ?? index + 1;
@@ -39,17 +47,24 @@ const AnalyzeView = () => {
             };
         });
     }, [analysisData.features]);
->>>>>>> dev
 
-    // ✅ 업로드 컴포넌트 각각 제어할 Ref
-    const rfpUploadRef = useRef(null);
-    const attachUploadRef = useRef(null);
+    // 업로드 컴포넌트를 제어하기 위한 Ref
+    const rfpUploadRef = useRef(null); // 공고문/RFP 업로드 컴포넌트
+    const attachUploadRef = useRef(null); // 첨부파일 업로드 컴포넌트
 
-    // ✅ 클릭 시 input 클릭 트리거
+    /**
+     * 업로드 영역 클릭 시 숨겨진 input 클릭 트리거
+     * @param {React.RefObject} ref - Upload 컴포넌트의 ref
+     */
     const triggerUpload = (ref) => {
         ref.current?.click();
     };
 
+    /**
+     * 파일 트리에서 모든 파일 노드를 재귀적으로 수집
+     * @param {Array} nodes - 파일 트리 노드 배열
+     * @returns {Array} 파일 노드만 포함된 배열
+     */
     const collectFiles = (nodes) => {
         let files = [];
         for (const node of nodes) {
@@ -59,17 +74,25 @@ const AnalyzeView = () => {
         return files;
     };
 
+    /**
+     * 분석 시작 버튼 클릭 핸들러
+     * - 업로드된 파일들을 수집하여 백엔드에 분석 요청
+     * - 분석 완료 후 결과를 store에 저장하면 화면이 자동으로 전환됨
+     */
     const handleAnalysisStart = async () => {
         try {
             setLoading(true);
             setError(null);
 
+            // 파일 트리에서 각 폴더 찾기 (root-01: 공고문, root-02: 첨부파일)
             const 공고문폴더 = tree.find((node) => node.id === 'root-01');
             const 파일폴더 = tree.find((node) => node.id === 'root-02');
 
+            // 각 폴더에서 실제 파일들만 수집
             const 공고문파일들 = 공고문폴더 ? collectFiles([공고문폴더]) : [];
             const 첨부파일들 = 파일폴더 ? collectFiles([파일폴더]) : [];
 
+            // 필수 파일 검증 (공고문이 없으면 분석 불가)
             if (공고문파일들.length === 0) {
                 setError('공고문/RFP 파일을 먼저 업로드해주세요.');
                 setLoading(false);
@@ -79,6 +102,7 @@ const AnalyzeView = () => {
             console.log('📁 공고문 파일:', 공고문파일들.length, '개');
             console.log('📁 첨부 파일:', 첨부파일들.length, '개');
 
+            // 백엔드로 전송할 payload 구성
             const payload = {
                 projectId: project.projectIdx,
                 userId: user.userId,
@@ -98,19 +122,20 @@ const AnalyzeView = () => {
 
             console.log('🚀 분석 요청 시작:', payload);
 
+            // 백엔드 API 호출 (분석 요청)
             const response = await api.post('/api/analysis/start', payload);
 
             console.log('✅ 분석 완료:', response.data);
 
+            // 분석 결과를 store에 저장 (이 시점에서 화면이 결과 화면으로 전환됨)
             setAnalysisResult(response.data);
 
-            // setAnalyzeResult(false);
-
+            // [참고] 이전 방식: 별도 페이지로 navigate 했었으나 현재는 사용 안 함
             //navigate('/works/analyze/dashboard', { state: { analysisResult: response.data } });
         } catch (err) {
             console.error('❌ 분석 실패:', err);
 
-            // 타임아웃 에러 처리
+            // 에러 타입별 처리
             if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
                 setError('분석 시간이 초과되었습니다. 파일 크기가 크거나 분석이 오래 걸리는 경우 10분 이상 소요될 수 있습니다. 다시 시도해주세요.');
             } else if (err.response?.data?.message) {
@@ -125,8 +150,13 @@ const AnalyzeView = () => {
         }
     };
 
-    return analysisResult == null?(
+    // === 조건부 렌더링: 분석 전/후 화면 전환 ===
+    return analysisResult == null ? (
+        /* ========================================
+         * [분석 전 화면] 파일 업로드 및 분석 시작
+         * ======================================== */
         <Stack sx={{ backgroundColor: '#F4F7F9' }} height={'100vh'} justifyContent={'center'}>
+            {/* 상단 타이틀 */}
             <Stack spacing={3} mb={5} alignItems={'center'}>
                 <Typography fontSize={'2rem'} fontFamily={'Isamanru-Bold'}>
                     PALADOC 프로젝트 분석 준비
@@ -134,8 +164,9 @@ const AnalyzeView = () => {
                 <Typography fontFamily={'Pretendard4'}>프로젝트 공고문과 관련 첨부파일을 업로드하면 PALADOC AI가 핵심 요구사항, 목차, 예상 일정을 자동으로 도출하여 분석을 시작합니다.</Typography>
             </Stack>
 
+            {/* 파일 업로드 영역 (2개) */}
             <Grid display={'flex'} justifyContent={'center'} container spacing={5} mb={10}>
-                {/* ✅ 1. 필수 RFP 업로드 */}
+                {/* 1. 필수 RFP 업로드 */}
                 <Stack
                     sx={{
                         cursor: 'pointer',
@@ -158,7 +189,7 @@ const AnalyzeView = () => {
                     </Typography>
                 </Stack>
 
-                {/* ✅ 2. 선택 첨부파일 업로드 */}
+                {/* 2. 선택 첨부파일 업로드 */}
                 <Stack
                     sx={{
                         cursor: 'pointer',
@@ -182,10 +213,11 @@ const AnalyzeView = () => {
                 </Stack>
             </Grid>
 
-            {/* ✅ 숨겨진 Upload 컴포넌트 */}
+            {/* 실제 업로드 기능을 수행하는 숨겨진 컴포넌트 (화면에는 보이지 않음) */}
             <Upload ref={rfpUploadRef} rootId={'root-01'} asButton={false} />
             <Upload ref={attachUploadRef} rootId={'root-02'} asButton={false} />
 
+            {/* 하단 안내 및 버튼 영역 */}
             <Stack alignItems={'center'} spacing={3}>
                 <Box height={'50px'}>
                     <Typography sx={{ color: '#8C8C8C' }} fontFamily={'Pretendard4'}>
@@ -193,6 +225,7 @@ const AnalyzeView = () => {
                     </Typography>
                 </Box>
                 <Box>
+                    {/* 분석 시작 버튼 */}
                     <Button
                         variant="contained"
                         size="large"
@@ -212,6 +245,7 @@ const AnalyzeView = () => {
                     </Button>
                 </Box>
                 <Box>
+                    {/* 에러 메시지 또는 안내 메시지 */}
                     {error ? (
                         <Typography sx={{ color: '#ff4d4f' }} fontFamily={'Pretendard4'}>
                             {error}
@@ -224,68 +258,77 @@ const AnalyzeView = () => {
                 </Box>
             </Stack>
         </Stack>
-    ) : 
-    (
-            <Stack sx={{ backgroundColor: '#F4F7F9', height: '100vh', overflow: 'auto', p: 4 }}>
-                {/* 헤더 */}
-                <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} mb={4} spacing={2}>
-                    <Box>
-                        <Typography fontSize={'2rem'} fontFamily={'Isamanru-Bold'} mb={1}>
-                            📊 프로젝트 분석 결과
-                        </Typography>
-                        <Typography fontFamily={'Pretendard4'} color={'#8C8C8C'}>
-                            PALADOC AI가 분석한 프로젝트 요구사항 및 첨부 양식입니다.
-                        </Typography>
-                    </Box>
-    
-                    <Button variant="contained" size="large" sx={{ backgroundColor: '#262626', '&:hover': { backgroundColor: '#000000' } }} onClick={() => navigate('/works/create')}>
-                        생성 페이지로 이동
-                    </Button>
-                </Stack>
-    
-                {/* Feature 카드 */}
-                {featureCards.length ? (
-                    <Grid container spacing={2}>
-                        {featureCards.map((feature) => (
-                            <Grid item size={4} key={feature.card_id}>
-                                <FeatureCard feature={feature} />
-                            </Grid>
-                        ))}
-                    </Grid>
-                ) : (
-                    <Paper elevation={0} sx={{ p: 6, textAlign: 'center', borderRadius: 3 }}>
-                        <Typography fontSize="1.1rem" fontWeight={600}>
-                            표시할 Feature 정보가 없습니다
-                        </Typography>
-                    </Paper>
-                )}
-    
-                {/* 디버깅 JSON */}
-                <Paper elevation={0} sx={{ p: 4, borderRadius: 3, mt: 4 }}>
-                    <Typography fontSize="1.2rem" fontWeight={700} mb={2}>
-                        🔍 원본 분석 데이터 (디버깅용)
+    ) : (
+        /* ========================================
+         * [분석 후 화면] 분석 결과 카드 표시
+         * ======================================== */
+        <Stack sx={{ backgroundColor: '#F4F7F9', height: '100vh', overflow: 'auto', p: 4 }}>
+            {/* 헤더 */}
+            <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} mb={4} spacing={2}>
+                <Box>
+                    <Typography fontSize={'2rem'} fontFamily={'Isamanru-Bold'} mb={1}>
+                        📊 프로젝트 분석 결과
                     </Typography>
-                    <Box
-                        component="pre"
-                        sx={{
-                            backgroundColor: '#111827',
-                            color: '#f5f5f5',
-                            p: 3,
-                            borderRadius: 2,
-                            overflow: 'auto',
-                            maxHeight: '320px',
-                        }}
-                    >
-                        {JSON.stringify(analysisResult, null, 2)}
-                    </Box>
-                </Paper>
+                    <Typography fontFamily={'Pretendard4'} color={'#8C8C8C'}>
+                        PALADOC AI가 분석한 프로젝트 요구사항 및 첨부 양식입니다.
+                    </Typography>
+                </Box>
+
+                {/* 생성 페이지로 이동 버튼 */}
+                <Button variant="contained" size="large" sx={{ backgroundColor: '#262626', '&:hover': { backgroundColor: '#000000' } }} onClick={() => navigate('/works/create')}>
+                    생성 페이지로 이동
+                </Button>
             </Stack>
-        );
+
+            {/* Feature 카드 그리드 */}
+            {featureCards.length ? (
+                <Grid container spacing={2}>
+                    {featureCards.map((feature) => (
+                        <Grid item size={4} key={feature.card_id}>
+                            <FeatureCard feature={feature} />
+                        </Grid>
+                    ))}
+                </Grid>
+            ) : (
+                <Paper elevation={0} sx={{ p: 6, textAlign: 'center', borderRadius: 3 }}>
+                    <Typography fontSize="1.1rem" fontWeight={600}>
+                        표시할 Feature 정보가 없습니다
+                    </Typography>
+                </Paper>
+            )}
+
+            {/* 디버깅용 원본 JSON 데이터 표시 */}
+            <Paper elevation={0} sx={{ p: 4, borderRadius: 3, mt: 4 }}>
+                <Typography fontSize="1.2rem" fontWeight={700} mb={2}>
+                    🔍 원본 분석 데이터 (디버깅용)
+                </Typography>
+                <Box
+                    component="pre"
+                    sx={{
+                        backgroundColor: '#111827',
+                        color: '#f5f5f5',
+                        p: 3,
+                        borderRadius: 2,
+                        overflow: 'auto',
+                        maxHeight: '320px',
+                    }}
+                >
+                    {JSON.stringify(analysisResult, null, 2)}
+                </Box>
+            </Paper>
+        </Stack>
+    );
 };
 
+/**
+ * Feature 카드 컴포넌트
+ * - 분석된 각 feature를 카드 형태로 표시
+ * - 클릭 시 상세 정보를 모달로 표시
+ */
 const FeatureCard = ({ feature }) => {
-    const [open, setOpen] = useState(false);
+    const [open, setOpen] = useState(false); // 모달 열림/닫힘 상태
 
+    // 카드에 표시할 메타 정보 칩 배열 생성
     const metaChips = [
         feature.result_id != null ? `ID: ${feature.result_id}` : null,
         feature.feature_code ? `코드: ${feature.feature_code}` : null,
@@ -294,13 +337,13 @@ const FeatureCard = ({ feature }) => {
 
     return (
         <>
-            {/* === 카드 === */}
+            {/* Feature 카드 */}
             <Paper
                 elevation={1}
                 sx={{
                     p: 3,
                     borderRadius: 3,
-                    height: 220, // 카드 높이 통일
+                    height: 220,
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
@@ -315,11 +358,12 @@ const FeatureCard = ({ feature }) => {
                 onClick={() => setOpen(true)}
             >
                 <Stack spacing={1.5}>
+                    {/* Feature 이름 */}
                     <Typography fontSize="1.1rem" fontWeight={700}>
                         {feature.feature_name || feature.feature_code || 'Feature'}
                     </Typography>
 
-                    {/* 메타 정보 */}
+                    {/* 메타 정보 칩들 (ID, 코드, 유사도) */}
                     {metaChips.length > 0 && (
                         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                             {metaChips.map((label) => (
@@ -328,13 +372,14 @@ const FeatureCard = ({ feature }) => {
                         </Stack>
                     )}
 
+                    {/* 안내 텍스트 */}
                     <Typography fontSize="0.85rem" color="#8C8C8C">
                         상세 내용을 확인하려면 클릭하세요.
                     </Typography>
                 </Stack>
             </Paper>
 
-            {/* === 상세 팝업 === */}
+            {/* 상세 정보 모달 */}
             <Modal open={open} onClose={() => setOpen(false)}>
                 <Box
                     sx={{
@@ -351,12 +396,15 @@ const FeatureCard = ({ feature }) => {
                         overflowY: 'auto',
                     }}
                 >
+                    {/* 모달 타이틀 */}
                     <Typography fontSize="1.4rem" fontWeight={700} mb={2}>
                         {feature.feature_name || feature.feature_code}
                     </Typography>
 
+                    {/* 요약 섹션 (있을 경우만 표시) */}
                     {feature.summary && <Section title="요약">{feature.summary}</Section>}
 
+                    {/* 핵심 포인트 섹션 (배열이 있고 비어있지 않을 경우만 표시) */}
                     {Array.isArray(feature.key_points) && feature.key_points.length > 0 && (
                         <Section title="핵심 포인트">
                             {feature.key_points.map((p, i) => (
@@ -367,12 +415,14 @@ const FeatureCard = ({ feature }) => {
                         </Section>
                     )}
 
+                    {/* 원문 내용 섹션 (있을 경우만 표시) */}
                     {feature.full_content && (
                         <Section title="원문 내용">
                             <Box sx={{ whiteSpace: 'pre-wrap', fontSize: '0.9rem' }}>{feature.full_content}</Box>
                         </Section>
                     )}
 
+                    {/* 닫기 버튼 */}
                     <Typography mt={3} fontSize="0.9rem" color="primary" sx={{ cursor: 'pointer', textAlign: 'center' }} onClick={() => setOpen(false)}>
                         닫기
                     </Typography>
@@ -382,6 +432,11 @@ const FeatureCard = ({ feature }) => {
     );
 };
 
+/**
+ * 모달 내부 섹션 공용 컴포넌트
+ * - title: 섹션 제목
+ * - children: 섹션 내용
+ */
 const Section = ({ title, children }) => (
     <Box sx={{ mb: 3 }}>
         <Typography fontWeight={700} mb={1}>
