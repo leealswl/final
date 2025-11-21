@@ -68,17 +68,48 @@ def history_checker(state: ProposalGenerationState) -> ProposalGenerationState:
     print(1)
     user_prompt = state.get('user_prompt')
     accumulated_data = state.get('accumulated_data', [])
+    current_idx = state.get("current_chapter_index", 0)
+
+    HISTORY_PROMPT = """
+        당신은 기획서 작성 흐름을 **순차적으로 관리하는 전문 AI**이며, 데이터 무결성을 최우선으로 합니다.
+        당신의 임무는 현재 상태를 보고 **다음으로 반드시 작성해야 할 목차**를 결정하는 것입니다.
+
+        [목차 전체 목록]: {toc_structure}
+        [완료된 항목]: {accumulated_data} 
+        [사용자 메시지]: {user_prompt}
+        
+        ---
+        
+        [다음 목차 결정 규칙: 순차적 진행 절대 강제]
+        
+        1. ⭐ **최우선 규칙:** **{toc_structure}** 목록에서 **{accumulated_data}**에 포함되지 않은 (즉, 80점 이상으로 아직 완료되지 않은) 항목들 중 **가장 낮은 번호의 목차**를 선택해야 합니다.
+        
+        2. **사용자 메시지({user_prompt})가 이전에 완료된 목차(예: 1.1 사업 배경)와 관련된 내용을 담고 있더라도, 그 내용을 무시하고** 규칙 1의 순차적 흐름을 유지해야 합니다. 즉, 완료된 목차는 절대로 다시 선택할 수 없습니다.
+        
+        3. 선택된 목차를 출력 형식으로 명확히 표시합니다.
+        
+        [출력 형식 예시]
+        <선택된 목차>1.2 사업 목표</선택된 목차>
+        """
+
+
 
     llm = ChatOpenAI( model="gpt-4o")
 
     prompt = PromptTemplate.from_template(HISTORY_PROMPT)
     chain = prompt | llm | StrOutputParser()
 
-    result = chain.invoke({
+    # 체인 구성: 프롬프트 -> LLM -> 람다 파서
+    # LLM이 반환하는 객체(x)의 content 속성만 파서로 넘겨 최종 결과를 추출합니다.
+    chain = prompt | llm | simple_parser 
+    
+    # chain.invoke()의 결과는 이제 순수한 파싱된 스트링입니다.
+    parsed_chapter = chain.invoke({
         'toc_structure': toc_structure,
         'user_prompt': user_prompt,
-        'accumulated_data': accumulated_data
-        })
+        'accumulated_data': accumulated_data,
+        'current_idx': current_idx  # 🔑 현재 인덱스 전달
+    })
     
     print('----------------')
     print('선택된 목차: ', result)

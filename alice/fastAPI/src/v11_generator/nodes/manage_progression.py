@@ -1,7 +1,4 @@
-# 목차(단락)을 관리 해주는 함수 
-# 한락이 완성이 되면 그 완성됐다는 정보를 판사함수와 작성함수에게전달
-
-from typing import Dict, Any
+from typing import Dict, Any, List
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 from ..state_types import ProposalGenerationState
@@ -18,71 +15,78 @@ def manage_progression(state: ProposalGenerationState) -> Dict[str, Any]:
     
     if not is_sufficient or current_idx >= len(toc):
         # 충분하지 않거나 목차 끝이면 진행 관리 노드가 호출될 일 없음 (방어적 코드)
+        # Note: 이 함수는 sufficiency=True일 때만 호출되어야 함
         return {} 
 
-    # 1. 이전 섹션 데이터 요약 및 누적
-    
-    # 현재 완료된 섹션 정보
+    # 1. 현재 완료된 섹션 정보 및 데이터
     current_item = toc[current_idx]
     current_number = current_item.get("number", "0")
     current_title = current_item.get("title", "제목 없음")
     current_data = state.get("collected_data", "")
     
-    llm = None
-    try:
-        llm = ChatOpenAI(temperature=0, model="gpt-4o")
-    except Exception as e:
-        print(f"⚠️ LLM 초기화 오류: {e}")
-
-    summary_text = current_data
-    if llm and current_data.strip():
-        SUMMARY_PROMPT = f"""
-        당신은 기획서 요약 전문가입니다.
-        아래 [대화 내용]에서 **[{current_title}]** 작성에 필요한 **핵심 정보(사실, 수치, 전략)**만 추출하여 요약하세요.
-        잡담이나 불필요한 문장은 모두 제거하세요. 개조식으로 간결하게 작성하세요.
-        
-        작성이 완료된 목차는 
-        <대화 내용>
-        {{current_data}}
-        """
+    # 🔑 [핵심 1] 중복 저장 방지를 위한 검사
+    # state에서 데이터를 가져와 List[str]로 강제 변환합니다.
+    raw_data = state.get("accumulated_data")
+    
+    if isinstance(raw_data, str) or raw_data is None:
+        # 이전에 잘못된 타입이 저장되었거나, None인 경우, 빈 리스트로 시작
+        accumulated_data_list: List[str] = []
+    else:
+        # 올바른 List[str] 타입인 경우 그대로 사용
+        accumulated_data_list: List[str] = raw_data
+    
+    # 요약 헤더가 이미 존재하는지 검사 (예: "### [1.1 사업 배경 및 필요성 요약]")
+    header_check = f"### [{current_number} {current_title} 요약]"
+    is_already_saved = any(header_check in content for content in accumulated_data_list)
+    
+    if is_already_saved:
+        print(f"✅ 데이터 재처리 스킵: [{current_number} {current_title}]은 이미 최종 저장소에 저장되어 있습니다.")
+        # 이미 저장되어 있다면, 요약/저장 과정을 건너뛰고 기존 리스트를 유지합니다.
+        new_accumulated_list = accumulated_data_list
+    
+    else:
+        # --- [최초 저장: 요약 및 압축 로직] ---
+        llm = None
         try:
-            prompt = PromptTemplate.from_template(SUMMARY_PROMPT)
-            chain = prompt | llm
-            summary_result = chain.invoke({"current_data": current_data}).content.strip()
-            summary_text = summary_result
-            print(f"⚡ 데이터 압축 완료: {current_number} - {len(current_data)}자 -> {len(summary_text)}자")
+            llm = ChatOpenAI(temperature=0, model="gpt-4o")
         except Exception as e:
-            print(f"⚠️ 요약 중 오류 발생: {e}")
+            print(f"⚠️ LLM 초기화 오류: {e}")
 
-    # 누적 데이터에 불러오기
-    accumulated_data = state.get("accumulated_data", "")
-    
-    new_accumulated = f"{accumulated_data}\n\n### [{current_number} {current_title} 요약]\n{summary_text}\n----------------------------------------\n"
-    
-    # 2. [핵심] 다음 섹션 인덱스 찾기
-# 4. 다음 챕터 계산
-    
-    # ------------------------------------------------------------------
-    # 🔑 [핵심 수정] 현재 인덱스 이후의 첫 번째 '하위 섹션' (예: 1.2, 2.1)을 찾습니다.
-    #    하위 섹션은 번호에 '.'이 포함되어 있습니다.
-    # ------------------------------------------------------------------
-    next_idx = -1
-    
-    # 현재 인덱스 다음부터 목차 끝까지 순회합니다.
-    for i in range(current_idx + 1, len(toc)):
-        item = toc[i]
-        num = item.get("number", "")
-        
-        # 소수점('.')이 포함된 '하위 섹션'을 찾습니다. (예: 1.1, 1.2, 2.1)
-        if '.' in num: 
-            next_idx = i
-            break
+        summary_text = current_data
+        if llm and current_data.strip():
+            SUMMARY_PROMPT = f"""
+            당신은 기획서 요약 전문가입니다.
+            아래 [대화 내용]에서 **[{current_title}]** 작성에 필요한 **핵심 정보(사실, 수치, 전략)**만 추출하여 요약하세요.
+            잡담이나 불필요한 문장은 모두 제거하세요. 개조식으로 간결하게 작성하세요.
             
-    # ------------------------------------------------------------------
-
-    if next_idx != -1:
+            <대화 내용>
+            {{current_data}}
+            """
+            try:
+                prompt = PromptTemplate.from_template(SUMMARY_PROMPT)
+                chain = prompt | llm
+                summary_result = chain.invoke({"current_data": current_data}).content.strip()
+                summary_text = summary_result
+                print(f"⚡ 데이터 압축 완료: {current_number} - {len(current_data)}자 -> {len(summary_text)}자")
+            except Exception as e:
+                print(f"⚠️ 요약 중 오류 발생: {e}")
+        
+        # 요약된 내용을 List에 추가할 포맷을 만듭니다.
+        summary_content = f"### [{current_number} {current_title} 요약]\n{summary_text}\n----------------------------------------"
+        
+        # 💡 [핵심 수정] 리스트 결합을 사용하여 데이터를 추가합니다.
+        new_accumulated_list = accumulated_data_list + [summary_content]
+        
+        print(f"⚡ 데이터 압축 및 저장 완료: [{current_number} {current_title}]")
+    
+    
+    # 2. [핵심 2] 다음 섹션 인덱스 업데이트 (중복 여부와 상관없이 다음으로 진행)
+    next_idx = current_idx + 1 # 완료된 인덱스 다음 순서로 업데이트
+    
+    if next_idx < len(toc):
         next_chapter = toc[next_idx]
-        print(f"⏩ 섹션 전환: [{current_title}] -> [{next_chapter.get('title')}]")
+        # print 문은 실제 저장 여부와 상관없이 다음 인덱스 정보를 출력
+        print(f"⏩ 섹션 인덱스 업데이트: [{current_title}] -> 다음 인덱스 [{next_chapter.get('title')}]")
         
         return {
             "current_chapter_index": next_idx,
