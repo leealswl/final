@@ -41,3 +41,12 @@ alice/practice/
 parsed_results/
 
 docs/
+
+chroma_db/
+alice/db/
+
+alice/fastAPI/src/extracted_texts
+
+alice/fastAPI/law_pipeline_data/vectordb
+
+alice/fastAPI/src/chroma_db

@@ -68,12 +68,10 @@ def history_checker(state: ProposalGenerationState) -> ProposalGenerationState:
     print(1)
     user_prompt = state.get('user_prompt', "").strip()
     accumulated_data = state.get('accumulated_data', [])
-   
     llm = ChatOpenAI( model="gpt-4o")
 
     prompt = PromptTemplate.from_template(HISTORY_PROMPT)
     chain = prompt | llm | StrOutputParser()
-
     
     # chain.invoke()의 결과는 이제 순수한 파싱된 스트링입니다.
     result = chain.invoke({

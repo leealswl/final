@@ -1,9 +1,8 @@
-// 📄 AnalyzeView.jsx
 import { Box, Button, Grid, Stack, Typography, CircularProgress, Paper, Chip, Modal } from '@mui/material';
 import { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFileStore } from '../../../store/useFileStore';
-// import { useAnalysisStore } from '../../../store/useAnalysisStore';
+import { useAnalysisStore } from '../../../store/useAnalysisStore';
 import api from '../../../utils/api';
 import 문서아이콘 from './icons/문서 아이콘.png';
 import 폴더아이콘 from './icons/폴더 아이콘.png';
@@ -14,18 +13,30 @@ import { useAuthStore } from '../../../store/useAuthStore';
 const AnalyzeView = () => {
     const navigate = useNavigate();
     const { tree } = useFileStore();
-    // const setAnalysisResult = useAnalysisStore((state) => state.setAnalysisResult);
-    const [analysisResult, setAnalysisResult] = useState(null);
+    const setAnalysisResult = useAnalysisStore((state) => state.setAnalysisResult);
+    const analysisResult = useAnalysisStore((state) => state.analysisResult);
+    const analysisData = analysisResult?.data || {};
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [analyzeResult, setAnalyzeResult] = useState(true);
 
     const user = useAuthStore((s) => s.user);
     const project = useProjectStore((s) => s.project);
 
     console.log('projectIdx: ', project.projectIdx);
     console.log('user: ', user.userId);
+
+    const featureCards = useMemo(() => {
+        return (analysisData.features || []).map((feature, index) => {
+            const resultId = feature.result_id ?? index + 1;
+            const cardId = `${feature.feature_code || feature.feature_name || 'feature'}_${resultId}`;
+            return {
+                ...feature,
+                result_id: resultId,
+                card_id: cardId,
+            };
+        });
+    }, [analysisData.features]);
 
     // ✅ 업로드 컴포넌트 각각 제어할 Ref
     const rfpUploadRef = useRef(null);
@@ -44,15 +55,6 @@ const AnalyzeView = () => {
         }
         return files;
     };
-
-    const featureCards = useMemo(() => {
-        if (!analysisResult || !analysisResult.data || !analysisResult.data.features) return [];
-        return analysisResult.data.features.map((feature, index) => {
-            const resultId = feature.result_id ?? index + 1;
-            const cardId = `${feature.feature_code || feature.feature_name || 'feature'}_${resultId}`;
-            return { ...feature, result_id: resultId, card_id: cardId };
-        });
-    }, [analysisResult]);
 
     const handleAnalysisStart = async () => {
         try {
@@ -99,9 +101,9 @@ const AnalyzeView = () => {
 
             setAnalysisResult(response.data);
 
-            setAnalyzeResult(false);
+            // setAnalyzeResult(false);
 
-            // navigate('/works/analyze/dashboard', { state: { analysisResult: response.data } });
+            //navigate('/works/analyze/dashboard', { state: { analysisResult: response.data } });
         } catch (err) {
             console.error('❌ 분석 실패:', err);
 
@@ -120,7 +122,7 @@ const AnalyzeView = () => {
         }
     };
 
-    return analyzeResult ? (
+    return analysisResult == null?(
         <Stack sx={{ backgroundColor: '#F4F7F9' }} height={'100vh'} justifyContent={'center'}>
             <Stack spacing={3} mb={5} alignItems={'center'}>
                 <Typography fontSize={'2rem'} fontFamily={'Isamanru-Bold'}>
@@ -219,62 +221,63 @@ const AnalyzeView = () => {
                 </Box>
             </Stack>
         </Stack>
-    ) : (
-        <Stack sx={{ backgroundColor: '#F4F7F9', height: '100vh', overflow: 'auto', p: 4 }}>
-            {/* 헤더 */}
-            <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} mb={4} spacing={2}>
-                <Box>
-                    <Typography fontSize={'2rem'} fontFamily={'Isamanru-Bold'} mb={1}>
-                        📊 프로젝트 분석 결과
+    ) : 
+    (
+            <Stack sx={{ backgroundColor: '#F4F7F9', height: '100vh', overflow: 'auto', p: 4 }}>
+                {/* 헤더 */}
+                <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} mb={4} spacing={2}>
+                    <Box>
+                        <Typography fontSize={'2rem'} fontFamily={'Isamanru-Bold'} mb={1}>
+                            📊 프로젝트 분석 결과
+                        </Typography>
+                        <Typography fontFamily={'Pretendard4'} color={'#8C8C8C'}>
+                            PALADOC AI가 분석한 프로젝트 요구사항 및 첨부 양식입니다.
+                        </Typography>
+                    </Box>
+    
+                    <Button variant="contained" size="large" sx={{ backgroundColor: '#262626', '&:hover': { backgroundColor: '#000000' } }} onClick={() => navigate('/works/create')}>
+                        생성 페이지로 이동
+                    </Button>
+                </Stack>
+    
+                {/* Feature 카드 */}
+                {featureCards.length ? (
+                    <Grid container spacing={2}>
+                        {featureCards.map((feature) => (
+                            <Grid item size={4} key={feature.card_id}>
+                                <FeatureCard feature={feature} />
+                            </Grid>
+                        ))}
+                    </Grid>
+                ) : (
+                    <Paper elevation={0} sx={{ p: 6, textAlign: 'center', borderRadius: 3 }}>
+                        <Typography fontSize="1.1rem" fontWeight={600}>
+                            표시할 Feature 정보가 없습니다
+                        </Typography>
+                    </Paper>
+                )}
+    
+                {/* 디버깅 JSON */}
+                {/* <Paper elevation={0} sx={{ p: 4, borderRadius: 3, mt: 4 }}>
+                    <Typography fontSize="1.2rem" fontWeight={700} mb={2}>
+                        🔍 원본 분석 데이터 (디버깅용)
                     </Typography>
-                    <Typography fontFamily={'Pretendard4'} color={'#8C8C8C'}>
-                        PALADOC AI가 분석한 프로젝트 요구사항 및 첨부 양식입니다.
-                    </Typography>
-                </Box>
-
-                <Button variant="contained" size="large" sx={{ backgroundColor: '#262626', '&:hover': { backgroundColor: '#000000' } }} onClick={() => navigate('/works/create')}>
-                    생성 페이지로 이동
-                </Button>
+                    <Box
+                        component="pre"
+                        sx={{
+                            backgroundColor: '#111827',
+                            color: '#f5f5f5',
+                            p: 3,
+                            borderRadius: 2,
+                            overflow: 'auto',
+                            maxHeight: '320px',
+                        }}
+                    >
+                        {JSON.stringify(analysisResult, null, 2)}
+                    </Box>
+                </Paper> */}
             </Stack>
-
-            {/* Feature 카드 */}
-            {featureCards.length ? (
-                <Grid container spacing={2}>
-                    {featureCards.map((feature) => (
-                        <Grid item size={4} key={feature.card_id}>
-                            <FeatureCard feature={feature} />
-                        </Grid>
-                    ))}
-                </Grid>
-            ) : (
-                <Paper elevation={0} sx={{ p: 6, textAlign: 'center', borderRadius: 3 }}>
-                    <Typography fontSize="1.1rem" fontWeight={600}>
-                        표시할 Feature 정보가 없습니다
-                    </Typography>
-                </Paper>
-            )}
-
-            {/* 디버깅 JSON */}
-            <Paper elevation={0} sx={{ p: 4, borderRadius: 3, mt: 4 }}>
-                <Typography fontSize="1.2rem" fontWeight={700} mb={2}>
-                    🔍 원본 분석 데이터 (디버깅용)
-                </Typography>
-                <Box
-                    component="pre"
-                    sx={{
-                        backgroundColor: '#111827',
-                        color: '#f5f5f5',
-                        p: 3,
-                        borderRadius: 2,
-                        overflow: 'auto',
-                        maxHeight: '320px',
-                    }}
-                >
-                    {JSON.stringify(analysisResult, null, 2)}
-                </Box>
-            </Paper>
-        </Stack>
-    );
+        );
 };
 
 const FeatureCard = ({ feature }) => {
@@ -376,9 +379,6 @@ const FeatureCard = ({ feature }) => {
     );
 };
 
-/* -----------------------------------------------------
- * Modal 내부 섹션 공용 컴포넌트
- * ---------------------------------------------------- */
 const Section = ({ title, children }) => (
     <Box sx={{ mb: 3 }}>
         <Typography fontWeight={700} mb={1}>
@@ -387,5 +387,6 @@ const Section = ({ title, children }) => (
         {children}
     </Box>
 );
+
 
 export default AnalyzeView;

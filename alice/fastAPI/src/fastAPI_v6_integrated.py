@@ -38,7 +38,7 @@ DB_PATH = str(NEW_DB_PATH)
 
 # 그래프 생성 (설계도만 가져옴)
 proposal_graph = create_proposal_graph()
-# batch_app = create_batch_graph()
+batch_app = create_batch_graph()
 
 # Request 모델들
 class ResumeRequest(BaseModel):
@@ -141,21 +141,36 @@ async def analyze_documents(
 
         print(f"✅ 파일 변환 완료: {len(saved_files)}개")
 
-        # (기존 분석 로직 유지)
-        base_dir = Path(__file__).resolve().parent.parent
-        json_file_path = base_dir / "result.json"
-        response_data = {}
-        if json_file_path.exists():
-            try:
-                with open(json_file_path, 'r', encoding='utf-8') as f:
-                    response_data = json.load(f)
-                print(f"✅ 'result.json' 파일 로드 완료. (경로: {json_file_path})")
-            except Exception as e:
-                print(f"❌ 'result.json' 로드 중 오류 발생: {e}")
-                response_data = {"status": "error", "message": "JSON 파일 로드 오류"}
-        else:
-            print(f"⚠️ 'result.json' 파일을 찾을 수 없습니다. 시도된 경로: {json_file_path}")
-            response_data = {"status": "warning", "message": "'result.json' 파일 없음"}
+        state = {
+            "files": saved_files,
+            "user_id": userid,
+            "project_idx": projectidx,
+            "documents": [],
+            "all_chunks": [],
+            "all_embeddings": None,
+            "embedding_model": None,
+            "chroma_client": None,
+            "chroma_collection": None,
+            "vector_db_path": "",
+            "extracted_features": [],
+            "attachment_templates": [],
+            "csv_paths": None,
+            "oracle_ids": None,
+            "response_data": {},
+            "status": "initialized",
+            "errors": []
+        }
+
+        # ========================================
+        # 4단계: LangGraph AI 분석 실행
+        # ========================================
+        # v6_rag의 batch_app이 saved_files를 분석하여:
+        # 1. folder=1 파일들 → 공고 분석 (TOC 추출)
+        # 2. folder=2 파일들 → 첨부서류 분석 (양식 추출)
+        # 3. 사용자 입력 폼 자동 생성
+        print(f"🚀 LangGraph 분석 시작: project_idx={projectidx}")
+        result = await run_in_threadpool(batch_app.invoke, state)
+        print(f"✅ LangGraph 분석 완료")
 
         # ========================================
         # 5단계 LLM 호출 → JSON Plan 생성 [분리함]
@@ -255,7 +270,7 @@ async def generate_content(request: ChatRequest):
         # [주석 처리] 기존의 복잡한 DB 저장 및 Interrupt 방식
         # ---------------------------------------------------------------------
         # thread_id_to_use = request.thread_id if request.thread_id else str(uuid.uuid4())
-        thread_id_to_use = "pigsuyeon" # str값이 바로넘어가서 오류생겨서 이렇게바꿈
+        thread_id_to_use = "sdfwecvxcv" # str값이 바로넘어가서 오류생겨서 이렇게바꿈
 
         async with AsyncSqliteSaver.from_conn_string(DB_PATH) as saver:
             app_run = proposal_graph.compile(checkpointer=saver)
@@ -378,15 +393,52 @@ async def get_table_of_contents(projectidx: int | None = None):
         )
 
     except Exception as e:
-        print(f"❌ /toc 처리 중 기타 서버 오류: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "status": "error",
-                "message": f"FastAPI 내부 오류: {str(e)}",
-                "sections": []
-            }
-        )
+        return {"error": str(e)}
+    
+# @app.post("/verify")
+# async def verify_text(req: VerifyRequest):
+#     """
+#     초안 문단을 문장별로 분리하여
+#     법령 RAG 기반으로 '적합/부적합' 검증해주는 API
+#     """
+#     try:
+#         print("🔍 검증 요청:", req.text[:50], "...")
+
+#         import re
+#         sentences = re.split(r'(?<=[.!?])\s+', req.text.strip())
+
+#         results = []
+#         for s in sentences:
+#             if not s.strip():
+#                 continue
+#             rag_res = rag_chain.invoke(s)
+#             results.append({
+#                 "sentence": s,
+#                 "result": rag_res.content
+#             })
+
+#         return {
+#             "status": "ok",
+#             "count": len(results),
+#             "results": results
+#         }
+
+#     except Exception as e:
+#         print("❌ 검증 오류:", e)
+#         return {
+#             "status": "error",
+#             "message": str(e)
+#         }
+    
+        # print(f"❌ /toc 처리 중 기타 서버 오류: {str(e)}")
+        # return JSONResponse(
+        #     status_code=500,
+        #     content={
+        #         "status": "error",
+        #         "message": f"FastAPI 내부 오류: {str(e)}",
+        #         "sections": []
+        #     }
+        # )
 
 # ========================================
 # 실행 (개발용)
