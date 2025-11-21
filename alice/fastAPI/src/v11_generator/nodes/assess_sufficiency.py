@@ -3,6 +3,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate 
 from ..state_types import ProposalGenerationState
 import re 
+import json # ⬅️ JSON 파싱을 위해 추가 
 
 def assess_info(state: ProposalGenerationState) -> Dict[str, Any]:
     """
@@ -33,17 +34,19 @@ def assess_info(state: ProposalGenerationState) -> Dict[str, Any]:
         [공고문 핵심 전략 및 평가 기준]
         ⭐ {anal_guide} ⭐ 공고문의 핵심 전략이 수집된 정보에 충분히 반영되었는지 평가하세요.
         
-        [평가 기준: '생성 적합성']
-        1. **정량적 데이터 포함 여부:** (예: 연 매출 목표, 시장 규모, % 성장률 등) 구체적인 수치와 데이터가 포함되어 있는가? (기획서의 설득력을 높이는 핵심 요소)
-        2. **논리적 연결성:** 수집된 정보가 목표 목차의 요구 사항을 논리적으로 뒷받침하며 최종 기획서에 그대로 활용될 수 있는가?
-        3. **완료 기준:** 80점 이상이면 '초안 생성에 필요한 정보가 확보됨'으로 판단합니다. 80점 미만이면 추가적인, 더욱 구체적인 정보가 필요합니다.
+        [평가 기준: '생성 적합성' - 100점 만점]
+        1. **정량적 데이터 포함 여부 ({{RATER_1}}):** (예: 연 매출 목표, 시장 규모, % 성장률 등) 구체적인 수치와 데이터가 포함되어 있는가?
+        2. **논리적 연결성 ({{RATER_2}}):** 수집된 정보가 목표 목차의 요구 사항을 논리적으로 뒷받침하며 최종 기획서에 그대로 활용될 수 있는가?
+        3. **공고문 전략 반영 ({{RATER_3}}):** 공고문의 핵심 전략이 수집된 정보에 충분히 반영되었는가?
         
         [출력 형식]
-        - 점수는 반드시 <score> 태그 안에 숫자(정수)만 넣어주세요.
+        - 최종 점수(3가지 항목 점수의 평균)는 반드시 <score> 태그 안에 숫자(정수)만 넣어주세요. (80점 이상이면 합격)
+        - 상세 항목별 점수를 <breakdown> 태그 안에 **JSON** 형태로 넣어주세요. 키는 RATER_1, RATER_2, RATER_3 코드를 사용해야 합니다.
         - 점수를 매긴 이유와 부족한 부분을 <reason> 태그 안에 구체적으로 설명해주세요.
-          (부족한 부분은 '정량적 목표 수치가 부족합니다', '경쟁 우위 요소가 불명확합니다'와 같이 구체적으로 명시)
+          **[중요]** <reason> 내용을 작성할 때, **RATER_1, RATER_2 등의 코드를 절대로 사용하지 마세요.** 항목의 한글 제목("정량적 데이터 포함 여부", "논리적 연결성", "공고문 전략 반영" 등)만 사용해야 합니다.
         
         <score>점수</score>
+        <breakdown>{{"RATER_1": 90, "RATER_2": 80, "RATER_3": 85}}</breakdown>
         <reason>평가 이유 및 부족한 점 설명</reason>
         """
     
@@ -87,6 +90,7 @@ def assess_info(state: ProposalGenerationState) -> Dict[str, Any]:
 
 
     # 3. --- 평가 LLM 호출 및 결과 파싱 ---
+    breakdown_data = {}  # 초기화
     if not collected_data.strip():
         # 데이터가 없으면 0점으로 처리 (LLM 호출 생략)
         final_score = 0
@@ -111,12 +115,27 @@ def assess_info(state: ProposalGenerationState) -> Dict[str, Any]:
                     "anal_guide": anal_guide 
                 }).content.strip()
                 
-                # 🔑 파싱 로직
+                # 🔑 파싱 로직 수정: breakdown 점수 추가 추출
                 score_match = re.search(r"<score>\s*(\d+)\s*</score>", response_text, re.IGNORECASE)
                 reason_match = re.search(r"<reason>\s*(.*?)\s*</reason>", response_text, re.IGNORECASE | re.DOTALL)
+                breakdown_match = re.search(r"<breakdown>\s*(\{.*?\})\s*</breakdown>", response_text, re.IGNORECASE | re.DOTALL)
                 
                 final_score = int(score_match.group(1)) if score_match else 0
                 grading_reason = reason_match.group(1).strip() if reason_match else "평가 이유 파싱 오류"
+                
+                breakdown_data = {}
+                if breakdown_match:
+                    try:
+                        breakdown_json_str = breakdown_match.group(1).strip()
+                        # 🔑 JSON 파싱 실행
+                        breakdown_data = json.loads(breakdown_json_str) 
+                        # 점수를 int로 변환 (안전성 확보)
+                        breakdown_data = {k: int(v) for k, v in breakdown_data.items()}
+                        print(f"📊 상세 평가 항목별 점수: {breakdown_data}")
+                    except json.JSONDecodeError as e:
+                        print(f"❌ Breakdown JSON 파싱 오류: {e}")
+                    except ValueError as e:
+                        print(f"❌ Breakdown 값 타입 변환 오류: {e}")
                 
                 print(f"📊 LLM 평가 결과: {final_score}점 - {grading_reason[:50]}...")
             except Exception as e:
@@ -139,6 +158,7 @@ def assess_info(state: ProposalGenerationState) -> Dict[str, Any]:
         "sufficiency": is_sufficient,
         "completeness_score": final_score,  # 🔑 점수 영속화를 위해 상태에 저장
         "grading_reason": grading_reason,
+        "assessment_breakdown": breakdown_data, # 🔑 상세 점수 저장
         "missing_subsections": [],
         "current_chapter_index": current_idx, 
         "target_chapter": current_title,      
