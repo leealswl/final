@@ -258,7 +258,7 @@ const AnalyzeView = () => {
                 )}
     
                 {/* 디버깅 JSON */}
-                <Paper elevation={0} sx={{ p: 4, borderRadius: 3, mt: 4 }}>
+                {/* <Paper elevation={0} sx={{ p: 4, borderRadius: 3, mt: 4 }}>
                     <Typography fontSize="1.2rem" fontWeight={700} mb={2}>
                         🔍 원본 분석 데이터 (디버깅용)
                     </Typography>
@@ -275,7 +275,7 @@ const AnalyzeView = () => {
                     >
                         {JSON.stringify(analysisResult, null, 2)}
                     </Box>
-                </Paper>
+                </Paper> */}
             </Stack>
         );
 };
