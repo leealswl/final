@@ -83,15 +83,22 @@ def manage_progression(state: ProposalGenerationState) -> Dict[str, Any]:
     # 2. [핵심 2] 다음 섹션 인덱스 업데이트 (중복 여부와 상관없이 다음으로 진행)
     next_idx = current_idx + 1 # 완료된 인덱스 다음 순서로 업데이트
     
+    next_chapter_info = ""
     if next_idx < len(toc):
         next_chapter = toc[next_idx]
+        next_chapter_info = next_chapter.get('title')
         # print 문은 실제 저장 여부와 상관없이 다음 인덱스 정보를 출력
-        print(f"⏩ 섹션 인덱스 업데이트: [{current_title}] -> 다음 인덱스 [{next_chapter.get('title')}]")
-        
+        print(f"⏩ 섹션 인덱스 업데이트: [{current_title}] -> 다음 인덱스 [{next_chapter_info}]")
+    
+    # 🔑 [핵심 수정] 다음 노드(GENERATE_QUERY)에게 완료 정보를 전달
+    just_completed_chapter = f"{current_number} {current_title}"
+    
+    if next_idx < len(toc):
         return {
             "current_chapter_index": next_idx,
             "accumulated_data": new_accumulated_list, # ⬅️ 새로운 리스트 반환 (저장 스킵 시 원본 리스트)
             "collected_data": "", # ⬅️ 다음 챕터를 위해 데이터 초기화
+            "section_just_completed": just_completed_chapter, # 🔑 완료된 섹션 정보 전달
             "next_step": "HISTORY_CHECKER" 
         }
     else:
@@ -101,6 +108,7 @@ def manage_progression(state: ProposalGenerationState) -> Dict[str, Any]:
                 "next_step": "FINISH_DRAFT", 
                 "accumulated_data": new_accumulated_list, 
                 "collected_data": "", 
+                "section_just_completed": just_completed_chapter, # 🔑 마지막 섹션도 완료 정보 전달
                 "current_draft": f"최종 초안을 생성하기 위한 정보가 모두 수집되었습니다. 수집된 총 정보 길이: {len(''.join(new_accumulated_list))}자",
                 "completeness_score": 100
             }

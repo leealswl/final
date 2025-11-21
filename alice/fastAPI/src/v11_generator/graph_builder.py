@@ -1,3 +1,8 @@
+"""
+기획서 생성 LangGraph 워크플로우 빌더
+새로운 플로우:
+  start(N) → LLM 판단 → [충분: 컨텐츠 생성 → end(N)] / [부족: 질문 생성 → 사용자 입력 → 다시 LLM 판단]
+"""
 from typing import Dict, Any, List
 from langgraph.graph import StateGraph, END, START
 from .state_types import ProposalGenerationState 
@@ -21,11 +26,24 @@ def route_after_assessment(state: ProposalGenerationState) -> str:
         # MANAGE_PROGRESSION 노드가 다음 섹션 인덱스를 설정하고 accumulated_data를 정리함
         return "MANAGE_PROGRESSION" 
     
-    # sufficiency: False (70점 미만) -> 추가 질문 필요
+
     return "GENERATE_QUERY"         
 
 # ---------------------------------------------------------
-# 2. 그래프 구축 (섹션 단위 진행 버전)
+# 2. [라우터] HISTORY_CHECKER 결과에 따라 분기 (완료 메시지 생성 OR 정보 평가)
+# ---------------------------------------------------------
+def route_after_history_check(state: ProposalGenerationState) -> str:
+    """HISTORY_CHECKER 결과에 따라, 완료 메시지 생성 OR 정보 평가로 분기"""
+    if state.get("target_already_completed"):
+        # 완료된 목차 언급 시 → GENERATE_QUERY 노드로 바로 이동
+        return "GENERATE_QUERY" 
+    
+
+    # 그 외의 경우 → ASSESS_INFO (정보 평가)
+    return "ASSESS_INFO"
+
+# ---------------------------------------------------------
+# 3. 그래프 구축 (섹션 단위 진행 버전)
 # ---------------------------------------------------------
 
 def create_proposal_graph() -> StateGraph:
@@ -58,9 +76,15 @@ def create_proposal_graph() -> StateGraph:
     # 목차 관리하는 히스토리 체커 노드 추가
     workflow.add_edge("SAVE_USER", "HISTORY_CHECKER")
 
-
-    # 3. 평가: 저장 -> 평가
-    workflow.add_edge("HISTORY_CHECKER", "ASSESS_INFO")
+    # 3. 조건부 분기: HISTORY_CHECKER -> (완료 메시지) GENERATE_QUERY OR (일반 흐름) ASSESS_INFO
+    workflow.add_conditional_edges(
+        "HISTORY_CHECKER", 
+        route_after_history_check, 
+        {
+            "ASSESS_INFO": "ASSESS_INFO", 
+            "GENERATE_QUERY": "GENERATE_QUERY"
+        }
+    )
     
     # 4. 조건부 분기: 평가 -> (합격) 매니저 OR (불합격) 질문자
     workflow.add_conditional_edges(
@@ -72,11 +96,9 @@ def create_proposal_graph() -> StateGraph:
         }
     )
     # 5. 다음 질문: 매니저(인덱스 이동 완료) -> 질문자
-    # (새로운 섹션에 대한 첫 질문을 생성하도록 루프 재시작)
     workflow.add_edge("MANAGE_PROGRESSION", "GENERATE_QUERY")
     
     # 6. 종료: 질문 생성 -> END
-    # (GENERATE_QUERY는 사용자에게 질문을 던지고 LangGraph 실행을 일시 중단하는 역할)
     workflow.add_edge("GENERATE_QUERY", END)
     
     return workflow

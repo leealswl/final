@@ -9,9 +9,32 @@ def history_checker(state: ProposalGenerationState) -> ProposalGenerationState:
 
     toc_structure = state.get("draft_toc_structure", [])
     print(1)
-    user_prompt = state.get('user_prompt')
+    user_prompt = state.get('user_prompt', "").strip()
     accumulated_data = state.get('accumulated_data', [])
     current_idx = state.get("current_chapter_index", 0)
+    
+    # 1. 완료된 목차 목록 추출 (번호 및 제목)
+    completed_chapters = {} 
+    for item in accumulated_data:
+        if isinstance(item, str):
+            match = re.search(r"### \[(\d+\.?\d*)\s*(.*?)\s*요약\]", item)
+            if match:
+                completed_chapters[match.group(1)] = match.group(2).strip()
+    
+    # 2. 사용자 프롬프트가 완료된 목차를 언급하는지 확인
+    target_completed_chapter = None
+    for num, title in completed_chapters.items():
+        if num in user_prompt or title in user_prompt:
+            target_completed_chapter = f"{num} {title}"
+            break
+            
+    # 3. 🔑 [핵심] 완료된 목차 언급 시 플래그 설정 후 반환
+    if target_completed_chapter:
+        print(f"⚠️ [완료 목차 언급 감지]: '{target_completed_chapter}'는 이미 완료되었습니다. 완료 메시지 생성 플래그 설정.")
+        return {
+            'target_already_completed': target_completed_chapter,
+            'next_step': "GENERATE_QUERY"  # 라우터가 사용할 커스텀 값
+        }
 
     HISTORY_PROMPT = """
         당신은 기획서 작성 흐름을 **순차적으로 관리하는 전문 AI**이며, 데이터 무결성을 최우선으로 합니다.
@@ -27,9 +50,13 @@ def history_checker(state: ProposalGenerationState) -> ProposalGenerationState:
         
         1. ⭐ **최우선 규칙:** **{toc_structure}** 목록에서 **{accumulated_data}**에 포함되지 않은 (즉, 80점 이상으로 아직 완료되지 않은) 항목들 중 **가장 낮은 번호의 목차**를 선택해야 합니다.
         
-        2. **사용자 메시지({user_prompt})가 이전에 완료된 목차(예: 1.1 사업 배경)와 관련된 내용을 담고 있더라도, 그 내용을 무시하고** 규칙 1의 순차적 흐름을 유지해야 합니다. 즉, 완료된 목차는 절대로 다시 선택할 수 없습니다.
+        2. **완료된 항목에 대한 처리:**
+           - **[완료된 항목]**에 이미 포함된 목차(예: 1.1 사업 배경)에 대해 사용자가 새로운 정보를 입력해도, **절대 해당 목차로 되돌아가거나 정보를 다시 수집해서는 안 됩니다.**
+           - 완료된 목차에 대한 사용자 입력은 **무시**하고, 오직 **현재 작업 중인 다음 목차**에 대한 정보로만 간주하여 처리합니다.
         
-        3. 선택된 목차를 출력 형식으로 명확히 표시합니다.
+        3. **사용자 메시지({user_prompt})**는 오직 현재 작업 중인 목차에 대한 정보로만 해석해야 합니다.
+        
+        4. 선택된 목차를 출력 형식으로 명확히 표시합니다.
         
         [출력 형식 예시]
         <선택된 목차>1.2 사업 목표</선택된 목차>
@@ -94,9 +121,11 @@ def history_checker(state: ProposalGenerationState) -> ProposalGenerationState:
         current_idx = found_idx
         print(f"✅ 목차 인덱스 업데이트: '{parsed_chapter}' → 인덱스 {current_idx}")
 
+    # 5. 최종 반환 (일반 흐름)
     # 람다 함수를 썼기 때문에, parsed_chapter는 이미 최종 스트링입니다.
     return {
             'target_chapter': parsed_chapter, # ⬅️ LLM이 동적으로 결정한 목표 제목 (예: "사업 목표")
             'current_chapter_index': current_idx, # ⬅️ 찾은 인덱스로 상태 업데이트
+            'target_already_completed': None, # 일반 흐름에서는 플래그 초기화
             'next_step': "ASSESS_SUFFICIENCY" 
         }
