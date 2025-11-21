@@ -22,6 +22,9 @@ backend/uploads/
 *.local.yml
 *.secret.yml
 
+# DB
+alice/db/
+
 # 로그/캐시
 *.log
 logs/
