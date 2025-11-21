@@ -397,4 +397,5 @@ if __name__ == "__main__":
         "fastAPI_v6_integrated:app",
         host=settings.HOST,
         port=settings.PORT,
+        
         reload=settings.RELOAD)
