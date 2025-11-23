@@ -1,6 +1,5 @@
 import { Box, Button, Grid, Stack, Typography, CircularProgress, Paper, Chip, Modal } from '@mui/material';
 import { useState, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useFileStore } from '../../../store/useFileStore';
 import { useAnalysisStore } from '../../../store/useAnalysisStore';
 import api from '../../../utils/api';
@@ -16,8 +15,6 @@ import { useAuthStore } from '../../../store/useAuthStore';
  * - analysisResult가 있으면: 분석 결과 카드 표시 화면
  */
 const AnalyzeView = () => {
-    const navigate = useNavigate();
-
     // 전역 상태 관리
     const { tree } = useFileStore(); // 업로드된 파일 트리 구조
     const setAnalysisResult = useAnalysisStore((state) => state.setAnalysisResult); // 분석 결과 저장 함수
@@ -260,39 +257,95 @@ const AnalyzeView = () => {
         </Stack>
     ) : 
     (
-            <Stack sx={{ backgroundColor: '#F4F7F9', height: '100vh', overflow: 'auto', p: 4 }}>
+            <Stack sx={{ backgroundColor: '#F4F7F9', height: '100vh', overflow: 'auto', p: 4 }} spacing={3}>
                 {/* 헤더 */}
-                <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} mb={4} spacing={2}>
-                    <Box>
-                        <Typography fontSize={'2rem'} fontFamily={'Isamanru-Bold'} mb={1}>
-                            📊 프로젝트 분석 결과
-                        </Typography>
-                        <Typography fontFamily={'Pretendard4'} color={'#8C8C8C'}>
-                            PALADOC AI가 분석한 프로젝트 요구사항 및 첨부 양식입니다.
-                        </Typography>
-                    </Box>
-    
-                    <Button variant="contained" size="large" sx={{ backgroundColor: '#262626', '&:hover': { backgroundColor: '#000000' } }} onClick={() => navigate('/works/create')}>
-                        생성 페이지로 이동
-                    </Button>
-                </Stack>
-    
-                {/* Feature 카드 */}
-                {featureCards.length ? (
-                    <Grid container spacing={2}>
-                        {featureCards.map((feature) => (
-                            <Grid item size={4} key={feature.card_id}>
-                                <FeatureCard feature={feature} />
+                <Box>
+                    <Typography fontSize={'2rem'} fontFamily={'Isamanru-Bold'} mb={1}>
+                        📊 프로젝트 분석 결과
+                    </Typography>
+                    <Typography fontFamily={'Pretendard4'} color={'#8C8C8C'}>
+                        PALADOC AI가 분석한 프로젝트 요구사항 및 첨부 양식입니다.
+                    </Typography>
+                </Box>
+
+                {/* 핵심 정보 박스 */}
+                <Paper 
+                    elevation={2} 
+                    sx={{ 
+                        p: 4, 
+                        borderRadius: 3, 
+                        backgroundColor: 'white',
+                        border: '1px solid #e0e0e0'
+                    }}
+                >
+                    <Typography fontSize="1.6rem" fontWeight={700} mb={3} fontFamily={'Isamanru-Bold'}>
+                        🔑 핵심 정보
+                    </Typography>
+                    <Grid container spacing={3}>
+                        {featureCards
+                            .filter(feature => {
+                                // 핵심 정보로 분류할 feature_code들
+                                const coreFeatures = [
+                                    'project_name', 'announcement_date', 'application_period',
+                                    'project_period', 'support_scale', 'deadline'
+                                ];
+                                return coreFeatures.includes(feature.feature_code);
+                            })
+                            .slice(0, 6) // 최대 6개만 표시
+                            .map((feature) => (
+                                <Grid item xs={12} sm={6} md={4} key={feature.card_id}>
+                                    <Box sx={{ mb: 2 }}>
+                                        <Typography fontSize="1.4rem" color="#262626" mb={1} fontWeight={700}>
+                                            {feature.feature_name || feature.feature_code}
+                                        </Typography>
+                                        <Typography fontSize="1.1rem" fontWeight={400} color="#595959">
+                                            {feature.summary || feature.full_content?.substring(0, 50) || '정보 없음'}
+                                        </Typography>
+                                    </Box>
+                                </Grid>
+                            ))}
+                        {featureCards.filter(f => {
+                            const coreFeatures = ['project_name', 'announcement_date', 'application_period', 'project_period', 'support_scale', 'deadline'];
+                            return coreFeatures.includes(f.feature_code);
+                        }).length === 0 && (
+                            <Grid item xs={12}>
+                                <Typography color="#8C8C8C" textAlign="center">
+                                    핵심 정보가 없습니다.
+                                </Typography>
                             </Grid>
-                        ))}
+                        )}
                     </Grid>
-                ) : (
-                    <Paper elevation={0} sx={{ p: 6, textAlign: 'center', borderRadius: 3 }}>
-                        <Typography fontSize="1.1rem" fontWeight={600}>
-                            표시할 Feature 정보가 없습니다
-                        </Typography>
-                    </Paper>
-                )}
+                </Paper>
+
+                {/* Feature 카드 박스 */}
+                <Paper 
+                    elevation={2} 
+                    sx={{ 
+                        p: 4, 
+                        borderRadius: 3, 
+                        backgroundColor: 'white',
+                        border: '1px solid #e0e0e0'
+                    }}
+                >
+                    <Typography fontSize="1.3rem" fontWeight={700} mb={3} fontFamily={'Isamanru-Bold'}>
+                        📋 상세 요구사항
+                    </Typography>
+                    {featureCards.length ? (
+                        <Grid container spacing={2}>
+                            {featureCards.map((feature) => (
+                                <Grid item size={4} key={feature.card_id}>
+                                    <FeatureCard feature={feature} />
+                                </Grid>
+                            ))}
+                        </Grid>
+                    ) : (
+                        <Box sx={{ p: 6, textAlign: 'center' }}>
+                            <Typography fontSize="1.1rem" fontWeight={600} color="#8C8C8C">
+                                표시할 Feature 정보가 없습니다
+                            </Typography>
+                        </Box>
+                    )}
+                </Paper>
     
                 {/* 디버깅 JSON */}
                 {/* <Paper elevation={0} sx={{ p: 4, borderRadius: 3, mt: 4 }}>
@@ -325,13 +378,6 @@ const AnalyzeView = () => {
 const FeatureCard = ({ feature }) => {
     const [open, setOpen] = useState(false); // 모달 열림/닫힘 상태
 
-    // 카드에 표시할 메타 정보 칩 배열 생성
-    const metaChips = [
-        feature.result_id != null ? `ID: ${feature.result_id}` : null,
-        feature.feature_code ? `코드: ${feature.feature_code}` : null,
-        typeof feature.vector_similarity === 'number' ? `유사도: ${feature.vector_similarity.toFixed(2)}` : null,
-    ].filter(Boolean);
-
     return (
         <>
             {/* Feature 카드 */}
@@ -340,7 +386,7 @@ const FeatureCard = ({ feature }) => {
                 sx={{
                     p: 3,
                     borderRadius: 3,
-                    height: 220,
+                    minHeight: 220,
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
@@ -360,17 +406,30 @@ const FeatureCard = ({ feature }) => {
                         {feature.feature_name || feature.feature_code || 'Feature'}
                     </Typography>
 
-                    {/* 메타 정보 칩들 (ID, 코드, 유사도) */}
-                    {metaChips.length > 0 && (
-                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                            {metaChips.map((label) => (
-                                <Chip key={label} label={label} size="small" sx={{ backgroundColor: '#E6F4FF', color: '#0958d9' }} />
-                            ))}
-                        </Stack>
+                    {/* 요약 내용 */}
+                    {feature.summary ? (
+                        <Typography 
+                            fontSize="0.9rem" 
+                            color="#595959"
+                            sx={{
+                                display: '-webkit-box',
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                lineHeight: 1.5,
+                            }}
+                        >
+                            {feature.summary}
+                        </Typography>
+                    ) : (
+                        <Typography fontSize="0.85rem" color="#8C8C8C" sx={{ fontStyle: 'italic' }}>
+                            요약 정보가 없습니다.
+                        </Typography>
                     )}
 
                     {/* 안내 텍스트 */}
-                    <Typography fontSize="0.85rem" color="#8C8C8C">
+                    <Typography fontSize="0.85rem" color="#8C8C8C" sx={{ mt: 'auto' }}>
                         상세 내용을 확인하려면 클릭하세요.
                     </Typography>
                 </Stack>
