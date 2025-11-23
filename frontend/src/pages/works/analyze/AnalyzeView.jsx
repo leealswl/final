@@ -258,28 +258,6 @@ const AnalyzeView = () => {
                 </Box>
             </Stack>
         </Stack>
-<<<<<<< HEAD
-    ) : (
-        /* ========================================
-         * [분석 후 화면] 분석 결과 카드 표시
-         * ======================================== */
-        <Stack sx={{ backgroundColor: '#F4F7F9', height: '100vh', overflow: 'auto', p: 4 }}>
-            {/* 헤더 */}
-            <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} mb={4} spacing={2}>
-                <Box>
-                    <Typography fontSize={'2rem'} fontFamily={'Isamanru-Bold'} mb={1}>
-                        📊 프로젝트 분석 결과
-                    </Typography>
-                    <Typography fontFamily={'Pretendard4'} color={'#8C8C8C'}>
-                        PALADOC AI가 분석한 프로젝트 요구사항 및 첨부 양식입니다.
-                    </Typography>
-                </Box>
-
-                {/* 생성 페이지로 이동 버튼 */}
-                <Button variant="contained" size="large" sx={{ backgroundColor: '#262626', '&:hover': { backgroundColor: '#000000' } }} onClick={() => navigate('/works/create')}>
-                    생성 페이지로 이동
-                </Button>
-=======
     ) : 
     (
             <Stack sx={{ backgroundColor: '#F4F7F9', height: '100vh', overflow: 'auto', p: 4 }}>
@@ -335,7 +313,6 @@ const AnalyzeView = () => {
                         {JSON.stringify(analysisResult, null, 2)}
                     </Box>
                 </Paper> */}
->>>>>>> dev
             </Stack>
 
             {/* Feature 카드 그리드 */}
