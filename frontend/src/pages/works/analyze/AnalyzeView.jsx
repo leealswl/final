@@ -314,44 +314,6 @@ const AnalyzeView = () => {
                     </Box>
                 </Paper> */}
             </Stack>
-
-            {/* Feature 카드 그리드 */}
-            {featureCards.length ? (
-                <Grid container spacing={2}>
-                    {featureCards.map((feature) => (
-                        <Grid item size={4} key={feature.card_id}>
-                            <FeatureCard feature={feature} />
-                        </Grid>
-                    ))}
-                </Grid>
-            ) : (
-                <Paper elevation={0} sx={{ p: 6, textAlign: 'center', borderRadius: 3 }}>
-                    <Typography fontSize="1.1rem" fontWeight={600}>
-                        표시할 Feature 정보가 없습니다
-                    </Typography>
-                </Paper>
-            )}
-
-            {/* 디버깅용 원본 JSON 데이터 표시 */}
-            <Paper elevation={0} sx={{ p: 4, borderRadius: 3, mt: 4 }}>
-                <Typography fontSize="1.2rem" fontWeight={700} mb={2}>
-                    🔍 원본 분석 데이터 (디버깅용)
-                </Typography>
-                <Box
-                    component="pre"
-                    sx={{
-                        backgroundColor: '#111827',
-                        color: '#f5f5f5',
-                        p: 3,
-                        borderRadius: 2,
-                        overflow: 'auto',
-                        maxHeight: '320px',
-                    }}
-                >
-                    {JSON.stringify(analysisResult, null, 2)}
-                </Box>
-            </Paper>
-        </Stack>
     );
 };
 
