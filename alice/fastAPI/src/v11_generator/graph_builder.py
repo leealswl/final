@@ -14,6 +14,7 @@ from .nodes.ask_user_and_update_data import ask_user_and_update_data
 from .nodes.assess_sufficiency import assess_info
 from .nodes.manage_progression import manage_progression
 from .nodes.histroy_checker import history_checker
+from .nodes.generate_draft import generate_proposal_draft
 
 
 # ---------------------------------------------------------
@@ -23,8 +24,8 @@ def route_after_assessment(state: ProposalGenerationState) -> str:
     """판단 결과: 충분하면 다음 섹션으로, 부족하면 추가 질문으로"""
     # sufficiency: True (70점 이상) -> 다음 섹션으로 이동해야 함
     if state.get("sufficiency", False):
-        # MANAGE_PROGRESSION 노드가 다음 섹션 인덱스를 설정하고 accumulated_data를 정리함
-        return "MANAGE_PROGRESSION" 
+        # generate_draft 노드가 다음 섹션 인덱스를 설정하고 accumulated_data를 정리함
+        return "generate_draft" 
     
 
     return "GENERATE_QUERY"         
@@ -57,7 +58,7 @@ def create_proposal_graph() -> StateGraph:
     # C. 평가 (70점 이상인지 판단)
     workflow.add_node("ASSESS_INFO", assess_info)
     # D. 진행 관리 (다음 섹션으로 인덱스 이동)
-    workflow.add_node("MANAGE_PROGRESSION", manage_progression) 
+    workflow.add_node("generate_draft", generate_proposal_draft) 
     # E. 질문 생성 (질문자 역할)
     workflow.add_node("GENERATE_QUERY", generate_query)
     # F. 목차 관리
@@ -76,27 +77,21 @@ def create_proposal_graph() -> StateGraph:
     # 목차 관리하는 히스토리 체커 노드 추가
     workflow.add_edge("SAVE_USER", "HISTORY_CHECKER")
 
-    # 3. 조건부 분기: HISTORY_CHECKER -> (완료 메시지) GENERATE_QUERY OR (일반 흐름) ASSESS_INFO
-    workflow.add_conditional_edges(
-        "HISTORY_CHECKER", 
-        route_after_history_check, 
-        {
-            "ASSESS_INFO": "ASSESS_INFO", 
-            "GENERATE_QUERY": "GENERATE_QUERY"
-        }
-    )
+    # 3. 평가: 저장 -> 평가
+    workflow.add_edge("HISTORY_CHECKER", "ASSESS_INFO")
     
     # 4. 조건부 분기: 평가 -> (합격) 매니저 OR (불합격) 질문자
     workflow.add_conditional_edges(
         "ASSESS_INFO",
         route_after_assessment,
         {
-            "MANAGE_PROGRESSION": "MANAGE_PROGRESSION", # 합격 시 -> 다음 섹션으로 인덱스 변경
+            "generate_draft": "generate_draft", # 합격 시 -> 다음 섹션으로 인덱스 변경
             "GENERATE_QUERY": "GENERATE_QUERY"          # 불합격 시 -> 현재 섹션에 대한 추가 질문 생성
         }
     )
     # 5. 다음 질문: 매니저(인덱스 이동 완료) -> 질문자
-    workflow.add_edge("MANAGE_PROGRESSION", "GENERATE_QUERY")
+    # (새로운 섹션에 대한 첫 질문을 생성하도록 루프 재시작)
+    workflow.add_edge("generate_draft", END)
     
     # 6. 종료: 질문 생성 -> END
     workflow.add_edge("GENERATE_QUERY", END)

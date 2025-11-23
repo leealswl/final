@@ -1,16 +1,11 @@
-# 초안을 작성해주는 작가 함수
-
 from ..state_types import ProposalGenerationState
-from typing import Dict, Any
-# from langchain_core.prompts import PromptTemplate  # [주석 처리]
-# from langchain_openai import ChatOpenAI            # [주석 처리]
+from langchain_openai import ChatOpenAI
+from dotenv import load_dotenv
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 import logging
-# import json                                        # [주석 처리]
 
-# [주석 처리] 고급 추론을 위해 GPT-4o 사용 권장
-# LLM_CLIENT = ChatOpenAI(temperature=0.3, model="gpt-4o")
-
-def generate_proposal_draft(state: ProposalGenerationState) -> Dict[str, Any]:
+def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGenerationState:
     """
     [작가 노드 - 비활성화 상태]
     현재는 초안 생성 로직을 주석 처리하여 실행되지 않도록 막아두었습니다.
@@ -18,100 +13,106 @@ def generate_proposal_draft(state: ProposalGenerationState) -> Dict[str, Any]:
     """
     print("--- 노드 실행: generate_proposal_draft (현재 비활성화됨) ---")
     logging.info(f"📝 generate_draft 노드 실행 (Skipped)")
+
+    DRAFT_PROMPT = """
+        당신은 한국 정부 RFP(제안요청서)·입찰·지원사업 제안서 작성 전문가이며,
+        실제 평가 심사위원이 읽는 수준으로 공식적이고 설득력 있는 문체를 사용합니다.
+
+        ======================================================================
+        📌 <입력 정보>
+        1. 작성 대상 목차 (Target Section)
+        - "{target_chapter_info}"
+
+        2. 공고문 핵심 분석 요약 (Key Guidelines Summary)
+        - "{anal_guide_summary}"
+
+        3. 현재까지 수집된 사용자 정보 (Collected Data)
+        - {collected_data}
+
+        4. 최근 대화 히스토리 (Recent Chat History)
+        - {recent_history}
+        ======================================================================
+
+        ✍️ <작성 지침>
+        - 위 네 가지 입력 정보를 모두 반영하여 **정부 제안서 공식 문체로 해당 목차의 완성된 단락**을 작성하십시오.
+        - 문단 형식으로 작성하고, 개조식 나열이 필요한 경우 적절히 혼합하십시오.
+        - 사용자가 제공한 정보가 불충분한 영역이 있어도 추론 가능한 범위 내에서 자연스럽게 보완하십시오.
+        - 단순 요약이나 나열이 아닌 **논리적 구조(배경 → 필요성 → 목적 → 근거 → 기대효과 등)**로 설득력 있게 작성하십시오.
+        - 공고문 요구사항과의 적합성을 명확하게 드러내십시오.
+        - 평가위원이 읽을 때 **사업의 타당성, 실현 가능성, 공공성, 혁신성, 기대 성과**가 강조되도록 작성하십시오.
+        - '우리는', '저희는' 같은 표현 대신 **기업명 또는 사업 주체를 3인칭으로 기술**하십시오.
+
+        📌 <출력 형식>
+        아래 형식을 반드시 준수하여 출력하십시오:
+        ----------------------------------------------------------------------
+        <작성된 제안서 본문>\n
+        (여기에 최종 작성 문단을 넣으십시오)
+        \n----------------------------------------------------------------------
+        """
     
-    # -------------------------------------------------------------------------
-    # [주석 처리 시작] - 나중에 활성화 시 아래 주석을 해제하세요.
-    # -------------------------------------------------------------------------
-    # # 1. 입력 데이터 준비
-    # # (1) 대화 기록 (User Domain Knowledge)
-    # collected_data = state.get("collected_data", "")
-    # accumulated_data = state.get("accumulated_data", "")
-    # full_user_context = f"{accumulated_data}\n{collected_data}"
-    # if len(full_user_context) < 10:
-    #     full_user_context = "사용자로부터 수집된 구체적인 정보가 부족합니다. 일반적인 내용을 바탕으로 작성해주세요."
+    # 2. 현재 목표 섹션 정보 설정 (history_checker의 결정 반영 로직)
+    collected_data = state.get("collected_data", "")
+    # print('collected_data: ', collected_data)
+    # print(f"--- 📊 ASSESS_INFO 수신 데이터 길이: {len(collected_data)}자 ---")
+    
+    toc_structure = state.get("draft_toc_structure", [])
+    target_title = state.get("target_chapter", "")
+    current_idx = state.get("current_chapter_index", 0) 
 
-    # # (2) 공고문 분석 데이터 (Guide & Strategy)
-    # # state['fetched_context']에 anal.json 내용이 있다고 가정
-    # fetched_context = state.get("fetched_context", {})
-    # # anal_guide가 리스트 형태라면 현재 챕터와 관련된 전략을 찾아야 함 (여기서는 전체를 문자열로 요약 가정)
-    # # 실제로는 anal.json 구조에 맞춰 필터링 로직이 필요할 수 있습니다.
-    # anal_guide_summary = "공고문에서 요구하는 '혁신성'과 '글로벌 진출 가능성'을 강조해야 합니다." 
-    # 
-    # # (3) 작성 목표 (Current Chapter)
-    # target_chapter = state.get("target_chapter", "전체 기획서")
-    # toc_structure = state.get("draft_toc_structure", [])
-    # 
-    # # 현재 작성해야 할 챕터의 하위 목차 상세 정보 구성
-    # current_toc_detail = ""
-    # current_idx = state.get("current_chapter_index", 0)
-    # if toc_structure and current_idx < len(toc_structure):
-    #     section = toc_structure[current_idx]
-    #     current_toc_detail = f"챕터명: {section.get('title')}\n설명: {section.get('description')}"
+    fetched_context = state.get("fetched_context", {})
+    anal_guide_summary = str(fetched_context.get("anal_guide", "전략 정보 없음"))
 
-    # # 2. proposal.py 스타일의 강력한 프롬프트 정의
-    # SYSTEM_PROMPT = """
-    # 당신은 정부 지원사업 제안서(RFP) 작성 전문 컨설턴트입니다.
-    # 주어진 [공고문 가이드], [사용자 인터뷰 내용], [작성 목표]를 완벽하게 숙지하고,
-    # 평가위원이 높은 점수를 줄 수밖에 없는 **전문적이고 논리적인 제안서 초안**을 작성하세요.
+    if toc_structure and current_idx < len(toc_structure):
+        major_chapter_item = toc_structure[current_idx]
+        major_chapter_number = major_chapter_item.get("number", "0") 
+        major_chapter_title = major_chapter_item.get("title", "제목 없음") 
 
-    # <작성 원칙>
-    # 1. **두괄식 작성**: 핵심 주장을 문단 처음에 배치하십시오.
-    # 2. **근거 제시**: 사용자의 인터뷰 내용에 있는 구체적 수치나 사실을 반드시 포함하십시오.
-    # 3. **가이드 준수**: 공고문 분석 전략에서 강조하는 키워드(예: 글로벌, 혁신 등)를 녹여내십시오.
-    # 4. **명확한 어조**: "~할 것임", "~로 사료됨" 보다는 "~함", "~를 추진함" 등의 개조식 혹은 명확한 해요체를 사용하십시오. (Markdown 포맷 사용)
-    # """
+        # 2-1. LLM 프롬프트에 사용될 주 챕터 정보 구성
+        chapter_display = f"{major_chapter_item.get('number')} {major_chapter_item.get('title')}"
+        target_info_full = f"[{chapter_display}]\n설명: {major_chapter_item.get('description')}" 
 
-    # USER_PROMPT_TEMPLATE = """
-    # 아래 정보를 바탕으로 **[{target_chapter}]** 챕터의 초안을 작성해 주세요.
+        print('target_info_full: ', target_info_full)
 
-    # ### 1. 공고문 분석 및 작성 전략 (Guide)
-    # {anal_guide_summary}
+    msgs = state.get("messages", [])
+    recent_history = ""
+    if msgs:
+        for msg in msgs:
+            role = "👤" if msg.get("role") == "user" else "🤖"
+            content = msg.get("content", "")
+            recent_history += f"{role}: {content}\n"
 
-    # ### 2. 사용자 인터뷰 내용 (Domain Context)
-    # {full_user_context}
 
-    # ### 3. 작성 목표 (Target Section)
-    # {current_toc_detail}
+    prompt = PromptTemplate.from_template(DRAFT_PROMPT)
 
-    # ---
-    # **[요청사항]**
-    # - 위 내용을 바탕으로 해당 챕터에 들어갈 본문을 작성하세요.
-    # - 소제목(##)을 적절히 활용하여 가독성을 높이세요.
-    # - 내용은 너무 짧지 않게, 전문적인 비즈니스 용어를 사용하여 풍성하게 작성하세요.
-    # """
+    llm = None
+    try:
+        llm = ChatOpenAI(temperature=0, model="gpt-4o")
+    except Exception as e:
+        print(f"⚠️ LLM 초기화 오류: {e}")
 
-    # prompt = PromptTemplate(
-    #     template=SYSTEM_PROMPT + "\n\n" + USER_PROMPT_TEMPLATE,
-    #     input_variables=["target_chapter", "anal_guide_summary", "full_user_context", "current_toc_detail"]
-    # )
+    chain = prompt | llm | StrOutputParser()
 
-    # # 3. LLM 실행
-    # chain = prompt | LLM_CLIENT
-    # 
-    # try:
-    #     response = chain.invoke({
-    #         "target_chapter": target_chapter,
-    #         "anal_guide_summary": anal_guide_summary,
-    #         "full_user_context": full_user_context,
-    #         "current_toc_detail": current_toc_detail
-    #     })
-    #     draft_content = response.content.strip()
-    #     print(f"✅ [{target_chapter}] 초안 생성 완료")
+    result = chain.invoke({
+        'target_chapter_info': target_info_full,
+        'anal_guide_summary': anal_guide_summary,
+        'collected_data': collected_data,
+        'recent_history': recent_history
+        })
+    
+    # 만약 accumulated_data가 문자열이면 리스트로 변환
+    accumulated_data = state.get('accumulated_data', [])
+    if isinstance(accumulated_data, str):
+        accumulated_data = [accumulated_data]
 
-    # except Exception as e:
-    #     draft_content = f"❌ 초안 생성 중 오류 발생: {e}"
-    #     logging.error(f"GENERATE_DRAFT 오류: {e}")
-    # -------------------------------------------------------------------------
-    # [주석 처리 끝]
-    # -------------------------------------------------------------------------
+    accumulated_data.append(target_title)
 
-    # 임시 반환값 (오류 방지용)
-    draft_content = "(현재 초안 생성 기능은 비활성화되어 있습니다.)"
-
+    print('accumulated_data: ', accumulated_data)
+    
+    history = state.get("messages", [])
+    history.append({"role": "assistant", "content": result})
     # 4. 상태 반환
     return {
-        "current_draft": draft_content,
-        "generated_text": draft_content,
-        # 다음 스텝은 사용자가 검토하거나, 다음 챕터로 넘어가는 로직으로 연결됨
-        "next_step": "REVIEW_OR_NEXT" 
+        "current_query": result,
+        "messages": history,
+        "target_chapter": ""
     }

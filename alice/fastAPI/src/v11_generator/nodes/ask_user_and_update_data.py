@@ -22,19 +22,9 @@ def ask_user_and_update_data(state: ProposalGenerationState) -> Dict[str, Any]:
     print(f"DEBUG: 📝 기존 데이터 길이 (DB 로드): {len(existing_data)}자")
     print(f"DEBUG: 📩 새 사용자 입력 길이: {len(user_input)}자")
 
-    if user_input:
-        # 중복 방지: 방금 한 말이 이미 저장되어 있는지 간단히 체크 (선택 사항)
-        if user_input not in existing_data:
-            # 기존 데이터가 있으면 줄바꿈 후 추가
-            prefix = "\n\n" if existing_data else ""
-            new_entry = f"{prefix}[사용자]: {user_input}"
-            updated_data = existing_data + new_entry
-            print(f"✅ 대화 기록 저장 완료! (추가된 길이: {len(new_entry)})")
-        else:
-            print("ℹ️ 이미 기록된 내용이라 스킵합니다.")
-    else:
-        print("⚠️ 사용자 입력이 감지되지 않았습니다. (user_prompt is empty)")
-        
+    new_entry = f"\n[사용자]: {user_input}"
+    updated_data = existing_data + new_entry
+
     # 3. 결과 반환
     return {
         "collected_data": updated_data,
