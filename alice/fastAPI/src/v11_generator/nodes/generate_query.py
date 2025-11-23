@@ -69,6 +69,7 @@ PROMPT_TEMPLATE_CONSULTANT = """
 
 ======================================================================
 
+
 """
 
 def generate_query(state: ProposalGenerationState) -> ProposalGenerationState:
@@ -172,12 +173,11 @@ def generate_query(state: ProposalGenerationState) -> ProposalGenerationState:
         generated_response = "질문 생성 중 서버 오류가 발생했습니다. 로그를 확인하세요."
     
     # 5. 최종 출력 포맷 구성 (사용자 요청 반영)
-    feedback_text = f" | 💡 {grading_reason}" if grading_reason else ""
+    feedback_text = f"💡 {grading_reason}" if grading_reason else ""
     
     final_response = (
         f"{generated_response}\n\n"
-        f"**(📌 전체완성도: {current_avg_score}% {avg_score_description}) "
-        f"(현재 진행중: [{focused_subchapter_display}] 정보수집도: {focused_subchapter_score}%{feedback_text})**"
+        f"{feedback_text}"
     )
 
     history = state.get("messages", [])
