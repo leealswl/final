@@ -258,6 +258,7 @@ const AnalyzeView = () => {
                 </Box>
             </Stack>
         </Stack>
+<<<<<<< HEAD
     ) : (
         /* ========================================
          * [분석 후 화면] 분석 결과 카드 표시
@@ -278,6 +279,63 @@ const AnalyzeView = () => {
                 <Button variant="contained" size="large" sx={{ backgroundColor: '#262626', '&:hover': { backgroundColor: '#000000' } }} onClick={() => navigate('/works/create')}>
                     생성 페이지로 이동
                 </Button>
+=======
+    ) : 
+    (
+            <Stack sx={{ backgroundColor: '#F4F7F9', height: '100vh', overflow: 'auto', p: 4 }}>
+                {/* 헤더 */}
+                <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} mb={4} spacing={2}>
+                    <Box>
+                        <Typography fontSize={'2rem'} fontFamily={'Isamanru-Bold'} mb={1}>
+                            📊 프로젝트 분석 결과
+                        </Typography>
+                        <Typography fontFamily={'Pretendard4'} color={'#8C8C8C'}>
+                            PALADOC AI가 분석한 프로젝트 요구사항 및 첨부 양식입니다.
+                        </Typography>
+                    </Box>
+    
+                    <Button variant="contained" size="large" sx={{ backgroundColor: '#262626', '&:hover': { backgroundColor: '#000000' } }} onClick={() => navigate('/works/create')}>
+                        생성 페이지로 이동
+                    </Button>
+                </Stack>
+    
+                {/* Feature 카드 */}
+                {featureCards.length ? (
+                    <Grid container spacing={2}>
+                        {featureCards.map((feature) => (
+                            <Grid item size={4} key={feature.card_id}>
+                                <FeatureCard feature={feature} />
+                            </Grid>
+                        ))}
+                    </Grid>
+                ) : (
+                    <Paper elevation={0} sx={{ p: 6, textAlign: 'center', borderRadius: 3 }}>
+                        <Typography fontSize="1.1rem" fontWeight={600}>
+                            표시할 Feature 정보가 없습니다
+                        </Typography>
+                    </Paper>
+                )}
+    
+                {/* 디버깅 JSON */}
+                {/* <Paper elevation={0} sx={{ p: 4, borderRadius: 3, mt: 4 }}>
+                    <Typography fontSize="1.2rem" fontWeight={700} mb={2}>
+                        🔍 원본 분석 데이터 (디버깅용)
+                    </Typography>
+                    <Box
+                        component="pre"
+                        sx={{
+                            backgroundColor: '#111827',
+                            color: '#f5f5f5',
+                            p: 3,
+                            borderRadius: 2,
+                            overflow: 'auto',
+                            maxHeight: '320px',
+                        }}
+                    >
+                        {JSON.stringify(analysisResult, null, 2)}
+                    </Box>
+                </Paper> */}
+>>>>>>> dev
             </Stack>
 
             {/* Feature 카드 그리드 */}

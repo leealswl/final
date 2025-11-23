@@ -97,7 +97,7 @@ const ChatBotMUI = () => {
                                 wordBreak: 'break-word',
                             }}
                         >
-                            <Typography variant="body2">{msg.text}</Typography>
+                            <Typography variant="body2" sx={{whiteSpace: "pre-line"}}>{msg.text}</Typography>
                         </Box>
                     ))}
                     {/* 🔹 AI 답변 로딩 중일 때 표시 */}
