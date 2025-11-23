@@ -83,11 +83,17 @@ def manage_progression(state: ProposalGenerationState) -> Dict[str, Any]:
     # 2. [핵심 2] 다음 섹션 인덱스 업데이트 (중복 여부와 상관없이 다음으로 진행)
     next_idx = current_idx + 1 # 완료된 인덱스 다음 순서로 업데이트
     
+    next_chapter_info = ""
     if next_idx < len(toc):
         next_chapter = toc[next_idx]
+        next_chapter_info = next_chapter.get('title')
         # print 문은 실제 저장 여부와 상관없이 다음 인덱스 정보를 출력
-        print(f"⏩ 섹션 인덱스 업데이트: [{current_title}] -> 다음 인덱스 [{next_chapter.get('title')}]")
-        
+        print(f"⏩ 섹션 인덱스 업데이트: [{current_title}] -> 다음 인덱스 [{next_chapter_info}]")
+    
+    # 🔑 [핵심 수정] 다음 노드(GENERATE_QUERY)에게 완료 정보를 전달
+    just_completed_chapter = f"{current_number} {current_title}"
+    
+    if next_idx < len(toc):
         return {
             "current_chapter_index": next_idx,
             "target_chapter": next_chapter.get("title", "목표 없음"),

@@ -71,7 +71,7 @@ def history_checker(state: ProposalGenerationState) -> ProposalGenerationState:
     toc_structure = state.get("draft_toc_structure", [])
     # toc_structure = state['draft_toc_structure']
     print(1)
-    user_prompt = state.get('user_prompt')
+    user_prompt = state.get('user_prompt', "").strip()
     accumulated_data = state.get('accumulated_data', [])
 
     target_chapter = state.get('target_chapter', [])

@@ -43,12 +43,21 @@ class ProposalGenerationState(TypedDict):
     
     # [핵심 필드] 현재 섹션의 최종 평가 점수 (70점 이상이면 합격).
     completeness_score: int
-    
+
     # [핵심 필드] LLM이 계산한 평가 사유 (프론트 출력용).
     grading_reason: str
-    
-        # 하위 챕터별 누적 점수 기록 (점수 하락 방지용 및 진행 여부 판단 기준).
+
+    # 🔑 추가: 상세 평가 항목별 점수 저장 (예: {"RATER_1": 90, "RATER_2": 70})
+    assessment_breakdown: Dict[str, int] 
+
+    # 하위 챕터별 누적 점수 기록 (점수 하락 방지용 및 진행 여부 판단 기준).
     section_scores: Dict[str, int] # 예: {"1.1": 85, "1.2": 40}
+    
+    # 🔑 추가: 이전 섹션 완료 여부를 저장하는 플래그
+    section_just_completed: Optional[str] # 포맷: "1.1 사업 배경 및 필요성"
+    
+    # 🔑 추가: '완료된 목차에 대한 질문' 플래그
+    target_already_completed: Optional[str] # 포맷: "1.1 사업 배경 및 필요성"
 
     # 하위 목차 관리 (Assess/Query 노드용)
     target_subchapters: List[Dict[str, Any]]
