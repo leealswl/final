@@ -1,5 +1,5 @@
 import { Box, Button, Grid, Stack, Typography, CircularProgress, Paper, Chip, Modal } from '@mui/material';
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { useFileStore } from '../../../store/useFileStore';
 import { useAnalysisStore } from '../../../store/useAnalysisStore';
 import api from '../../../utils/api';
@@ -18,12 +18,14 @@ const AnalyzeView = () => {
     // 전역 상태 관리
     const { tree } = useFileStore(); // 업로드된 파일 트리 구조
     const setAnalysisResult = useAnalysisStore((state) => state.setAnalysisResult); // 분석 결과 저장 함수
+    const clearAnalysisResult = useAnalysisStore((state) => state.clearAnalysisResult); // 분석 결과 초기화 함수
     const analysisResult = useAnalysisStore((state) => state.analysisResult); // 분석 결과 데이터
     const analysisData = analysisResult?.data || {}; // 분석 결과 내부 data 객체
 
     // 로컬 상태 관리
     const [loading, setLoading] = useState(false); // 분석 진행 중 상태
     const [error, setError] = useState(null); // 에러 메시지 상태
+    const [loadingAnalysis, setLoadingAnalysis] = useState(false); // 분석 결과 로딩 상태
 
     // 사용자 및 프로젝트 정보
     const user = useAuthStore((s) => s.user);
@@ -31,6 +33,76 @@ const AnalyzeView = () => {
 
     console.log('projectIdx: ', project.projectIdx);
     console.log('user: ', user.userId);
+
+    /**
+     * 2025-11-23 추가: 프로젝트 변경 시 해당 프로젝트의 분석 결과를 DB에서 자동 로드
+     * 
+     * 문제점: 이전에는 sessionStorage에 저장된 분석 결과가 프로젝트 변경 시에도 그대로 표시됨
+     * 해결: 프로젝트가 변경될 때마다 해당 프로젝트의 분석 결과를 DB에서 조회하여 표시
+     * 
+     * 동작 흐름:
+     * 1. projectIdx가 변경되면 useEffect 트리거
+     * 2. /api/analysis/get-context API 호출하여 해당 프로젝트의 분석 결과 조회
+     * 3. 분석 결과가 있으면 store에 저장하여 화면에 표시
+     * 4. 분석 결과가 없으면 store 초기화하여 파일 업로드 화면 표시
+     */
+    useEffect(() => {
+        const loadAnalysisResult = async () => {
+            // 프로젝트 ID가 없으면 분석 결과 초기화
+            if (!project.projectIdx) {
+                clearAnalysisResult();
+                return;
+            }
+
+            try {
+                setLoadingAnalysis(true);
+                console.log('📖 프로젝트별 분석 결과 로드 시작: projectIdx=', project.projectIdx);
+                
+                // 백엔드 API 호출: 해당 프로젝트의 분석 결과 조회
+                const response = await api.get('/api/analysis/get-context', {
+                    params: { projectIdx: project.projectIdx }
+                });
+
+                if (response.data.status === 'success' && response.data.data) {
+                    const contextData = response.data.data;
+                    const features = contextData.extracted_features || []; // 분석된 Feature 배열
+                    const resultToc = contextData.result_toc; // 목차 데이터
+
+                    // 분석 결과가 있으면 store에 저장 (화면에 표시됨)
+                    if (features.length > 0 || resultToc) {
+                        const analysisResultData = {
+                            status: 'success',
+                            data: {
+                                features: features,
+                                table_of_contents: resultToc,
+                                features_summary: {
+                                    total_count: features.length
+                                }
+                            }
+                        };
+                        setAnalysisResult(analysisResultData);
+                        console.log('✅ 분석 결과 로드 완료:', features.length, '개 Feature');
+                    } else {
+                        // 분석 결과가 없으면 초기화 (파일 업로드 화면 표시)
+                        clearAnalysisResult();
+                        console.log('⚠️ 분석 결과 없음 (새 프로젝트 또는 분석 미실행)');
+                    }
+                } else {
+                    // API 응답이 실패한 경우 초기화
+                    clearAnalysisResult();
+                    console.log('⚠️ 분석 결과 조회 실패:', response.data.message);
+                }
+            } catch (err) {
+                // API 호출 실패 시 초기화
+                console.error('❌ 분석 결과 로드 실패:', err);
+                clearAnalysisResult();
+            } finally {
+                setLoadingAnalysis(false);
+            }
+        };
+
+        loadAnalysisResult();
+    }, [project.projectIdx, setAnalysisResult, clearAnalysisResult]);
 
     // 분석 결과의 features 배열을 카드 데이터로 변환
     const featureCards = useMemo(() => {

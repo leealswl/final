@@ -22,4 +22,11 @@ public interface AnalysisService {
         List<Map<String, Object>> features,
         Map<String, Object> tableOfContents
     );
+
+    /**
+     * 2025-11-23 추가: 프로젝트별 분석 결과 조회 (v11_generator용)
+     * @param projectIdx 프로젝트 ID
+     * @return 분석 결과 컨텍스트 (result_toc, extracted_features)
+     */
+    Map<String, Object> getAnalysisContext(Long projectIdx);
 }

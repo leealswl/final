@@ -267,7 +267,7 @@ public class AnalysisController {
 
     /**
      * 2025-11-17: 프로젝트의 분석 결과 목차(TOC) 조회 API
-     * FastAPI의 result.json에서 sections 정보를 가져와 편집 페이지 좌측 패널에 표시
+     * 2025-11-23 수정: FastAPI 로컬 파일 대신 Oracle DB에서 직접 조회
      * 
      * @param projectIdx 프로젝트 ID
      * @return 목차 데이터 (sections 배열)
@@ -279,8 +279,9 @@ public class AnalysisController {
         System.out.println("📚 목차 조회 API 호출: projectIdx=" + projectIdx);
         
         try {
-            // FastAPI에서 목차 데이터 가져오기
-            Map<String, Object> tocData = fastApi.getTocData(projectIdx);
+            // Oracle DB에서 목차 데이터 직접 조회
+            Map<String, Object> context = analysisService.getAnalysisContext(projectIdx);
+            Map<String, Object> tocData = (Map<String, Object>) context.get("result_toc");
             
             if (tocData == null || !tocData.containsKey("sections")) {
                 return ResponseEntity.ok(Map.of(
@@ -304,6 +305,38 @@ public class AnalysisController {
                     "status", "error",
                     "message", "목차 조회 중 오류가 발생했습니다: " + e.getMessage(),
                     "sections", List.of()
+                ));
+        }
+    }
+
+    /**
+     * 2025-11-23 추가: v11_generator용 분석 결과 컨텍스트 조회 API
+     * 
+     * @param projectIdx 프로젝트 ID
+     * @return 분석 결과 컨텍스트 (result_toc, extracted_features)
+     */
+    @GetMapping("/get-context")
+    public ResponseEntity<Map<String, Object>> getAnalysisContext(
+        @RequestParam("projectIdx") Long projectIdx
+    ) {
+        System.out.println("📖 분석 결과 컨텍스트 조회 API 호출: projectIdx=" + projectIdx);
+        
+        try {
+            Map<String, Object> context = analysisService.getAnalysisContext(projectIdx);
+            
+            return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "message", "분석 결과 컨텍스트 조회 성공",
+                "data", context
+            ));
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("❌ 분석 결과 컨텍스트 조회 실패: " + e.getMessage());
+            return ResponseEntity.internalServerError()
+                .body(Map.of(
+                    "status", "error",
+                    "message", "분석 결과 컨텍스트 조회 중 오류가 발생했습니다: " + e.getMessage()
                 ));
         }
     }

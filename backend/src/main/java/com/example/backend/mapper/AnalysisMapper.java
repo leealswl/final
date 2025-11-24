@@ -1,5 +1,6 @@
 package com.example.backend.mapper;
 
+import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import com.example.backend.domain.AnalysisResult;
 import com.example.backend.domain.TableOfContents;
@@ -36,4 +37,18 @@ public interface AnalysisMapper {
      * @return 삭제된 행 수
      */
     int deleteTableOfContentsByProject(Long projectIdx);
+
+    /**
+     * 2025-11-23 추가: 프로젝트별 분석 결과(Features) 조회
+     * @param projectIdx 프로젝트 ID
+     * @return 분석 결과 리스트
+     */
+    List<AnalysisResult> getAnalysisResultsByProject(Long projectIdx);
+
+    /**
+     * 2025-11-23 추가: 프로젝트별 목차 데이터 조회
+     * @param projectIdx 프로젝트 ID
+     * @return 목차 데이터
+     */
+    TableOfContents getTableOfContentsByProject(Long projectIdx);
 }

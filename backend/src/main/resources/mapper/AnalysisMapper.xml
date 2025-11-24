@@ -114,5 +114,26 @@
         where project_idx = #{projectIdx}
     </delete>
 
+    <!--
+        2025-11-23 추가: 프로젝트별 분석 결과(Features) 조회
+    -->
+    <select id="getAnalysisResultsByProject" resultMap="analysisResultMap">
+        select *
+        from analysis_result
+        where project_idx = #{projectIdx}
+        order by result_idx
+    </select>
+
+    <!--
+        2025-11-23 추가: 프로젝트별 목차 데이터 조회
+    -->
+    <select id="getTableOfContentsByProject" resultMap="tableOfContentsMap">
+        select *
+        from table_of_contents
+        where project_idx = #{projectIdx}
+        order by toc_idx desc
+        fetch first 1 row only
+    </select>
+
 
 </mapper>

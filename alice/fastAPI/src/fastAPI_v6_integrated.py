@@ -249,17 +249,58 @@ async def generate_content(request: ChatRequest):
     try:
         print(f"📢 요청 수신: '{request.userMessage}' (Thread: {request.thread_id})")
         
-        # 1. 컨텍스트 파일 로드
-        base_dir = Path(__file__).resolve().parent.parent 
+        # ========================================
+        # [수정 전 코드] 로컬 파일에서 컨텍스트 로드
+        # ========================================
+        # # 1. 컨텍스트 파일 로드
+        # base_dir = Path(__file__).resolve().parent.parent 
+        # context_data = {}
+        # try:
+        #     # anal.json은 현재 로직에서 안 쓰더라도 일단 로드는 유지하거나 생략 가능
+        #     # with open(base_dir / "src/anal.json", 'r', encoding='utf-8') as f:
+        #     #     context_data['anal_guide'] = json.load(f)
+        #     with open(base_dir / "src/result.json", 'r', encoding='utf-8') as f:
+        #         context_data['result_toc'] = json.load(f)
+        # except Exception as e:
+        #     print(f"⚠️ 파일 로드 경고: {e}")
+
+        # ========================================
+        # [수정 후] 백엔드에서 분석 결과 컨텍스트 조회
+        # ========================================
+        import requests
+        backend_url = os.getenv('BACKEND_URL', 'http://localhost:8081')
         context_data = {}
+        
         try:
-            # anal.json은 현재 로직에서 안 쓰더라도 일단 로드는 유지하거나 생략 가능
-            # with open(base_dir / "src/anal.json", 'r', encoding='utf-8') as f:
-            #     context_data['anal_guide'] = json.load(f)
-            with open(base_dir / "src/result.json", 'r', encoding='utf-8') as f:
-                context_data['result_toc'] = json.load(f)
+            print(f"📖 백엔드에서 분석 결과 조회: projectIdx={request.projectIdx}")
+            response = requests.get(
+                f"{backend_url}/api/analysis/get-context",
+                params={"projectIdx": request.projectIdx},
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("status") == "success":
+                    context_data = result.get("data", {})
+                    print(f"  ✅ 분석 결과 조회 성공")
+                    print(f"    - 목차: {'있음' if context_data.get('result_toc') else '없음'}")
+                    print(f"    - Features: {len(context_data.get('extracted_features', []))}개")
+                else:
+                    print(f"  ⚠️ 백엔드 응답 오류: {result.get('message')}")
+            else:
+                print(f"  ⚠️ 백엔드 API 호출 실패: {response.status_code}")
+                
         except Exception as e:
-            print(f"⚠️ 파일 로드 경고: {e}")
+            print(f"  ⚠️ 백엔드 API 호출 실패: {e}")
+            # Fallback: 로컬 파일에서 읽기 (하위 호환성)
+            try:
+                base_dir = Path(__file__).resolve().parent.parent
+                with open(base_dir / "src/result.json", 'r', encoding='utf-8') as f:
+                    context_data['result_toc'] = json.load(f)
+                print(f"  ⚠️ 로컬 파일로 대체 (result.json)")
+            except Exception as file_error:
+                print(f"  ❌ 로컬 파일 로드도 실패: {file_error}")
 
         new_thread_id = str(uuid.uuid4()) # 로그용 ID
         current_thread_id = request.thread_id if request.thread_id else str(uuid.uuid4())

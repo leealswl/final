@@ -21,18 +21,41 @@ export default function TocSidebar() {
     const tocMetadata = useTocStore((s) => s.tocMetadata);
     const setTocMetadata = useTocStore((s) => s.setTocMetadata);
 
-    // 프로젝트 ID 가져오기
-    const currentProject = useProjectStore((s) => s.currentProject);
-    const projectIdx = currentProject?.projectIdx || 1; // 기본값 1
+    /**
+     * 2025-11-23 수정: 프로젝트 ID 가져오기
+     * useProjectStore의 'project' 필드를 사용하여 현재 프로젝트 정보 조회
+     * 주의: 'currentProject' 필드는 존재하지 않으므로 'project'를 사용해야 함
+     * 
+     * @see useProjectStore.js - store 구조 확인
+     * @see AnalyzeView.jsx, Upload.jsx - 동일한 패턴 사용
+     */
+    const project = useProjectStore((s) => s.project);
+    const projectIdx = project?.projectIdx; // 프로젝트가 없으면 undefined (기본값 제거)
 
-    // 목차 데이터 로드
+    /**
+     * 프로젝트별 목차 데이터 로드
+     * - projectIdx가 변경될 때마다 백엔드 API(/api/analysis/toc)를 호출하여 목차 조회
+     * - Oracle DB에서 해당 프로젝트의 table_of_contents 데이터를 가져옴
+     * - 성공 시 sections와 메타데이터를 store에 저장
+     * 
+     * 주의: projectIdx가 없으면 목차를 로드하지 않음 (기본값 1 사용 안 함)
+     */
     useEffect(() => {
+        // 프로젝트 ID가 없으면 목차를 로드하지 않음
+        if (!projectIdx) {
+            console.log('⚠️ 프로젝트 ID가 없어 목차를 로드하지 않습니다.');
+            setSections([]);
+            setLoading(false);
+            return;
+        }
+
         const loadToc = async () => {
             try {
                 setLoading(true);
                 setError(null);
                 
                 console.log('📚 목차 데이터 로딩 시작... projectIdx:', projectIdx);
+                console.log('📋 현재 프로젝트 정보:', project);
                 const response = await getToc(projectIdx);
                 
                 if (response.status === 'success' && response.data) {
@@ -42,7 +65,7 @@ export default function TocSidebar() {
                         sourceFile: source_file || source || '분석 결과',
                         totalSections: total_sections || sectionData?.length || 0,
                     });
-                    console.log('✅ 목차 로드 완료:', sectionData?.length, '개 섹션');
+                    console.log('✅ 목차 로드 완료: projectIdx=' + projectIdx + ', 섹션 수=' + (sectionData?.length || 0));
                 } else {
                     throw new Error(response.message || '목차 데이터를 불러올 수 없습니다.');
                 }
@@ -56,7 +79,7 @@ export default function TocSidebar() {
         };
 
         loadToc();
-    }, [projectIdx, setSections, setTocMetadata]);
+    }, [projectIdx, project, setSections, setTocMetadata]);
 
     // 목차 항목 클릭 핸들러
     const handleSectionClick = (section) => {
