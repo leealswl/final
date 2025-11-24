@@ -1,9 +1,16 @@
 import { useMutation } from '@tanstack/react-query';
 import api from '../utils/api';
 import { useProjectStore } from '../store/useProjectStore';
+import { useFileStore } from '../store/useFileStore';
 
+/**
+ * 2025-11-23 수정: 새 프로젝트 생성 시 파일 트리 초기화
+ * 문제: 이전 프로젝트의 파일이 새 프로젝트에도 표시되는 문제
+ * 해결: 새 프로젝트 생성 시 useFileStore의 resetTree() 호출하여 파일 트리 초기화
+ */
 export default function UseProject(opts = {}) {
     const setProject = useProjectStore((s) => s.setProject);
+    const resetTree = useFileStore((s) => s.resetTree);
 
     return useMutation({
         mutationKey: ['user', 'project'],
@@ -12,6 +19,11 @@ export default function UseProject(opts = {}) {
             return res.data;
         },
         onSuccess: async (data) => {
+            // 새 프로젝트 생성 시 파일 트리 초기화
+            console.log('🆕 새 프로젝트 생성: 파일 트리 초기화');
+            resetTree();
+            
+            // 프로젝트 정보 저장
             setProject(data);
             opts.onSuccess?.(data);
         },
