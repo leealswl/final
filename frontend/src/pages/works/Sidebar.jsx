@@ -50,6 +50,11 @@ const isRootId = (id) => /^root-(01|02)$/.test(String(id));
 export default function Sidebar() {
   const { tree, selectedNodeId, selectNode, renameNode, deleteNode } = useFileStore();
 
+  const selectedFile = useFileStore((state) => state.selectedFile);
+useEffect(() => {
+    console.log("Sidebar selectedFile 변경됨:", selectedFile);
+}, [selectedFile]);
+
   const [expandedItems, setExpandedItems] = useState(() => (tree || []).map(n => String(n.id)));
   const selectedNode = useMemo(
     () => (selectedNodeId ? findNode(tree, selectedNodeId) : null),
