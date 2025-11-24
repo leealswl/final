@@ -7,6 +7,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { Box, Divider, Typography } from '@mui/material';
 import ChatBotMUI from './ChatBotMUI';
 import TiptapEditor from '../../../components/TiptapEditor';
+import Editor from './Editor';
 
 /**
  * 2025-11-17 수정:
@@ -71,13 +72,14 @@ export default function EditView() {
                 <Panel defaultSize={50} minSize={30}>
                     <Box display="flex" flexDirection="column" height="100%" bgcolor="white">
                         <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                            <TiptapEditor 
+                            {/* <TiptapEditor 
                                 initialContent={initialContent} 
                                 contentKey={docId || 'default'} 
                                 onContentChange={setDocumentContent} 
                                 readOnly={false}
                                 registerEditor={setEditorInstance}
-                            />
+                            /> */}
+                            <Editor />
                         </Box>
                         <Box sx={{ px: 2, py: 1, borderTop: '1px solid #e5e7eb', bgcolor: '#fafafa' }}>
                             <Typography variant="caption" color="text.secondary">

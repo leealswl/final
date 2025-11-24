@@ -28,6 +28,7 @@ public class DocumentContentController {
 
     public DocumentContentController(@Value("${upload.dir:uploads}") String uploadDir) {
         this.storageDir = Paths.get(uploadDir, "document_json");
+        System.out.println("storageDir: " + storageDir);
         try {
             Files.createDirectories(this.storageDir);
         } catch (IOException e) {
@@ -46,14 +47,28 @@ public class DocumentContentController {
         return ResponseEntity.ok(Map.of("content", content));
     }
 
-    @PostMapping("/{docId}/content")
+    // @PostMapping("/{docId}/content")
+    // public ResponseEntity<Map<String, Object>> saveDocument(
+    //     @PathVariable String docId,
+    //     @RequestBody SaveRequest request
+    // ) throws IOException {
+    //     System.out.println("작동하는거니?");
+    //     // Path target = storageDir.resolve(docId + ".json");
+    //     Path target = storageDir.resolve("1/1/234.json");
+    //     JsonNode content = request.content == null ? objectMapper.createObjectNode() : request.content;
+    //     objectMapper.writerWithDefaultPrettyPrinter().writeValue(target.toFile(), content);
+    //     return ResponseEntity.ok(Map.of("status", "success"));
+    // }
+
+    @PostMapping("/1/content")
     public ResponseEntity<Map<String, Object>> saveDocument(
-        @PathVariable String docId,
-        @RequestBody SaveRequest request
+        @RequestBody SaveRequest content
     ) throws IOException {
-        Path target = storageDir.resolve(docId + ".json");
-        JsonNode content = request.content == null ? objectMapper.createObjectNode() : request.content;
-        objectMapper.writerWithDefaultPrettyPrinter().writeValue(target.toFile(), content);
+        System.out.println("작동하는거니?");
+        // Path target = storageDir.resolve(docId + ".json");
+        Path target = storageDir.resolve("1/1/234.json");
+        JsonNode result = content.content == null ? objectMapper.createObjectNode() : content.content;
+        objectMapper.writerWithDefaultPrettyPrinter().writeValue(target.toFile(), result);
         return ResponseEntity.ok(Map.of("status", "success"));
     }
 
