@@ -1,9 +1,33 @@
-﻿import uuid
-from typing import Dict, Any, Optional, List
+﻿import os
+from dotenv import load_dotenv
+load_dotenv()
+
+import json
+import uuid
+from typing import Dict, Any, Optional
+from pydantic import BaseModel # ChatRequest, ResumeRequest 정의를 위해 필요
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+# from langgraph.checkpoint.memory import MemorySaver
+# from langgraph.checkpoint.sqlite import SqliteSaver
+
+from v11_generator.nodes.fetch_context import fetch_context_for_proposal
+from v11_generator.nodes.assess_sufficiency import assess_info
+# from v11_generator.nodes.generate_section_draft import generate_section_draft
+from v11_generator.nodes.generate_draft import generate_proposal_draft
+
 import sys
 from pathlib import Path
-import os
-import json
+project_root = Path(__file__).resolve().parent.parent.parent.parent 
+sys.path.append(str(project_root))
+
+from fastapi import FastAPI, File, Form, UploadFile
+from fastapi.responses import JSONResponse
+from fastapi.concurrency import run_in_threadpool
+from typing import List
+
+
+
+
 
 # 경로 설정
 current_file_path = Path(__file__).resolve()
@@ -107,9 +131,10 @@ async def analyze_documents(
         # ========================================
         # 1단계: Backend에서 받은 데이터 검증
         # ========================================
-
         if len(files) != len(folders):
-            raise ValueError(f"파일 개수({len(files)})와 폴더 개수({len(folders)})가 일치하지 않습니다.")
+            raise ValueError(
+                f"파일 개수({len(files)})와 폴더 개수({len(folders)})가 일치하지 않습니다."
+            )
 
         print(f"📥 수신 데이터: userid={userid}, projectidx={projectidx}")
         print(f"📁 파일 개수: {len(files)}개")
@@ -128,13 +153,17 @@ async def analyze_documents(
 
         saved_files = []
         for i, file in enumerate(files):
-            folder_id = int(folders[i])
+            folder_id = int(folders[i])  # "1" → 1, "2" → 2
+
+            # UploadFile → 바이트 데이터 변환
             file_bytes = await file.read()
+
             saved_files.append({
-                "bytes": file_bytes,
-                "filename": file.filename,
-                "folder": folder_id
+                "bytes": file_bytes,         # 파일 바이너리 데이터
+                "filename": file.filename,   # 원본 파일명
+                "folder": folder_id          # 1=공고, 2=첨부서류
             })
+
             folder_type = "공고" if folder_id == 1 else "첨부서류"
             file_size_kb = len(file_bytes) / 1024
             print(f"  [{i}] {file.filename} → 폴더 {folder_id} ({folder_type}) - {file_size_kb:.1f}KB")
@@ -195,7 +224,6 @@ async def analyze_documents(
             }
         )
 
-
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "message": "Alice Consultant API is running"}
@@ -221,17 +249,58 @@ async def generate_content(request: ChatRequest):
     try:
         print(f"📢 요청 수신: '{request.userMessage}' (Thread: {request.thread_id})")
         
-        # 1. 컨텍스트 파일 로드
-        base_dir = Path(__file__).resolve().parent.parent 
+        # ========================================
+        # [수정 전 코드] 로컬 파일에서 컨텍스트 로드
+        # ========================================
+        # # 1. 컨텍스트 파일 로드
+        # base_dir = Path(__file__).resolve().parent.parent 
+        # context_data = {}
+        # try:
+        #     # anal.json은 현재 로직에서 안 쓰더라도 일단 로드는 유지하거나 생략 가능
+        #     # with open(base_dir / "src/anal.json", 'r', encoding='utf-8') as f:
+        #     #     context_data['anal_guide'] = json.load(f)
+        #     with open(base_dir / "src/result.json", 'r', encoding='utf-8') as f:
+        #         context_data['result_toc'] = json.load(f)
+        # except Exception as e:
+        #     print(f"⚠️ 파일 로드 경고: {e}")
+
+        # ========================================
+        # [수정 후] 백엔드에서 분석 결과 컨텍스트 조회
+        # ========================================
+        import requests
+        backend_url = os.getenv('BACKEND_URL', 'http://localhost:8081')
         context_data = {}
+        
         try:
-            # anal.json은 현재 로직에서 안 쓰더라도 일단 로드는 유지하거나 생략 가능
-            # with open(base_dir / "src/anal.json", 'r', encoding='utf-8') as f:
-            #     context_data['anal_guide'] = json.load(f)
-            with open(base_dir / "src/result.json", 'r', encoding='utf-8') as f:
-                context_data['result_toc'] = json.load(f)
+            print(f"📖 백엔드에서 분석 결과 조회: projectIdx={request.projectIdx}")
+            response = requests.get(
+                f"{backend_url}/api/analysis/get-context",
+                params={"projectIdx": request.projectIdx},
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("status") == "success":
+                    context_data = result.get("data", {})
+                    print(f"  ✅ 분석 결과 조회 성공")
+                    print(f"    - 목차: {'있음' if context_data.get('result_toc') else '없음'}")
+                    print(f"    - Features: {len(context_data.get('extracted_features', []))}개")
+                else:
+                    print(f"  ⚠️ 백엔드 응답 오류: {result.get('message')}")
+            else:
+                print(f"  ⚠️ 백엔드 API 호출 실패: {response.status_code}")
+                
         except Exception as e:
-            print(f"⚠️ 파일 로드 경고: {e}")
+            print(f"  ⚠️ 백엔드 API 호출 실패: {e}")
+            # Fallback: 로컬 파일에서 읽기 (하위 호환성)
+            try:
+                base_dir = Path(__file__).resolve().parent.parent
+                with open(base_dir / "src/result.json", 'r', encoding='utf-8') as f:
+                    context_data['result_toc'] = json.load(f)
+                print(f"  ⚠️ 로컬 파일로 대체 (result.json)")
+            except Exception as file_error:
+                print(f"  ❌ 로컬 파일 로드도 실패: {file_error}")
 
         new_thread_id = str(uuid.uuid4()) # 로그용 ID
         current_thread_id = request.thread_id if request.thread_id else str(uuid.uuid4())

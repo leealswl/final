@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -18,7 +17,6 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.example.backend.domain.AiChat;
-// 💡 AiChat 모델은 threadId와 status 필드를 포함하도록 확장되어야 합니다.
 
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
@@ -118,7 +116,7 @@ public class FastAPIService {
                 .body(BodyInserters.fromMultipartData(builder.build()))
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
-                .block();
+                .block(); 
 
             System.out.println("fastapi 작동 완료");
             return result;
