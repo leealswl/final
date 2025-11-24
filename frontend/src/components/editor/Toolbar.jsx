@@ -13,10 +13,15 @@ import FormatAlignJustifyIcon from '@mui/icons-material/FormatAlignJustify';
 import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
 import TableRowsIcon from '@mui/icons-material/TableRows';
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
+import useDocumentSave from '../../hooks/useDocumentSave';
+
 
 import CreateTableModal from './CreateTableModal';
+
+import { asBlob } from 'html-docx-js-typescript';
+import { saveAs } from 'file-saver';
+
 
 const headingOptions = [
     { value: 'paragraph', label: '본문' },
@@ -45,9 +50,6 @@ const RibbonSection = ({ title, children }) => (
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'stretch',
-            // minWidth: 160,
-            // px: 2,
-            // py: 1,
             borderRight: '1px solid #E2E8F0',
             gap: 1.5,
         }}
@@ -72,10 +74,11 @@ const RibbonAction = ({ title, icon: Icon, active, onClick, disabled }) => (
     </Tooltip>
 );
 
-export default function Toolbar({ editor, onAiPolish, aiLoading }) {
+export default function Toolbar({ editor }) {
     const [activeTab, setActiveTab] = useState('home');
     const [tableModalOpen, setTableModalOpen] = useState(false);
     const imageInputRef = useRef(null);
+    const { saveDocument,saving,isDirty } = useDocumentSave();
 
     const activeHeading = useMemo(() => {
         if (!editor) return 'paragraph';
@@ -145,6 +148,52 @@ export default function Toolbar({ editor, onAiPolish, aiLoading }) {
         if (tab?.disabled) return;
         setActiveTab(value);
     };
+
+      // ★ 서버 저장 핸들러 (버튼에서 부를 함수)
+    // const handleSaveToServer = async () => {
+    //     const result = await saveDocument();
+    //     if (!result.ok) {
+    //     alert(result.error);
+    //     } else {
+    //     // 필요하면 토스트나 알림 추가
+    //     // alert('저장되었습니다.');
+    //     }
+    // };
+
+
+        // DOCX 저장 핸들러
+    const handleExportDocx = async () => {
+        if (!editor) return;
+
+        // 0) 먼저 서버에 저장 (변경사항 없어도 force로 강제 저장)
+        const saveResult = await saveDocument({ force: true });
+
+        if (!saveResult.ok) {
+            alert(saveResult.error || '서버 저장 중 오류가 발생했습니다.');
+            return;
+        }
+
+        // 1) 에디터 내용을 HTML로 가져오기
+        const htmlBody = editor.getHTML();
+
+        // 2) Word가 이해할 수 있는 전체 HTML 문서 형태로 감싸기
+        const fullHtml =
+            '<!DOCTYPE html>' +
+            '<html><head><meta charset="UTF-8"></head><body>' +
+            htmlBody +
+            '</body></html>';
+
+        try {
+            // 3) HTML → DOCX Blob 변환
+            const blob = await asBlob(fullHtml);
+
+            // 4) 파일 저장
+            saveAs(blob, '제안서초안.docx');
+        } catch (err) {
+            console.error('DOCX 내보내기 실패', err);
+            alert('DOCX 파일 생성 중 오류가 발생했습니다.');
+        }
+        };
 
     const headingValue = typeof activeHeading === 'number' ? activeHeading : 'paragraph';
     const isImageActive = editor?.isActive('image');
@@ -237,14 +286,20 @@ export default function Toolbar({ editor, onAiPolish, aiLoading }) {
                         <RibbonAction title="다시 실행" icon={RedoIcon} active={false} onClick={() => editor?.chain().focus().redo().run()} disabled={!editor?.can().redo()} />
                     </RibbonSection>
 
-                    <RibbonSection title="AI 도우미">
+                    <RibbonSection title="내보내기">
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
-                            <Button size="small" variant="contained" startIcon={<AutoFixHighIcon />} onClick={onAiPolish} sx={{ textTransform: 'none', minWidth: 132 }} disabled={aiLoading}>
-                                {aiLoading ? '다듬는 중…' : 'AI 다듬기'}
+                            <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={handleExportDocx}
+                            sx={{ textTransform: 'none', minWidth: 120 }}
+                            disabled={!editor || saving}
+                            >
+                            {saving ? '저장 중…' : 'DOCX 저장'}
                             </Button>
                         </Box>
-                    </RibbonSection>
-                </Box>
+                        </RibbonSection>
+                    </Box>
             )}
 
             {activeTab === 'insert' && (

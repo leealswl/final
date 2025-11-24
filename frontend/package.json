@@ -31,6 +31,8 @@
     "@tiptap/starter-kit": "^2.6.6",
     "axios": "^1.12.2",
     "dotenv": "^17.2.3",
+    "file-saver": "^2.0.5",
+    "html-docx-js-typescript": "^0.1.5",
     "lucide-react": "^0.553.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",

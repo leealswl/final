@@ -1,4 +1,3 @@
-// 파일명: TiptapEditor.jsx
 import './editor/style/editor.css';
 import './editor/style/table.css';
 
@@ -110,22 +109,36 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
     const [tableMenu, setTableMenu] = useState(null);
     const hydrateKeyRef = useRef(null);
     const headingsRef = useRef([]);
-    const [tableSelection, setTableSelection] = useState(null);
-
     const extensions = useMemo(() => defaultExtensions, []);
-
+    
     const editor = useEditor({
         extensions,
         content: initialContent || undefined,
         editable: !readOnly,
-        editorProps: { attributes: { class: 'editor-page' } },
-        onUpdate: ({ editor }) => {
-            onContentChange?.(editor.getJSON());
-            emitHeadings(editor);
-            emitActive(editor);
+        editorProps: { attributes: { class: 'editor-page' },
+        handleDOMEvents: {
+            contextmenu: ( _view, event) => {
+                const target = event.target;
+                if (target instanceof HTMLElement && target.closest('table')) {
+                    event.preventDefault();
+                    setTableMenu({
+                        mouseX: event.clientX + 2,
+                        mouseY: event.clientY - 6,
+                    });
+                    return true; // 브라우저 기본 메뉴 막기
+                }
+                return false;
+            },
         },
+    },
+    onUpdate: ({ editor }) => {
+        const json = editor.getJSON();
+        onContentChange(json);
+        emitHeadings(editor);
+        emitActive(editor);
+    },
     });
-
+        
     // 2025-11-17: 에디터 인스턴스를 외부에 등록 (목차 스크롤 기능을 위해)
     useEffect(() => {
         if (editor && registerEditor) {
@@ -140,6 +153,8 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
 
         let contentToSet = initialContent;
 
+        if (hydrateKeyRef.current === contentKey) return;
+        
         // string이면 JSON인지 HTML인지 확인
         if (typeof initialContent === 'string') {
             try {
@@ -204,26 +219,6 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
 
     // ---------------------- Render ----------------------
     return (
-        // <Box className="editor-root">
-        //   {editor && <Toolbar editor={editor} />}
-        //   <Box className="editor-wrapper">
-        //     <EditorContent editor={editor} />
-        //   </Box>
-        //   {tableSelection ? <TableToolbar editor={editor} selection={tableSelection} /> : null}
-        //   <TableContextMenu anchor={tableMenu} onClose={() => setTableMenu(null)} editor={editor} />
-        //   <Snackbar
-        //     open={Boolean(snackbar)}
-        //     autoHideDuration={3000}
-        //     onClose={() => setSnackbar(null)}
-        //   >
-        //     {snackbar ? (
-        //       <Alert onClose={() => setSnackbar(null)} severity={snackbar.severity} sx={{ width: "100%" }}>
-        //         {snackbar.message}
-        //       </Alert>
-        //     ) : null}
-        //   </Snackbar>
-        // </Box>
-        // TiptapEditor.jsx (CSS를 MUI sx로 변환)
         <Box
             className="editor-root"
             sx={{
@@ -240,31 +235,31 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
                 sx={{
                     flex: 1,
                     overflowY: 'auto',
-                    px: 3, // padding-left, right
-                    py: 3, // padding-top, bottom
+                    px: 3,
+                    py: 3, 
                     minHeight: 'calc(100vh - 200px)',
                     lineHeight: 1.6,
                     outline: 'none',
                     '& p': {
                         m: 0,
-                        mb: 2, // margin-bottom 1em
+                        mb: 2,
                     },
                     '& h1, & h2, & h3': {
                         fontWeight: 700,
-                        mt: 3, // margin-top 1.5em
-                        mb: 1, // margin-bottom 0.5em
+                        mt: 3,
+                        mb: 1,
                     },
                     '& ul, & ol': {
-                        pl: 3, // padding-left: 24px
+                        pl: 3,
                         mb: 2,
                     },
                     '& table': {
                         borderCollapse: 'collapse',
-                        my: 2, // margin-top/bottom 16px
+                        my: 2, 
                         width: '100%',
                         '& th, & td': {
                             border: '1px solid #d1d5db',
-                            p: 1, // padding 8px
+                            p: 1,
                             textAlign: 'left',
                             fontSize: 14,
                         },
@@ -281,9 +276,8 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
                 <EditorContent editor={editor} />
             </Box>
 
-            {tableSelection && <TableToolbar editor={editor} selection={tableSelection} />}
+            {editor?.isActive('table') && <TableToolbar editor={editor} />}
             <TableContextMenu anchor={tableMenu} onClose={() => setTableMenu(null)} editor={editor} />
-
             <Snackbar open={Boolean(snackbar)} autoHideDuration={3000} onClose={() => setSnackbar(null)}>
                 {snackbar && (
                     <Alert onClose={() => setSnackbar(null)} severity={snackbar.severity} sx={{ width: '100%' }}>
