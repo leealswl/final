@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.backend.mapper.AiChatMapper">
+
+    <insert id="insertChat" parameterType="com.example.backend.domain.AiChat">
+        INSERT INTO ai_chat(user_idx, project_idx, user_message, ai_response)
+        VALUES (#{userIdx}, #{projectIdx}, #{userMessage}, #{aiResponse})
+    </insert>
+
+    <select id="getAllChats" resultType="com.example.backend.domain.AiChat">
+        SELECT user_idx, project_idx, user_message, ai_response
+        FROM ai_chat
+        ORDER BY user_idx ASC
+    </select>
+
+    <select id="getChatById" parameterType="long" resultType="com.example.backend.domain.AiChat">
+        SELECT user_idx, project_idx, user_message, ai_response
+        FROM ai_chat
+        WHERE user_idx = #{id}
+    </select>
+
+</mapper>

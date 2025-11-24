@@ -16,6 +16,14 @@ frontend/dist/
 backend/target/
 backend/.mvn/
 *.iml
+backend/src/main/resources/application.yml
+backend/uploads/
+
+*.local.yml
+*.secret.yml
+
+# DB
+alice/db/
 
 # 로그/캐시
 *.log
@@ -27,3 +35,18 @@ logs/
 .idea/
 .DS_Store
 Thumbs.db
+
+alice/practice/
+
+parsed_results/
+
+docs/
+
+chroma_db/
+alice/db/
+
+alice/fastAPI/src/extracted_texts
+
+alice/fastAPI/law_pipeline_data/vectordb
+
+alice/fastAPI/src/chroma_db

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.backend.mapper.ProjectMapper">
+
+    <resultMap id="projectMap" type="Project">
+        <id property="projectIdx" column="project_idx"/>
+        <result property="userIdx" column="user_idx"/>
+        <result property="projectName" column="project_name"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+
+        <association property="user" javaType="User">
+			<result property="idx" column="idx"/>
+			<result property="userId" column="user_id"/>
+			<result property="userPw" column="user_pw"/>
+		</association>
+    </resultMap>
+
+        <insert id="insertProject">
+            <selectKey keyProperty="projectIdx" order="BEFORE" resultType="long">
+                select project_seq.nextval from dual
+            </selectKey>
+            insert into projects (project_idx, user_idx, project_name, created_at, updated_at)
+            values (#{projectIdx}, #{userIdx}, #{projectName}, sysdate, sysdate)
+        </insert>
+
+        <delete id="deleteProject">
+            delete from projects
+            where project_idx = #{projectIdx} and user_idx = #{userIdx}
+        </delete>
+
+        <update id="updateProjectName">
+                update projects
+                set project_name = #{projectName}, updated_at = sysdate
+                where project_idx = #{projectIdx}
+        </update>
+
+        <select id="getProject" resultMap="projectMap">
+            select projects.project_idx, projects.user_idx, projects.project_name, projects.created_at, projects.updated_at, users.idx, users.user_id
+            from projects
+            left join users
+            on projects.user_idx = users.idx
+            where project_idx = #{projectIdx}
+        </select>
+
+        <select id="getProjectList" resultMap="projectMap">
+            select *
+            from projects
+            where user_idx = #{userIdx}
+            order by project_idx desc
+        </select>
+
+
+</mapper>
