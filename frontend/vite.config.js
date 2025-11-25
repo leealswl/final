@@ -14,6 +14,12 @@ export default defineConfig({
       '/uploads': {
         target: 'http://localhost:8081',
         changeOrigin: true,
+      },
+      // FastAPI 프록시 추가 (포트 8001)
+      '/fastapi': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/fastapi/, ''),
       }
     },
   },
