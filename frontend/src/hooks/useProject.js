@@ -10,7 +10,7 @@ import { useFileStore } from '../store/useFileStore';
  */
 export default function UseProject(opts = {}) {
     const setProject = useProjectStore((s) => s.setProject);
-    const resetTree = useFileStore((s) => s.resetTree);
+    // const resetTree = useFileStore((s) => s.resetTree);
 
     return useMutation({
         mutationKey: ['user', 'project'],
@@ -20,8 +20,8 @@ export default function UseProject(opts = {}) {
         },
         onSuccess: async (data) => {
             // 새 프로젝트 생성 시 파일 트리 초기화
-            console.log('🆕 새 프로젝트 생성: 파일 트리 초기화');
-            resetTree();
+            // console.log('🆕 새 프로젝트 생성: 파일 트리 초기화');
+            // resetTree();
             
             // 프로젝트 정보 저장
             setProject(data);

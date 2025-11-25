@@ -339,7 +339,7 @@ async def generate_content(request: ChatRequest):
         # [주석 처리] 기존의 복잡한 DB 저장 및 Interrupt 방식
         # ---------------------------------------------------------------------
         # thread_id_to_use = request.thread_id if request.thread_id else str(uuid.uuid4())
-        thread_id_to_use = "xcvweoisdksdkeeeeeeedd" # str값이 바로넘어가서 오류생겨서 이렇게바꿈
+        thread_id_to_use = "ddd" # str값이 바로넘어가서 오류생겨서 이렇게바꿈
 
         async with AsyncSqliteSaver.from_conn_string(DB_PATH) as saver:
             app_run = proposal_graph.compile(checkpointer=saver)
