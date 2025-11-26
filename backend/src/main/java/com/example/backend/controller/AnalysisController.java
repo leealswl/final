@@ -135,6 +135,8 @@ public class AnalysisController {
     public ResponseEntity<Map<String, Object>> startAnalysis(@RequestBody Map<String, Object> payload) {
         System.out.println("🚀 분석 시작 API 호출됨");
 
+        System.out.println("payload: " + payload);
+
         try {
             // 1. Frontend에서 받은 데이터 추출
             Long projectId = ((Number) payload.get("projectId")).longValue();
@@ -157,10 +159,14 @@ public class AnalysisController {
 
             // 공고문 파일 처리 (폴더 ID: 1)
             for (Map<String, Object> fileInfo : announcementFiles) {
+                System.out.println("fileInfo: " + fileInfo);
                 String filePath = (String) fileInfo.get("path");
+                System.out.println("filePath : " + filePath);
                 String fileName = (String) fileInfo.get("name");
+                System.out.println("fileName: " + fileName);
 
                 MultipartFile multipartFile = loadFileAsMultipart(filePath, fileName);
+                System.out.println("multipartFile: " + multipartFile);
                 if (multipartFile != null) {
                     files.add(multipartFile);
                     folders.add(1L); // 공고문 폴더

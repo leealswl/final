@@ -66,6 +66,15 @@ export const useFileStore = create(
             selectedFile: null, //선택된 노드가 파일일 때, 그 파일 객체
             currentProjectId: null, //업로드/경로 생성에 쓰는 컨텍스트
             currentUserId: null,
+            filePath: null,
+            setFilePath: (path) => set({ filePath: path }),
+
+            reloadTrigger: 0, // 🔥 추가: 리로드 트리거 값
+
+            reload: () =>
+                // 🔥 추가: 증가하여 useEffect 강제 실행
+                set((state) => ({ reloadTrigger: state.reloadTrigger + 1 })),
+
             setCurrentContext: (
                 { projectId, userId }, //컨텍스트 저장(페이지 진입 시 한 번). 업로드 훅 / 경로 생성에서 사용
             ) => set({ currentProjectId: projectId, currentUserId: userId }),

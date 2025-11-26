@@ -5,6 +5,8 @@ import java.util.Map;
 
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.backend.domain.Document;
+
 public interface DocumentService {
 
     public int saveFilesAndDocuments(List<MultipartFile> files, List<Long> folders, String userId, Long projectIdx)
@@ -15,5 +17,7 @@ public interface DocumentService {
      */
     public List<Map<String, Object>> saveFilesAndReturnInfo(List<MultipartFile> files, List<Long> folders, String userId, Long projectIdx)
             throws Exception;
+
+        Long saveDocument(Document request);
 
 }

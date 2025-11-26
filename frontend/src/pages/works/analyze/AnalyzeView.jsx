@@ -36,10 +36,10 @@ const AnalyzeView = () => {
 
     /**
      * 2025-11-23 추가: 프로젝트 변경 시 해당 프로젝트의 분석 결과를 DB에서 자동 로드
-     * 
+     *
      * 문제점: 이전에는 sessionStorage에 저장된 분석 결과가 프로젝트 변경 시에도 그대로 표시됨
      * 해결: 프로젝트가 변경될 때마다 해당 프로젝트의 분석 결과를 DB에서 조회하여 표시
-     * 
+     *
      * 동작 흐름:
      * 1. projectIdx가 변경되면 useEffect 트리거
      * 2. /api/analysis/get-context API 호출하여 해당 프로젝트의 분석 결과 조회
@@ -57,10 +57,10 @@ const AnalyzeView = () => {
             try {
                 setLoadingAnalysis(true);
                 console.log('📖 프로젝트별 분석 결과 로드 시작: projectIdx=', project.projectIdx);
-                
+
                 // 백엔드 API 호출: 해당 프로젝트의 분석 결과 조회
                 const response = await api.get('/api/analysis/get-context', {
-                    params: { projectIdx: project.projectIdx }
+                    params: { projectIdx: project.projectIdx },
                 });
 
                 if (response.data.status === 'success' && response.data.data) {
@@ -76,9 +76,9 @@ const AnalyzeView = () => {
                                 features: features,
                                 table_of_contents: resultToc,
                                 features_summary: {
-                                    total_count: features.length
-                                }
-                            }
+                                    total_count: features.length,
+                                },
+                            },
                         };
                         setAnalysisResult(analysisResultData);
                         console.log('✅ 분석 결과 로드 완료:', features.length, '개 Feature');
@@ -160,6 +160,7 @@ const AnalyzeView = () => {
             // 각 폴더에서 실제 파일들만 수집
             const 공고문파일들 = 공고문폴더 ? collectFiles([공고문폴더]) : [];
             const 첨부파일들 = 파일폴더 ? collectFiles([파일폴더]) : [];
+            console.log('공고문파일들: ', 공고문파일들);
 
             // 필수 파일 검증 (공고문이 없으면 분석 불가)
             if (공고문파일들.length === 0) {
@@ -327,100 +328,96 @@ const AnalyzeView = () => {
                 </Box>
             </Stack>
         </Stack>
-    ) : 
-    (
-            <Stack sx={{ backgroundColor: '#F4F7F9', height: '100vh', overflow: 'auto', p: 4 }} spacing={3}>
-                {/* 헤더 */}
-                <Box>
-                    <Typography fontSize={'2rem'} fontFamily={'Isamanru-Bold'} mb={1}>
-                        📊 프로젝트 분석 결과
-                    </Typography>
-                    <Typography fontFamily={'Pretendard4'} color={'#8C8C8C'}>
-                        PALADOC AI가 분석한 프로젝트 요구사항 및 첨부 양식입니다.
-                    </Typography>
-                </Box>
+    ) : (
+        <Stack sx={{ backgroundColor: '#F4F7F9', height: '100vh', overflow: 'auto', p: 4 }} spacing={3}>
+            {/* 헤더 */}
+            <Box>
+                <Typography fontSize={'2rem'} fontFamily={'Isamanru-Bold'} mb={1}>
+                    📊 프로젝트 분석 결과
+                </Typography>
+                <Typography fontFamily={'Pretendard4'} color={'#8C8C8C'}>
+                    PALADOC AI가 분석한 프로젝트 요구사항 및 첨부 양식입니다.
+                </Typography>
+            </Box>
 
-                {/* 핵심 정보 박스 */}
-                <Paper 
-                    elevation={2} 
-                    sx={{ 
-                        p: 4, 
-                        borderRadius: 3, 
-                        backgroundColor: 'white',
-                        border: '1px solid #e0e0e0'
-                    }}
-                >
-                    <Typography fontSize="1.6rem" fontWeight={700} mb={3} fontFamily={'Isamanru-Bold'}>
-                        🔑 핵심 정보
-                    </Typography>
-                    <Grid container spacing={3}>
-                        {featureCards
-                            .filter(feature => {
-                                // 핵심 정보로 분류할 feature_code들
-                                const coreFeatures = [
-                                    'project_name', 'announcement_date', 'application_period',
-                                    'project_period', 'support_scale', 'deadline'
-                                ];
-                                return coreFeatures.includes(feature.feature_code);
-                            })
-                            .slice(0, 6) // 최대 6개만 표시
-                            .map((feature) => (
-                                <Grid item xs={12} sm={6} md={4} key={feature.card_id}>
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography fontSize="1.4rem" color="#262626" mb={1} fontWeight={700}>
-                                            {feature.feature_name || feature.feature_code}
-                                        </Typography>
-                                        <Typography fontSize="1.1rem" fontWeight={400} color="#595959">
-                                            {feature.summary || feature.full_content?.substring(0, 50) || '정보 없음'}
-                                        </Typography>
-                                    </Box>
-                                </Grid>
-                            ))}
-                        {featureCards.filter(f => {
+            {/* 핵심 정보 박스 */}
+            <Paper
+                elevation={2}
+                sx={{
+                    p: 4,
+                    borderRadius: 3,
+                    backgroundColor: 'white',
+                    border: '1px solid #e0e0e0',
+                }}
+            >
+                <Typography fontSize="1.6rem" fontWeight={700} mb={3} fontFamily={'Isamanru-Bold'}>
+                    🔑 핵심 정보
+                </Typography>
+                <Grid container spacing={3}>
+                    {featureCards
+                        .filter((feature) => {
+                            // 핵심 정보로 분류할 feature_code들
                             const coreFeatures = ['project_name', 'announcement_date', 'application_period', 'project_period', 'support_scale', 'deadline'];
-                            return coreFeatures.includes(f.feature_code);
-                        }).length === 0 && (
-                            <Grid item xs={12}>
-                                <Typography color="#8C8C8C" textAlign="center">
-                                    핵심 정보가 없습니다.
-                                </Typography>
+                            return coreFeatures.includes(feature.feature_code);
+                        })
+                        .slice(0, 6) // 최대 6개만 표시
+                        .map((feature) => (
+                            <Grid item xs={12} sm={6} md={4} key={feature.card_id}>
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography fontSize="1.4rem" color="#262626" mb={1} fontWeight={700}>
+                                        {feature.feature_name || feature.feature_code}
+                                    </Typography>
+                                    <Typography fontSize="1.1rem" fontWeight={400} color="#595959">
+                                        {feature.summary || feature.full_content?.substring(0, 50) || '정보 없음'}
+                                    </Typography>
+                                </Box>
                             </Grid>
-                        )}
-                    </Grid>
-                </Paper>
-
-                {/* Feature 카드 박스 */}
-                <Paper 
-                    elevation={2} 
-                    sx={{ 
-                        p: 4, 
-                        borderRadius: 3, 
-                        backgroundColor: 'white',
-                        border: '1px solid #e0e0e0'
-                    }}
-                >
-                    <Typography fontSize="1.3rem" fontWeight={700} mb={3} fontFamily={'Isamanru-Bold'}>
-                        📋 상세 요구사항
-                    </Typography>
-                    {featureCards.length ? (
-                        <Grid container spacing={2}>
-                            {featureCards.map((feature) => (
-                                <Grid item size={4} key={feature.card_id}>
-                                    <FeatureCard feature={feature} />
-                                </Grid>
-                            ))}
-                        </Grid>
-                    ) : (
-                        <Box sx={{ p: 6, textAlign: 'center' }}>
-                            <Typography fontSize="1.1rem" fontWeight={600} color="#8C8C8C">
-                                표시할 Feature 정보가 없습니다
+                        ))}
+                    {featureCards.filter((f) => {
+                        const coreFeatures = ['project_name', 'announcement_date', 'application_period', 'project_period', 'support_scale', 'deadline'];
+                        return coreFeatures.includes(f.feature_code);
+                    }).length === 0 && (
+                        <Grid item xs={12}>
+                            <Typography color="#8C8C8C" textAlign="center">
+                                핵심 정보가 없습니다.
                             </Typography>
-                        </Box>
+                        </Grid>
                     )}
-                </Paper>
-    
-                {/* 디버깅 JSON */}
-                {/* <Paper elevation={0} sx={{ p: 4, borderRadius: 3, mt: 4 }}>
+                </Grid>
+            </Paper>
+
+            {/* Feature 카드 박스 */}
+            <Paper
+                elevation={2}
+                sx={{
+                    p: 4,
+                    borderRadius: 3,
+                    backgroundColor: 'white',
+                    border: '1px solid #e0e0e0',
+                }}
+            >
+                <Typography fontSize="1.3rem" fontWeight={700} mb={3} fontFamily={'Isamanru-Bold'}>
+                    📋 상세 요구사항
+                </Typography>
+                {featureCards.length ? (
+                    <Grid container spacing={2}>
+                        {featureCards.map((feature) => (
+                            <Grid item size={4} key={feature.card_id}>
+                                <FeatureCard feature={feature} />
+                            </Grid>
+                        ))}
+                    </Grid>
+                ) : (
+                    <Box sx={{ p: 6, textAlign: 'center' }}>
+                        <Typography fontSize="1.1rem" fontWeight={600} color="#8C8C8C">
+                            표시할 Feature 정보가 없습니다
+                        </Typography>
+                    </Box>
+                )}
+            </Paper>
+
+            {/* 디버깅 JSON */}
+            {/* <Paper elevation={0} sx={{ p: 4, borderRadius: 3, mt: 4 }}>
                     <Typography fontSize="1.2rem" fontWeight={700} mb={2}>
                         🔍 원본 분석 데이터 (디버깅용)
                     </Typography>
@@ -438,7 +435,7 @@ const AnalyzeView = () => {
                         {JSON.stringify(analysisResult, null, 2)}
                     </Box>
                 </Paper> */}
-            </Stack>
+        </Stack>
     );
 };
 
@@ -480,8 +477,8 @@ const FeatureCard = ({ feature }) => {
 
                     {/* 요약 내용 */}
                     {feature.summary ? (
-                        <Typography 
-                            fontSize="0.9rem" 
+                        <Typography
+                            fontSize="0.9rem"
                             color="#595959"
                             sx={{
                                 display: '-webkit-box',
@@ -573,6 +570,5 @@ const Section = ({ title, children }) => (
         {children}
     </Box>
 );
-
 
 export default AnalyzeView;

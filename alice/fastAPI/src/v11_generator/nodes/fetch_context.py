@@ -13,7 +13,7 @@ def fetch_context_for_proposal(state: ProposalGenerationState) -> ProposalGenera
     result_toc = context_data.get('result_toc', {})
     raw_sections: List[Dict[str, Any]] = result_toc.get("sections", [])
 
-    print('raw_sections: ', raw_sections)
+    # print('raw_sections: ', raw_sections)
     
     # 🔑 핵심 수정: 소수점(.)이 있는 하위 섹션만 필터링하여 toc_structure에 담습니다.
     # toc_structure = []
@@ -25,7 +25,7 @@ def fetch_context_for_proposal(state: ProposalGenerationState) -> ProposalGenera
     anal_guide = context_data.get('anal_guide', {})
     generation_strategy = anal_guide.get("generation_strategy", "공고문 분석 전략이 없으므로, 목차를 작성하는 데 필요한 일반적인 정보를 수집합니다.")
 
-    print('generation_strategy: ', generation_strategy)
+    # print('generation_strategy: ', generation_strategy)
     
     # # 3. --- 루프 초기 목표 및 인덱스 설정 (필터링된 리스트의 0번 인덱스부터 시작) ---
     # initial_chapter_index = 0
