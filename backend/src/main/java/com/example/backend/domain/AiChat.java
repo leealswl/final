@@ -39,4 +39,8 @@ public class AiChat {
     // 5. FastAPI의 "message" 필드를 수신하기 위한 필드 추가
     @JsonProperty("message")
     private String message;
+    
+    // 6. ProseMirror JSON 형식의 완성된 콘텐츠 (에디터용)
+    @JsonProperty("completed_content")
+    private Map<String, Object> completedContent;
 }

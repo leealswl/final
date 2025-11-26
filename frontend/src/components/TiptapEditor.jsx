@@ -153,7 +153,7 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
 
         let contentToSet = initialContent;
 
-        if (hydrateKeyRef.current === contentKey) return;
+        // if (hydrateKeyRef.current === contentKey) return;
         
         // string이면 JSON인지 HTML인지 확인
         if (typeof initialContent === 'string') {

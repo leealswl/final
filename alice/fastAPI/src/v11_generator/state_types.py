@@ -18,6 +18,7 @@ class ProposalGenerationState(TypedDict):
     # === 4. 생성 및 검토 결과 ===
     generated_text: str 
     current_draft: str 
+    completedContent: Optional[Dict[str, Any]]  # ProseMirror JSON 형식 (에디터용) 
     
     # === 5. 챗봇 주도 정보 수집 플로우 필드 ===
     current_chapter_index: int 

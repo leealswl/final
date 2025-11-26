@@ -241,7 +241,8 @@ export default function Editor() {
         //     cancelled = true;
         // };
 
-        fetch(toAbs(filePath))
+        // fetch(toAbs(filePath))
+        fetch(toAbs('/uploads/admin/1/1/234.json'))
             .then(async (res) => {
                 if (!res.ok) throw new Error(res.statusText || 'JSON 파일을 불러오지 못했습니다.');
                 const jsonData = await res.json(); // JSON 파싱

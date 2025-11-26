@@ -219,6 +219,14 @@ public class FastAPIService {
             AiChat result = response.block();
             System.out.println("✅ FastAPI 응답 수신 완료");
             
+            // 🔍 [디버깅] FastAPI Raw Response 확인
+            System.out.println("🔍 [디버깅] FastAPI Raw Response - aiResponse: " + (result != null ? result.getAiResponse() : "null"));
+            System.out.println("🔍 [디버깅] FastAPI Raw Response - message: " + (result != null ? result.getMessage() : "null"));
+            System.out.println("🔍 [디버깅] FastAPI Raw Response - completedContent: " + (result != null ? result.getCompletedContent() : "null"));
+            System.out.println("🔍 [디버깅] FastAPI Raw Response - generatedContent: " + (result != null ? result.getGeneratedContent() : "null"));
+            System.out.println("🔍 [디버깅] FastAPI Raw Response - status: " + (result != null ? result.getStatus() : "null"));
+            System.out.println("🔍 [디버깅] FastAPI Raw Response - threadId: " + (result != null ? result.getThreadId() : "null"));
+            
             // 💡 중요: 호출하는 서비스(예: AiChatServiceImpl)는 이 AiChat 객체에서 
             // threadId와 status 필드를 확인하고 관리해야 합니다.
             return result;

@@ -14,13 +14,13 @@ import { useDocumentSaveStore } from '../../../store/useDocumentSaveStore';
  * 2025-11-17 수정:
  * EditView는 이제 2분할 레이아웃만 관리
  * 좌측 목차는 Layout.jsx에서 관리하도록 변경
- * - 좌측: AI Chatbot
- * - 우측: TipTap Editor (항상 표시)
+ * - 중앙: TipTap Editor (항상 표시)
+ * - 우측: AI Chatbot
  */
 export default function EditView() {
     const params = useParams();
     const docId = params.docId ?? null; 
-    const isExistingDoc = !!docId;
+    const isExistingDoc = !docId;
 
     //const { docId } = useParams();
     const getById = useFileStore((s) => s.getById);
@@ -30,7 +30,7 @@ export default function EditView() {
     //const { setDocumentId, content: docContent, setContent: setDocumentContent } = useDocumentStore();
     const {
     content: docContent,          // TipTap 내용(JSON)
-    setContent: setDocumentContent, // onContentChange에서 호출
+    setContent: setDocumentContent, // onContentChange에서 호출 (주석 처리된 코드에서 사용)
     setMeta,
     projectIdx,
     documentIdx,                    // projectIdx, documentIdx, fileName 설정
@@ -146,28 +146,8 @@ export default function EditView() {
     return (
         <Box display="flex" flex={1} height="100vh">
             <PanelGroup direction="horizontal" style={{ display: 'flex', width: '100%' }}>
-                {/* 좌측: AI Chatbot Panel */}
-                <Panel defaultSize={50} minSize={30}>
-                    <Box height="100%" bgcolor="grey.100" p={1} overflow="auto">
-                        <ChatBotMUI />
-                    </Box>
-                </Panel>
-
-                {/* Resizer Handle */}
-                <PanelResizeHandle>
-                    <Divider
-                        orientation="vertical"
-                        sx={{
-                            cursor: 'col-resize',
-                            bgcolor: 'grey.300',
-                            '&:hover': { bgcolor: 'primary.main' },
-                            width: 4,
-                        }}
-                    />
-                </PanelResizeHandle>
-
-                {/* 우측: TipTap Editor Panel */}
-                <Panel defaultSize={50} minSize={30}>
+                {/* 중앙: TipTap Editor Panel */}
+                <Panel defaultSize={70} minSize={40}>
                     <Box display="flex" flexDirection="column" height="100%" bgcolor="white">
                         <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
                             {/* <TiptapEditor 
@@ -184,6 +164,26 @@ export default function EditView() {
                                 📋 좌측 목차를 클릭하면 해당 섹션으로 이동합니다. Heading 레벨, 목록, 표 삽입이 지원됩니다.
                             </Typography>
                         </Box>
+                    </Box>
+                </Panel>
+
+                {/* Resizer Handle */}
+                <PanelResizeHandle>
+                    <Divider
+                        orientation="vertical"
+                        sx={{
+                            cursor: 'col-resize',
+                            bgcolor: 'grey.300',
+                            '&:hover': { bgcolor: 'primary.main' },
+                            width: 4,
+                        }}
+                    />
+                </PanelResizeHandle>
+
+                {/* 우측: AI Chatbot Panel */}
+                <Panel defaultSize={30} minSize={20}>
+                    <Box height="100%" bgcolor="grey.100" p={1} overflow="auto">
+                        <ChatBotMUI />
                     </Box>
                 </Panel>
             </PanelGroup>

@@ -339,7 +339,7 @@ async def generate_content(request: ChatRequest):
         # [주석 처리] 기존의 복잡한 DB 저장 및 Interrupt 방식
         # ---------------------------------------------------------------------
         # thread_id_to_use = request.thread_id if request.thread_id else str(uuid.uuid4())
-        thread_id_to_use = "awe34d" # str값이 바로넘어가서 오류생겨서 이렇게바꿈
+        thread_id_to_use = "4da5hsdsfgas5a" # str값이 바로넘어가서 오류생겨서 이렇게바꿈
 
         async with AsyncSqliteSaver.from_conn_string(DB_PATH) as saver:
             app_run = proposal_graph.compile(checkpointer=saver)
@@ -356,6 +356,7 @@ async def generate_content(request: ChatRequest):
 
         # 4. 결과 추출 (GENERATE_QUERY 노드가 만든 질문)
         current_query = result.get("current_query")
+        completedContent = result.get("completedContent")
         
         print(f"📤 응답 전송: {current_query}")
         
@@ -363,7 +364,8 @@ async def generate_content(request: ChatRequest):
         return JSONResponse({
             "status": "waiting_for_input", 
             "message": current_query,
-            "thread_id": thread_id_to_use 
+            "thread_id": thread_id_to_use ,
+            "completed_content":  completedContent
         })
         
     except Exception as e:
