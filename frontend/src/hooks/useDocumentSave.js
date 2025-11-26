@@ -3,7 +3,7 @@ import { useDocumentStore } from '../store/useDocumentStore';
 import api from '../utils/api';
 
 export default function useDocumentSave() {
-    const { projectIdx, documentIdx, fileName, content, isDirty, saving, saveError, setSaving, markSaved, setSaveError, setMeta } = useDocumentStore();
+    const { projectIdx, documentIdx, fileName, content, isDirty, saving, saveError, setSaving, markSaved, setSaveError, setMeta, filePath, folder } = useDocumentStore();
 
     // 실제 저장 함수
     const saveDocument = useCallback(
@@ -44,6 +44,8 @@ export default function useDocumentSave() {
                     documentIdx: documentIdx ?? null, // ★ 새 문서면 null 그대로 보냄
                     fileName: finalFileName,
                     content: JSON.stringify(content), // ★ Tiptap JSON → 문자열
+                    filePath: filePath,
+                    folder: folder,
                 };
                 console.log('[saveDocument] 서버로 보낼 payload:', payload);
 
@@ -62,6 +64,8 @@ export default function useDocumentSave() {
                             projectIdx,
                             documentIdx: data.documentIdx,
                             fileName: finalFileName,
+                            filePath: filePath,
+                            folder: folder,
                         });
                     }
                 }
@@ -84,7 +88,7 @@ export default function useDocumentSave() {
                 setSaving(false);
             }
         },
-        [projectIdx, documentIdx, fileName, content, isDirty, saving, setSaving, markSaved, setSaveError, setMeta],
+        [projectIdx, documentIdx, fileName, content, isDirty, saving, setSaving, markSaved, setSaveError, setMeta, filePath, folder],
     );
 
     return {
