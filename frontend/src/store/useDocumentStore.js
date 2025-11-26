@@ -10,6 +10,8 @@ export const useDocumentStore = create((set, get) => ({
     projectIdx: null,
     documentIdx: null,
     fileName: '',
+    filePath: null,
+    folder: 0,
 
     isDirty: false, // 수정됨 여부
 
@@ -17,11 +19,12 @@ export const useDocumentStore = create((set, get) => ({
     saveError: null, // 마지막 에러
     lastSavedAt: null, // 마지막 저장 시각
 
-    setMeta: ({ projectIdx, documentIdx, fileName }) =>
+    setMeta: ({ projectIdx, documentIdx, fileName, filePath }) =>
         set(() => ({
             projectIdx,
             documentIdx,
             fileName: fileName || '',
+            filePath,
         })),
     setContent: (content, shouldSave = true) => {
         set({ content });
@@ -79,7 +82,7 @@ export const useDocumentStore = create((set, get) => ({
 
         set({ status: 'loading', error: null, documentId: targetId });
         try {
-            const { data } = await api.get(`/api/document/${targetId}/content`);
+            const { data } = await api.get(`/api/documents/${targetId}/content`);
             const content = data?.content || null;
             set({ content, status: 'success' });
             return content;
@@ -99,8 +102,8 @@ export const useDocumentStore = create((set, get) => ({
 
         set({ status: 'saving', error: null });
         try {
-            // await api.post(`/api/document/${targetId}/content`, { content: payload });
-            await api.post(`/api/document/1/content`, { content: payload });
+            // await api.post(`/api/documents/${targetId}/content`, { content: payload });
+            await api.post(`/api/documents/1/content`, { content: payload });
             set({ status: 'success' });
         } catch (error) {
             set({ status: 'error', error: error.message });
