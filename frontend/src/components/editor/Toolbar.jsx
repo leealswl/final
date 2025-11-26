@@ -175,6 +175,7 @@ export default function Toolbar({ editor }) {
 
         // 1) 에디터 내용을 HTML로 가져오기
         const htmlBody = editor.getHTML();
+        // console.log("htmlbody", htmlBody)
 
         // 2) Word가 이해할 수 있는 전체 HTML 문서 형태로 감싸기
         const fullHtml =
@@ -186,6 +187,7 @@ export default function Toolbar({ editor }) {
         try {
             // 3) HTML → DOCX Blob 변환
             const blob = await asBlob(fullHtml);
+
 
             // 4) 파일 저장
             saveAs(blob, '제안서초안.docx');

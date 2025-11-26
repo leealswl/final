@@ -24,8 +24,9 @@ from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.concurrency import run_in_threadpool
 from typing import List
+from fastapi.middleware.cors import CORSMiddleware
 
-
+from law_rag import verify_law_compliance
 
 
 
@@ -34,11 +35,6 @@ current_file_path = Path(__file__).resolve()
 source_root = current_file_path.parent.parent.parent.parent
 sys.path.append(str(source_root))
 
-from fastapi import FastAPI, File, Form, UploadFile
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from fastapi.concurrency import run_in_threadpool
 
 # [주석 처리] DB 저장소 (단순 실행 모드에서는 필요 없음)
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
@@ -76,6 +72,10 @@ class ChatRequest(BaseModel):
     thread_id: Optional[str] = None # [추가] 대화 이어서 하려면 이게 필요함
     userIdx: int | None = None
     projectIdx: int | None = None
+
+class VerifyRequest(BaseModel):
+    text: str              # 검증할 초안 텍스트 (섹션 하나)
+    focus: str | None = None   # 예: "연구개발비", "수행계획", "기관요건" 등
 
 app = FastAPI(
     title=settings.API_TITLE,
@@ -463,51 +463,35 @@ async def get_table_of_contents(projectidx: int | None = None):
 
     except Exception as e:
         return {"error": str(e)}
-    
-# @app.post("/verify")
-# async def verify_text(req: VerifyRequest):
-#     """
-#     초안 문단을 문장별로 분리하여
-#     법령 RAG 기반으로 '적합/부적합' 검증해주는 API
-#     """
-#     try:
-#         print("🔍 검증 요청:", req.text[:50], "...")
 
-#         import re
-#         sentences = re.split(r'(?<=[.!?])\s+', req.text.strip())
+@app.post("/verify/law")
+async def verify_law(req: VerifyRequest):
+    """
+    기획서 초안의 일부(text)를 법령 RAG 기반으로 검증하고
+    JSON 결과를 그대로 반환하는 엔드포인트.
+    """
+    try:
+        print("🔍 법령 검증 요청:", req.text[:50], "... / focus:", req.focus)
 
-#         results = []
-#         for s in sentences:
-#             if not s.strip():
-#                 continue
-#             rag_res = rag_chain.invoke(s)
-#             results.append({
-#                 "sentence": s,
-#                 "result": rag_res.content
-#             })
+        result = verify_law_compliance(req.text, req.focus)
 
-#         return {
-#             "status": "ok",
-#             "count": len(results),
-#             "results": results
-#         }
-
-#     except Exception as e:
-#         print("❌ 검증 오류:", e)
-#         return {
-#             "status": "error",
-#             "message": str(e)
-#         }
-    
-        # print(f"❌ /toc 처리 중 기타 서버 오류: {str(e)}")
-        # return JSONResponse(
-        #     status_code=500,
-        #     content={
-        #         "status": "error",
-        #         "message": f"FastAPI 내부 오류: {str(e)}",
-        #         "sections": []
-        #     }
-        # )
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "data": result
+            }
+        )
+    except Exception as e:
+        print("❌ /verify/law 처리 중 오류:", e)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "message": "법령 검증 중 서버 오류 발생",
+                "detail": str(e)
+            }
+        )
 
 # ========================================
 # 실행 (개발용)

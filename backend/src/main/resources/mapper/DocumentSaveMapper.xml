@@ -18,18 +18,18 @@
             folder,
             file_name,
             file_path,
-            content,
-            created_at,
-            updated_at
+            <!-- content, -->
+            created_at
+            <!-- updated_at -->
         ) VALUES (
             #{documentIdx},
             #{projectIdx},
             2,                          
             #{fileName},
             '/some/path',               
-            #{content},
-            SYSDATE,
+            <!-- #{content}, -->
             SYSDATE
+            <!-- SYSDATE -->
         )
     </insert>
 
@@ -37,8 +37,8 @@
     <update id="updateDocumentContent" parameterType="com.example.backend.domain.DocumentSave">
         UPDATE documents
         SET
-            content    = #{content},
-            updated_at = SYSDATE
+            <!-- content    = #{content}, -->
+            <!-- updated_at = SYSDATE -->
         WHERE document_idx = #{documentIdx}
           AND project_idx  = #{projectIdx}
     </update>

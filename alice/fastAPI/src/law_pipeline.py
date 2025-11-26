@@ -205,13 +205,13 @@ def build_vectordb():
 # 7) 메인 실행
 # ----------------------------------------------------------
 
-if __name__ == "__main__":
-    print("\n🚀 법령 파이프라인 실행")
+# if __name__ == "__main__":
+#     print("\n🚀 법령 파이프라인 실행")
 
-    build_parsed_json()
-    build_vectordb()
+#     build_parsed_json()
+#     build_vectordb()
 
-    print("\n🎉 모든 작업 완료! (parsed/ + vectordb/ 생성됨)")
+#     print("\n🎉 모든 작업 완료! (parsed/ + vectordb/ 생성됨)")
 
 
 # 법령 rag -> python law_pipeline.py 실행하면 law_pipeline_data/parsed/ 와 vectordb/ 생성됨

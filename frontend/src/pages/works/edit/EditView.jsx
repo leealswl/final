@@ -22,12 +22,10 @@ export default function EditView() {
     const docId = params.docId ?? null; 
     const isExistingDoc = !!docId;
 
-    //const { docId } = useParams();
     const getById = useFileStore((s) => s.getById);
     const setSelectedFile = useFileStore((s) => s.setSelectedFile);
     const currentProjectIdx = useFileStore((s) => s.currentProjectId);
     
-    //const { setDocumentId, content: docContent, setContent: setDocumentContent } = useDocumentStore();
     const {
     content: docContent,          // TipTap 내용(JSON)
     setContent: setDocumentContent, // onContentChange에서 호출

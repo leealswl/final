@@ -27,7 +27,7 @@ public class DocumentContentController {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public DocumentContentController(@Value("${upload.dir:uploads}") String uploadDir) {
-        this.storageDir = Paths.get(uploadDir, "document_json");
+        this.storageDir = Paths.get(uploadDir, "admin");
         System.out.println("storageDir: " + storageDir);
         try {
             Files.createDirectories(this.storageDir);
