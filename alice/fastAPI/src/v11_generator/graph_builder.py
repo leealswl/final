@@ -1,99 +1,98 @@
-"""
-기획서 생성 LangGraph 워크플로우 빌더
-새로운 플로우:
-  start(N) → LLM 판단 → [충분: 컨텐츠 생성 → end(N)] / [부족: 질문 생성 → 사용자 입력 → 다시 LLM 판단]
-"""
-from typing import Dict, Any, List
+from typing import Dict, Any
 from langgraph.graph import StateGraph, END, START
-from .state_types import ProposalGenerationState 
+from .state_types import ProposalGenerationState
 
-# --- 사용하는 노드만 임포트 ---
 from .nodes.fetch_context import fetch_context_for_proposal
 from .nodes.generate_query import generate_query
-from .nodes.ask_user_and_update_data import ask_user_and_update_data 
+from .nodes.ask_user_and_update_data import ask_user_and_update_data
 from .nodes.assess_sufficiency import assess_info
-from .nodes.manage_progression import manage_progression
-from .nodes.histroy_checker import history_checker
+from .nodes.history_checker import history_checker
 from .nodes.generate_draft import generate_proposal_draft
+from .nodes.edit_draft import edit_proposal_draft
 
-
-# ---------------------------------------------------------
-# 1. [라우터] 판결에 따라 갈림길 (ASSESS_INFO의 결과에 따라 분기)
-# ---------------------------------------------------------
-def route_after_assessment(state: ProposalGenerationState) -> str:
-    """판단 결과: 충분하면 다음 섹션으로, 부족하면 추가 질문으로"""
-    # sufficiency: True (70점 이상) -> 다음 섹션으로 이동해야 함
-    if state.get("sufficiency", False):
-        # generate_draft 노드가 다음 섹션 인덱스를 설정하고 accumulated_data를 정리함
-        return "generate_draft" 
+# ----------------------------
+# 라우터 함수
+# ----------------------------
+# 질문이지 판단하는걸 LLM한테
+def route_after_save_user(state: ProposalGenerationState) -> str:
+    """사용자 요청이 수정 요청인지 질문인지 판단"""
+    user_prompt = state.get("user_prompt", "").lower()
     
+    # 수정 요청 키워드 확인
+    edit_keywords = ["바꿔", "수정", "변경", "고쳐", "교체", "다시 써", "재작성", "바꾸", "수정해", "변경해", "고쳐줘"]
+    is_edit_request = any(keyword in user_prompt for keyword in edit_keywords)
+    
+    if is_edit_request:
+        print(f"🔍 수정 요청 감지: {user_prompt}")
+        return "edit_draft"
+    
+    # 일반 요청 (정보 제공 또는 질문)
+    return "history_checker"
 
-    return "GENERATE_QUERY"         
 
-# ---------------------------------------------------------
-# 2. [라우터] HISTORY_CHECKER 결과에 따라 분기 (완료 메시지 생성 OR 정보 평가)
-# ---------------------------------------------------------
 def route_after_history_check(state: ProposalGenerationState) -> str:
-    """HISTORY_CHECKER 결과에 따라, 완료 메시지 생성 OR 정보 평가로 분기"""
-    if state.get("target_already_completed"):
-        # 완료된 목차 언급 시 → GENERATE_QUERY 노드로 바로 이동
-        return "GENERATE_QUERY" 
-    
-
-    # 그 외의 경우 → ASSESS_INFO (정보 평가)
+    """이미 작성된 섹션이면 바로 generate_draft, 아니면 평가로 진행"""
+    if state.get("target_already_completed", False):
+        return "generate_draft"
     return "ASSESS_INFO"
 
-# ---------------------------------------------------------
-# 3. 그래프 구축 (섹션 단위 진행 버전)
-# ---------------------------------------------------------
+
+def route_after_assessment(state: ProposalGenerationState) -> str:
+    """필요 정보 충분 여부 -> (draft 생성 or 질문 생성)"""
+    if state.get("sufficiency", False):
+        return "generate_draft"
+    return "GENERATE_QUERY"
+
+
+# ----------------------------
+# 그래프 생성
+# ----------------------------
 
 def create_proposal_graph() -> StateGraph:
     workflow = StateGraph(ProposalGenerationState)
 
-    # === 1. 노드 추가 ===
-    # A. 초기화 (Context 설정)
+    # 노드 등록
     workflow.add_node("FETCH_CONTEXT", fetch_context_for_proposal)
-    # B. 데이터 저장 (사용자 답변 기록)
     workflow.add_node("SAVE_USER", ask_user_and_update_data)
-    # C. 평가 (70점 이상인지 판단)
+    workflow.add_node("history_checker", history_checker)
     workflow.add_node("ASSESS_INFO", assess_info)
-    # D. 진행 관리 (다음 섹션으로 인덱스 이동)
-    workflow.add_node("generate_draft", generate_proposal_draft) 
-    # E. 질문 생성 (질문자 역할)
     workflow.add_node("GENERATE_QUERY", generate_query)
-    # F. 목차 관리
-    workflow.add_node("HISTORY_CHECKER", history_checker)
-    
-    
-    # === 2. 엣지 연결 (섹션 단위 반복 루프) ===
-    
-    # 1. 시작: Start -> 설정
-    workflow.add_edge(START, "FETCH_CONTEXT")
-    
-    # 2. 첫 루프 시작: 설정 -> 저장
-    # (FastAPI에서 이미 user_prompt가 들어왔으므로 바로 저장 후 평가로 넘어갑니다)
-    workflow.add_edge("FETCH_CONTEXT", "SAVE_USER")
-    
-    # 목차 관리하는 히스토리 체커 노드 추가
-    workflow.add_edge("SAVE_USER", "HISTORY_CHECKER")
+    workflow.add_node("generate_draft", generate_proposal_draft)
+    workflow.add_node("edit_draft", edit_proposal_draft)
 
-    # 3. 평가: 저장 -> 평가
-    workflow.add_edge("HISTORY_CHECKER", "ASSESS_INFO")
-    
-    # 4. 조건부 분기: 평가 -> (합격) 매니저 OR (불합격) 질문자
+    # 엣지 연결
+    workflow.add_edge(START, "FETCH_CONTEXT")
+    workflow.add_edge("FETCH_CONTEXT", "SAVE_USER")
+
+    # SAVE_USER 다음 분기: 수정 요청이면 edit_draft, 아니면 history_checker
+    workflow.add_conditional_edges(
+        "SAVE_USER",
+        route_after_save_user,
+        {
+            "edit_draft": "edit_draft",  # 수정 요청 시
+            "history_checker": "history_checker"  # 일반 요청 시
+        }
+    )
+
+    workflow.add_edge("history_checker", "ASSESS_INFO")
+
     workflow.add_conditional_edges(
         "ASSESS_INFO",
         route_after_assessment,
         {
-            "generate_draft": "generate_draft", # 합격 시 -> 다음 섹션으로 인덱스 변경
-            "GENERATE_QUERY": "GENERATE_QUERY"          # 불합격 시 -> 현재 섹션에 대한 추가 질문 생성
+            "generate_draft": "generate_draft",
+            "GENERATE_QUERY": "GENERATE_QUERY",
         }
     )
-    # 5. 다음 질문: 매니저(인덱스 이동 완료) -> 질문자
-    # (새로운 섹션에 대한 첫 질문을 생성하도록 루프 재시작)
-    workflow.add_edge("generate_draft", END)
-    
-    # 6. 종료: 질문 생성 -> END
+
+    # 질문 생성 후 → 사용자 입력을 받고 다시 저장으로!
     workflow.add_edge("GENERATE_QUERY", END)
-    
+
+    # Draft 생성 후 → 다음 섹션 질문 생성
+    workflow.add_edge("generate_draft", END)
+
+    # 수정 완료 후 → END
+    workflow.add_edge("edit_draft", END)
+
     return workflow
+

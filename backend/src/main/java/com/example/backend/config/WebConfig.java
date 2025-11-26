@@ -33,6 +33,6 @@ public class WebConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // /uploads/** 요청 → backend/uploads/ 폴더
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:uploads/");
+                .addResourceLocations("file:backend/uploads/");
     }
 }

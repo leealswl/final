@@ -19,13 +19,42 @@
 
 .editor-page {
   width: 794px;
-  min-height: 1123px;
-  margin: 0 auto;
+  height: 1123px; /* A4 높이 고정 - 실제 페이지 분할 */
+  max-height: 1123px; /* 최대 높이 제한 */
+  margin: 0 auto 40px; /* 페이지 간 간격 */
   padding: 56px;
   background: #ffffff;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 
+    0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 2px 8px rgba(0, 0, 0, 0.1),
+    0 4px 16px rgba(0, 0, 0, 0.05);
   font-family: "Pretendard", "Noto Sans KR", sans-serif;
   line-height: 1.65;
+  position: relative;
+  page-break-after: always; /* 인쇄 시 페이지 나누기 */
+  break-after: page;
+  overflow: hidden; /* 넘치는 내용 숨김 - 실제 페이지 분할 */
+  display: flex;
+  flex-direction: column;
+}
+
+/* 페이지 컨테이너 */
+.editor-pages-container {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  width: 100%;
+}
+
+/* 페이지 번호 표시 (선택사항) */
+.editor-page::after {
+  content: '';
+  position: absolute;
+  bottom: 20px;
+  right: 56px;
+  width: 30px;
+  height: 1px;
+  background: #cbd5e1;
 }
 
 .editor-page h1,
@@ -158,6 +187,35 @@
 
 .editor-page table tbody tr:nth-of-type(even) td {
   background: #f8fafc;
+}
+
+/* 페이지 넘김 방지 (표, 이미지 등 큰 요소) */
+.editor-page table,
+.editor-page img,
+.editor-page .paladoc-image-wrapper {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+/* ProseMirror 내용 컨테이너 - 실제 페이지 분할 */
+.ProseMirror {
+  position: relative;
+  min-height: 1011px; /* 최소 한 페이지 높이 */
+  /* 구분선 제거 - 실제 페이지로 분할됨 */
+}
+
+/* 내용이 배경 위에 오도록 */
+.ProseMirror > * {
+  position: relative;
+  background: transparent;
+}
+
+/* 페이지 넘김 방지가 필요한 요소들 */
+.ProseMirror > h1,
+.ProseMirror > h2,
+.ProseMirror > h3 {
+  page-break-after: avoid;
+  break-after: avoid;
 }
 
 .table-toolbar {
