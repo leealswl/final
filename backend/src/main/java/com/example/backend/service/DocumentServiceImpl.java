@@ -84,12 +84,15 @@ public class DocumentServiceImpl implements DocumentService{
             Long folderName = folders.get(i);
 
             Path uploadPath = baseUploadPath.resolve(Paths.get(userid, String.valueOf(projectIdx), String.valueOf(folderName)));
+            System.out.println("uploadPath: " + uploadPath);
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }
 
             Path filePath = uploadPath.resolve(file.getOriginalFilename());
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            System.out.println("filePath.toString(): " + filePath.toString());
 
             System.out.println("[SAVE] " + filePath.toAbsolutePath());
 
@@ -122,5 +125,29 @@ public class DocumentServiceImpl implements DocumentService{
 
         System.out.println("document service (with info) 작동 완료: " + savedFiles.size() + "개");
         return savedFiles;
+    }
+
+    @Override
+    public Long saveDocument(Document request) {
+        if (request.getProjectIdx() == null) {
+            throw new IllegalArgumentException("projectIdx는 필수입니다.");
+        }
+
+        // 새 문서 생성
+        if (request.getDocumentIdx() == null) {
+            int rows = documentMapper.insertDocument(request);
+
+            if (rows != 1) {
+                throw new IllegalStateException("문서 INSERT 실패: rows=" + rows);
+            }
+
+            Long generatedId = request.getDocumentIdx();  // ← selectKey가 여기 채워줌
+            System.out.println("새 문서 생성: documentIdx=" + generatedId);
+            return generatedId;
+        }
+
+        // 기존 문서 업데이트
+        documentMapper.updateDocumentContent(request);
+        return request.getDocumentIdx();
     }
 }

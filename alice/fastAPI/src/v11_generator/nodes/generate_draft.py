@@ -130,6 +130,79 @@ def text_to_prosemirror_json(text: str) -> Dict[str, Any]:
         "type": "doc",
         "content": paragraphs
     }
+import json
+import os
+from pathlib import Path
+
+
+def _extract_relevant_guide(guide_data: dict, chapter_number: str, chapter_title: str) -> str:
+    """
+    guide_claude.json에서 목차 번호/제목에 맞는 가이드를 추출합니다.
+
+    Args:
+        guide_data: 로드된 guide JSON 데이터
+        chapter_number: 목차 번호 (예: "1", "2", "2.1")
+        chapter_title: 목차 제목
+
+    Returns:
+        해당 목차에 대한 가이드 텍스트
+    """
+    try:
+        # integrated_business_proposal_guide에서 섹션 찾기
+        guide_root = guide_data.get("integrated_business_proposal_guide", {})
+
+        # 목차 번호를 기반으로 섹션 키 매핑
+        section_mapping = {
+            "1": "section_01_basic_info",
+            "2": "section_02_current_status",
+            "3": "section_03_preparation_plan",
+            "4": "section_04_goals_and_requirements",
+            "5": "section_05_business_feasibility",
+            "6": "section_06_budget",
+            "7": "section_07_evaluation_criteria"
+        }
+
+        # 주요 섹션 번호 추출 (2.1 -> 2)
+        main_section_num = chapter_number.split('.')[0] if '.' in chapter_number else chapter_number
+        section_key = section_mapping.get(main_section_num)
+
+        if section_key and section_key in guide_root:
+            section_data = guide_root[section_key]
+
+            # 가이드 텍스트 구성
+            guide_text = f"## {section_data.get('section_name', '')}\n\n"
+
+            # R&D 계획서 참조
+            if 'rd_plan_reference' in section_data:
+                guide_text += f"**R&D 참조**: {section_data['rd_plan_reference']}\n"
+
+            # SW RFP 참조
+            if 'sw_rfp_reference' in section_data:
+                guide_text += f"**SW RFP 참조**: {section_data['sw_rfp_reference']}\n\n"
+
+            # 주요 키워드
+            if 'common_keywords' in section_data:
+                guide_text += f"**핵심 키워드**: {', '.join(section_data['common_keywords'])}\n\n"
+
+            # 나머지 섹션 데이터를 JSON으로 추가
+            guide_text += "### 상세 가이드\n"
+            guide_text += json.dumps(section_data, ensure_ascii=False, indent=2)
+
+            return guide_text
+        else:
+            # 매칭되는 섹션이 없으면 일반 작성 팁 반환
+            tips = guide_root.get("writing_tips_and_warnings", {}).get("common_tips", [])
+            if tips:
+                return f"일반 작성 지침:\n" + "\n".join(f"- {item}" for item in tips)
+            else:
+                return "해당 목차에 대한 가이드를 찾을 수 없습니다."
+
+    except Exception as e:
+        print(f"⚠️ 가이드 추출 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        return "가이드 정보를 추출할 수 없습니다."
+
 
 def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGenerationState:
     """
@@ -159,10 +232,15 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
 
         4. 최근 대화 히스토리 (Recent Chat History)
         - {recent_history}
+
+        5. 제안서 작성 가이드 (Writing Guide Reference)
+        - {guide_reference}
         ======================================================================
 
         ✍️ <작성 지침>
-        - 위 네 가지 입력 정보를 모두 반영하여 **정부 제안서 공식 문체로 해당 목차의 완성된 단락**을 작성하십시오.
+        - 위 다섯 가지 입력 정보를 모두 반영하여 **정부 제안서 공식 문체로 해당 목차의 완성된 단락**을 작성하십시오.
+        - **제안서 작성 가이드**에 명시된 해당 목차의 작성 요령, 핵심 포인트, 필수 포함 내용을 반드시 준수하십시오.
+        - 가이드에 제시된 표 형식, 측정 방법, 정량적 지표, 예시 등의 요구사항이 있다면 반드시 반영하십시오.
         - 문단 형식으로 작성하고, 개조식 나열이 필요한 경우 적절히 혼합하십시오.
         - 사용자가 제공한 정보가 불충분한 영역이 있어도 추론 가능한 범위 내에서 자연스럽게 보완하십시오.
         - 단순 요약이나 나열이 아닌 **논리적 구조(배경 → 필요성 → 목적 → 근거 → 기대효과 등)**로 설득력 있게 작성하십시오.
@@ -226,28 +304,51 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
         - 각 문단은 별도의 paragraph로 구분하세요
         """
     
+    # 1. guide_claude.json 로드
+    guide_data = {}
+    guide_reference = "가이드 정보를 불러올 수 없습니다."
+
+    try:
+        # 현재 파일 기준으로 guide 폴더 경로 찾기
+        current_dir = Path(__file__).parent
+        guide_path = current_dir.parent / "guide" / "guide_claude.json"
+
+        if guide_path.exists():
+            with open(guide_path, 'r', encoding='utf-8') as f:
+                guide_data = json.load(f)
+                print(f"✅ guide_claude.json 로드 성공: {guide_path}")
+        else:
+            print(f"⚠️ guide_claude.json 파일을 찾을 수 없습니다: {guide_path}")
+    except Exception as e:
+        print(f"⚠️ guide_claude.json 로드 오류: {e}")
+
     # 2. 현재 목표 섹션 정보 설정 (history_checker의 결정 반영 로직)
     collected_data = state.get("collected_data", "")
     # print('collected_data: ', collected_data)
     # print(f"--- 📊 ASSESS_INFO 수신 데이터 길이: {len(collected_data)}자 ---")
-    
+
     toc_structure = state.get("draft_toc_structure", [])
     target_title = state.get("target_chapter", "")
-    current_idx = state.get("current_chapter_index", 0) 
+    current_idx = state.get("current_chapter_index", 0)
 
     fetched_context = state.get("fetched_context", {})
     anal_guide_summary = str(fetched_context.get("anal_guide", "전략 정보 없음"))
 
     if toc_structure and current_idx < len(toc_structure):
         major_chapter_item = toc_structure[current_idx]
-        major_chapter_number = major_chapter_item.get("number", "0") 
-        major_chapter_title = major_chapter_item.get("title", "제목 없음") 
+        major_chapter_number = major_chapter_item.get("number", "0")
+        major_chapter_title = major_chapter_item.get("title", "제목 없음")
 
         # 2-1. LLM 프롬프트에 사용될 주 챕터 정보 구성
         chapter_display = f"{major_chapter_item.get('number')} {major_chapter_item.get('title')}"
-        target_info_full = f"[{chapter_display}]\n설명: {major_chapter_item.get('description')}" 
+        target_info_full = f"[{chapter_display}]\n설명: {major_chapter_item.get('description')}"
 
         print('target_info_full: ', target_info_full)
+
+        # 2-2. 가이드에서 해당 목차에 맞는 섹션 찾기
+        if guide_data:
+            guide_reference = _extract_relevant_guide(guide_data, major_chapter_number, major_chapter_title)
+            print(f"📚 추출된 가이드 길이: {len(guide_reference)}자")
 
     msgs = state.get("messages", [])
     recent_history = ""
@@ -272,7 +373,8 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
         'target_chapter_info': target_info_full,
         'anal_guide_summary': anal_guide_summary,
         'collected_data': collected_data,
-        'recent_history': recent_history
+        'recent_history': recent_history,
+        'guide_reference': guide_reference
         })
     
     # 만약 accumulated_data가 문자열이면 리스트로 변환

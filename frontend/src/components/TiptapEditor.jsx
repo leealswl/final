@@ -110,35 +110,36 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
     const hydrateKeyRef = useRef(null);
     const headingsRef = useRef([]);
     const extensions = useMemo(() => defaultExtensions, []);
-    
+
     const editor = useEditor({
         extensions,
         content: initialContent || undefined,
         editable: !readOnly,
-        editorProps: { attributes: { class: 'editor-page' },
-        handleDOMEvents: {
-            contextmenu: ( _view, event) => {
-                const target = event.target;
-                if (target instanceof HTMLElement && target.closest('table')) {
-                    event.preventDefault();
-                    setTableMenu({
-                        mouseX: event.clientX + 2,
-                        mouseY: event.clientY - 6,
-                    });
-                    return true; // 브라우저 기본 메뉴 막기
-                }
-                return false;
+        editorProps: {
+            attributes: { class: 'editor-page' },
+            handleDOMEvents: {
+                contextmenu: (_view, event) => {
+                    const target = event.target;
+                    if (target instanceof HTMLElement && target.closest('table')) {
+                        event.preventDefault();
+                        setTableMenu({
+                            mouseX: event.clientX + 2,
+                            mouseY: event.clientY - 6,
+                        });
+                        return true; // 브라우저 기본 메뉴 막기
+                    }
+                    return false;
+                },
             },
         },
-    },
-    onUpdate: ({ editor }) => {
-        const json = editor.getJSON();
-        onContentChange(json);
-        emitHeadings(editor);
-        emitActive(editor);
-    },
+        onUpdate: ({ editor }) => {
+            const json = editor.getJSON();
+            onContentChange(json);
+            emitHeadings(editor);
+            emitActive(editor);
+        },
     });
-        
+
     // 2025-11-17: 에디터 인스턴스를 외부에 등록 (목차 스크롤 기능을 위해)
     useEffect(() => {
         if (editor && registerEditor) {
@@ -155,6 +156,7 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
 
         // if (hydrateKeyRef.current === contentKey) return;
         
+
         // string이면 JSON인지 HTML인지 확인
         if (typeof initialContent === 'string') {
             try {
@@ -236,7 +238,7 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
                     flex: 1,
                     overflowY: 'auto',
                     px: 3,
-                    py: 3, 
+                    py: 3,
                     minHeight: 'calc(100vh - 200px)',
                     lineHeight: 1.6,
                     outline: 'none',
@@ -255,7 +257,7 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
                     },
                     '& table': {
                         borderCollapse: 'collapse',
-                        my: 2, 
+                        my: 2,
                         width: '100%',
                         '& th, & td': {
                             border: '1px solid #d1d5db',

@@ -128,11 +128,14 @@
         2025-11-23 추가: 프로젝트별 목차 데이터 조회
     -->
     <select id="getTableOfContentsByProject" resultMap="tableOfContentsMap">
-        select *
-        from table_of_contents
-        where project_idx = #{projectIdx}
-        order by toc_idx desc
-        fetch first 1 row only
+        SELECT *
+        FROM (
+            SELECT *
+            FROM table_of_contents
+            WHERE project_idx = #{projectIdx}
+            ORDER BY toc_idx DESC
+        )
+        WHERE ROWNUM = 1
     </select>
 
 

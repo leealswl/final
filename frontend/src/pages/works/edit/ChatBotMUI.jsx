@@ -6,6 +6,7 @@ import { useProjectStore } from '../../../store/useProjectStore';
 import { useTocStore } from '../../../store/useTocStore';
 import robotIcon from '../robot-icon.png.png';
 import { useFileStore } from '../../../store/useFileStore';
+import { Typewriter } from 'react-simple-typewriter';
 
 const ChatBotMUI = () => {
     const [messages, setMessages] = useState([{ sender: 'bot', text: '안녕하세요! 기획서 작성을 도와드릴 ai도우미입니다 목차를 보고 원하는 챕터를 알려주세요' }]);
@@ -166,6 +167,25 @@ const ChatBotMUI = () => {
                             >
                                 <Typography variant="body2" sx={{whiteSpace: "pre-line"}}>{msg.text}</Typography>
                             </Box>
+                            {msg.sender === 'user' ? (
+                                // 사용자 메시지는 즉시 출력
+                                <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+                                    {msg.text}
+                                </Typography>
+                            ) : (
+                                // AI 메시지는 타이핑 효과로 출력
+                                <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+                                    <Typewriter
+                                        words={[msg.text]}
+                                        loop={1} // 1회만 실행
+                                        cursor={false} // 커서 표시
+                                        cursorStyle="|" // 커서 모양
+                                        typeSpeed={30} // 타이핑 속도
+                                        deleteSpeed={0} // 삭제 속도 0으로 설정
+                                        delaySpeed={1000} // 다음 문장 전 딜레이
+                                    />
+                                </Typography>
+                            )}
                         </Box>
                     ))}
                     {/* 🔹 AI 답변 로딩 중일 때 표시 */}
