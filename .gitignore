@@ -6,6 +6,7 @@
 **/.venv/
 **/__pycache__/
 **/*.pyc
+alice/alice/
 
 # Node (frontend)
 frontend/node_modules/
