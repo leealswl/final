@@ -29,19 +29,24 @@ const Banner01 = () => {
                             flexDirection: 'column',
                         }}
                     >
-                        <Typography fontSize={60} textAlign={'center'} my={2} fontFamily={'Isamanru-Bold'}>
-                            A next-gen
-                            <br />
-                            AI editor for all your
-                            <br />
-                            documents
-                        </Typography>
-                        <Typography textAlign={'center'} fontFamily={'Pretendard5'}>
-                            Out-of-the-box, Markdown-Friendly
-                            <br />
-                            Full framework support (React, Vue Angular, Svelte)
-                        </Typography>
+                        <Box>
+                            <Typography data-aos="fade-up" data-aos-once="false" fontSize={60} textAlign={'center'} my={2} fontFamily={'Isamanru-Bold'}>
+                                A next-gen
+                                <br />
+                                AI editor for all your
+                                <br />
+                                documents
+                            </Typography>
+                            <Typography data-aos="fade-up" data-aos-once="false" data-aos-delay="200" textAlign={'center'} fontFamily={'Pretendard5'}>
+                                Out-of-the-box, Markdown-Friendly
+                                <br />
+                                Full framework support (React, Vue Angular, Svelte)
+                            </Typography>
+                        </Box>
                         <Button
+                            data-aos="fade-up"
+                            data-aos-once="false"
+                            data-aos-delay="400"
                             onClick={main}
                             variant="contained"
                             size="large"
@@ -60,6 +65,9 @@ const Banner01 = () => {
                     </Box>
                 </Grid>
                 <Box
+                    data-aos="fade-up"
+                    data-aos-once="false"
+                    data-aos-delay="600"
                     sx={{
                         width: '100%',
                         height: '55vh',

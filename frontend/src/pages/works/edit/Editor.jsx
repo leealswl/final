@@ -47,15 +47,47 @@ export default function Editor() {
         setLoading(true);
         setLoadError(null);
 
-        fetch(toAbs(filePath))
+        // fetch(toAbs(filePath))
+        //     .then(async (res) => {
+        //         if (!res.ok) throw new Error(res.statusText || '파일을 불러오지 못했습니다.');
+        //         const txt = await res.text(); // 텍스트로 읽기
+        //         // 이미 언마운트된 경우 무시
+        //         if (!cancelled) {
+        //             const html = textToHtml(txt); // 텍스트를 HTML로 변환
+        //             setInitialContent(html);
+        //             setDocumentContent(html);
+        //         }
+        //     })
+        //     .catch((error) => {
+        //         console.warn('[Editor] 콘텐츠 로드 실패', error);
+        //         if (!cancelled) {
+        //             // 에러 발생 시 빈 문서로 시작
+        //             const emptyHtml = '<p></p>';
+        //             setInitialContent(emptyHtml);
+        //             setDocumentContent(emptyHtml);
+        //             setLoadError('파일 내용을 불러오지 못했습니다. 빈 문서로 시작합니다.');
+        //         }
+        //     })
+        //     .finally(() => {
+        //         if (!cancelled) setLoading(false);
+        //     });
+
+        // // cleanup 함수: 컴포넌트 언마운트 시 중단
+        // return () => {
+        //     cancelled = true;
+        // };
+
+        const url = `${toAbs(filePath)}?t=${Date.now()}`;
+
+        fetch(url)
             .then(async (res) => {
                 if (!res.ok) throw new Error(res.statusText || 'JSON 파일을 불러오지 못했습니다.');
                 const jsonData = await res.json(); // JSON 파싱
+                console.log('jsondata: ', jsonData);
                 // 이미 언마운트된 경우 무시
-                if (!cancelled) {
-                    setInitialContent(jsonData);
-                    setDocumentContent(jsonData);
-                }
+
+                setInitialContent(jsonData);
+                setDocumentContent(jsonData, false);
             })
             .catch((error) => {
                 console.warn('[Editor] JSON 로드 실패', error);
@@ -71,11 +103,9 @@ export default function Editor() {
                 if (!cancelled) setLoading(false);
             });
 
-
-        return () => {
-            cancelled = true;
-        };
-    }, [setDocumentId, setDocumentContent, reloadTrigger]);
+        // cleanup 함수: 컴포넌트 언마운트 시 중단
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [setDocumentId, setDocumentContent, reloadTrigger, filePath]);
 
     // 지원하는 파일 형식인 경우: TiptapEditor 표시
     return (
@@ -90,7 +120,8 @@ export default function Editor() {
             {!loading && loadError && <Box sx={{ px: 2, py: 1, bgcolor: '#fff4e5', color: '#8a6d3b', borderBottom: '1px solid #f0deb4' }}>{loadError}</Box>}
             {/* Tiptap 에디터 영역 */}
             <Box sx={{ flex: 1, minHeight: 0 }}>
-                <TiptapEditor initialContent={initialContent} onContentChange={setDocumentContent} readOnly={false} contentKey={'default'} registerEditor={setEditorInstance} />
+                {/* <TiptapEditor initialContent={initialContent} contentKey={file.id} onContentChange={setDocumentContent} readOnly={false} registerEditor={setEditorInstance} /> */}
+                <TiptapEditor initialContent={initialContent} onContentChange={setDocumentContent} contentKey={'default'} readOnly={false} registerEditor={setEditorInstance} />
             </Box>
             {/* 하단 안내 메시지 */}
             <Box sx={{ px: 2, py: 1, borderTop: '1px solid #e5e7eb', bgcolor: '#fafafa' }}>

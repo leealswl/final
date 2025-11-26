@@ -1,3 +1,4 @@
+import 'aos/dist/aos.css';
 import './App.css';
 import Homepage from './pages/home/Homepage';
 import { Route, Routes } from 'react-router-dom';
@@ -11,28 +12,35 @@ import EditView from './pages/works/edit/EditView';
 import VerifyView from './pages/works/verify/VerifyView';
 import Dashboard from './pages/main/Dashboard';
 import { useEffect } from 'react';
-import { useFileStore } from './store/useFileStore';
+import AOS from 'aos';
 
 function App() {
+    useEffect(() => {
+        AOS.init({
+            duration: 1000,
+            once: true,
+            easing: 'ease-out',
+        });
+    }, []);
 
-  return (
-      <Routes>
-        <Route path="/" element={<Homepage />} />
-        <Route path="/login" element={<Login />} />
-        
-        <Route path="/main" element={<Dashboard />} />
-        
-        <Route path="/works" element={<Layout />}>
-          <Route path="analyze" element={<AnalyzeView />} />
-          <Route path="analyze/dashboard" element={<AnalyzeDashboard />} />
-          <Route path="create"  element={<CreateView />} />
-          <Route path="generate" element={<GenerateView />} />
-          <Route path="edit"    element={<EditView />} />
-          <Route path="edit/:docId" element={<EditView />} />
-          <Route path="verify"  element={<VerifyView />} />
-        </Route>
-    </Routes>
-  );
+    return (
+        <Routes>
+            <Route path="/" element={<Homepage />} />
+            <Route path="/login" element={<Login />} />
+
+            <Route path="/main" element={<Dashboard />} />
+
+            <Route path="/works" element={<Layout />}>
+                <Route path="analyze" element={<AnalyzeView />} />
+                <Route path="analyze/dashboard" element={<AnalyzeDashboard />} />
+                <Route path="create" element={<CreateView />} />
+                <Route path="generate" element={<GenerateView />} />
+                <Route path="edit" element={<EditView />} />
+                <Route path="edit/:docId" element={<EditView />} />
+                <Route path="verify" element={<VerifyView />} />
+            </Route>
+        </Routes>
+    );
 }
 
 export default App;

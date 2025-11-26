@@ -64,7 +64,7 @@ export function NewDocumentCard() {
                 <Plus size={24} style={{ color: '#5f6368' }} />
             </Box>
             <Typography variant="body2" sx={{ color: '#5f6368' }}>
-                새 문서 생성
+                새 프로젝트 생성
             </Typography>
         </Box>
     );
