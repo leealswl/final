@@ -18,13 +18,19 @@ const ChatBotMUI = () => {
     // 사용자 정보 및 프로젝트 정보 가져오기
     const user = useAuthStore((s) => s.user);
     const project = useProjectStore((s) => s.project);
-    
+
     // 에디터 인스턴스 가져오기
     const editorInstance = useTocStore((s) => s.editorInstance);
 
     const scrollRef = useRef(null);
     const isComposingRef = useRef(false); // IME 조합 중인지 추적
     const pendingEnterRef = useRef(false); // 조합 종료 직후 Enter 키 대기
+
+    const scrollToBottom = () => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    };
 
     const handleSend = () => {
         // 중복 호출 방지: 로딩 중이거나 입력값이 없으면 무시
@@ -37,42 +43,42 @@ const ChatBotMUI = () => {
         setIsLoading(true);
 
         sendChatMessage(
-            { 
+            {
                 userMessage: userText,
                 userIdx: user?.idx || 1,
-                projectIdx: project?.projectIdx || 1
+                projectIdx: project?.projectIdx || 1,
             },
             {
                 onSuccess: async (data) => {
                     // 챗봇 UI용 메시지 추가
                     setMessages((prev) => [...prev, { sender: 'bot', text: data.aiResponse }]);
-                    setFilePath('/uploads/admin/1/1/234.json')
-                    
+                    setFilePath('/uploads/admin/1/1/234.json');
+
                     // 파일에서 JSON 읽어서 에디터에 출력
                     if (editorInstance) {
                         try {
                             // 파일 경로 설정 (캐시 방지를 위해 타임스탬프 추가)
                             const timestamp = new Date().getTime();
                             const filePath = `/uploads/admin/1/1/234.json?t=${timestamp}`;
-                            
+
                             console.log('[ChatBotMUI] 📂 파일 읽기 시도:', filePath);
-                            
+
                             // 파일에서 JSON 읽기 (캐시 방지 헤더 추가)
                             const response = await fetch(filePath, {
                                 method: 'GET',
                                 headers: {
                                     'Cache-Control': 'no-cache',
-                                    'Pragma': 'no-cache'
-                                }
+                                    Pragma: 'no-cache',
+                                },
                             });
-                            
+
                             if (!response.ok) {
                                 throw new Error(`파일 읽기 실패: ${response.status} ${response.statusText}`);
                             }
-                            
+
                             const completedContent = await response.json();
                             console.log('[ChatBotMUI] 📄 파일 읽기 성공, paragraph 개수:', completedContent?.content?.length || 0);
-                            
+
                             // 에디터에 반영
                             editorInstance.commands.setContent(completedContent, false);
                             console.log('[ChatBotMUI] ✅ 에디터 업데이트 완료 (파일에서 읽음)');
@@ -83,26 +89,21 @@ const ChatBotMUI = () => {
                     } else {
                         console.warn('[ChatBotMUI] ⚠️ editorInstance가 없습니다');
                     }
-                    
+
                     setIsLoading(false);
                 },
                 onError: (error) => {
                     console.error('챗봇 오류:', error);
-                    setMessages((prev) => [
-                        ...prev,
-                        { sender: 'bot', text: '⚠️ 서버 오류가 발생했습니다.' }
-                    ]);
+                    setMessages((prev) => [...prev, { sender: 'bot', text: '⚠️ 서버 오류가 발생했습니다.' }]);
                     setIsLoading(false);
-                }
-        });
-        
+                },
+            },
+        );
     };
 
     // ✅ 스크롤 항상 아래로
     useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
+        scrollToBottom();
     }, [messages, isLoading]);
 
     // 🔹 로딩 애니메이션 점 찍기
@@ -166,25 +167,26 @@ const ChatBotMUI = () => {
                                 }}
                             >
                                 {/* <Typography variant="body2" sx={{whiteSpace: "pre-line"}}>{msg.text}</Typography> */}
-                            {msg.sender === 'user' ? (
-                                // 사용자 메시지는 즉시 출력
-                                <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
-                                    {msg.text}
-                                </Typography>
-                            ) : (
-                                // AI 메시지는 타이핑 효과로 출력
-                                <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
-                                    <Typewriter
-                                        words={[msg.text]}
-                                        loop={1} // 1회만 실행
-                                        cursor={false} // 커서 표시
-                                        cursorStyle="|" // 커서 모양
-                                        typeSpeed={30} // 타이핑 속도
-                                        deleteSpeed={0} // 삭제 속도 0으로 설정
-                                        delaySpeed={1000} // 다음 문장 전 딜레이
+                                {msg.sender === 'user' ? (
+                                    // 사용자 메시지는 즉시 출력
+                                    <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+                                        {msg.text}
+                                    </Typography>
+                                ) : (
+                                    // AI 메시지는 타이핑 효과로 출력
+                                    <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+                                        <Typewriter
+                                            words={[msg.text]}
+                                            loop={1} // 1회만 실행
+                                            cursor={false} // 커서 표시
+                                            cursorStyle="|" // 커서 모양
+                                            typeSpeed={30} // 타이핑 속도
+                                            deleteSpeed={0} // 삭제 속도 0으로 설정
+                                            delaySpeed={1000} // 다음 문장 전 딜레이
+                                            onType={scrollToBottom}
                                         />
-                                </Typography>
-                            )}
+                                    </Typography>
+                                )}
                             </Box>
                         </Box>
                     ))}

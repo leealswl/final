@@ -26,7 +26,6 @@ export default function EditView() {
     const isExistingDoc = !!docId;
     const { reloadTrigger, filePath } = useFileStore();
 
-    //const { docId } = useParams();
     const getById = useFileStore((s) => s.getById);
     const setSelectedFile = useFileStore((s) => s.setSelectedFile);
     const currentProjectIdx = useFileStore((s) => s.currentProjectId);
