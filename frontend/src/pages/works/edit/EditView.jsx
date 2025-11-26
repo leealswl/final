@@ -59,6 +59,7 @@ export default function EditView() {
                 projectIdx: tmpProjectIdx,
                 documentIdx: null, // 아직 문서 row 없음
                 fileName: '제안서_초안',
+                filePath: filePath ?? '/uploads/admin/1/1/234.json',
             });
 
             // 새 문서일 땐 굳이 파일 트리에서 찾을 게 없으니 바로 리턴
@@ -74,8 +75,9 @@ export default function EditView() {
 
             setMeta({
                 projectIdx: f.projectIdx ?? f.project_idx ?? f.projectId ?? f.project_id ?? currentProjectIdx ?? 1,
-                documentIdx: f.documentIdx ?? f.document_idx ?? f.id ?? docId,
+                documentIdx: f.documentIdx ?? f.document_idx ?? f.id ?? docId ?? 1,
                 fileName: f.fileName ?? f.name ?? f.label ?? '제안서_초안',
+                filePath: filePath ?? '/uploads/admin/1/1/234.json',
             });
         } else {
             console.warn('[EditView] getById로 파일을 찾지 못했습니다.', { docId });
@@ -83,9 +85,10 @@ export default function EditView() {
                 projectIdx: currentProjectIdx ?? 1,
                 documentIdx: docId, // 일단 라우트에서 온 값 넣어둠
                 fileName: '제안서_초안',
+                filePath: filePath ?? '/uploads/admin/1/1/234.json',
             });
         }
-    }, [isExistingDoc, docId, getById, setSelectedFile, setMeta, currentProjectIdx]);
+    }, [isExistingDoc, docId, getById, setSelectedFile, setMeta, currentProjectIdx, filePath]);
 
     useEffect(() => {
         fetch(toAbs('/uploads/admin/1/1/234.json'))

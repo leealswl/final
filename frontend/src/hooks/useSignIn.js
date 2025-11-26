@@ -8,7 +8,7 @@ export default function useSignIn(opts = {}) {
     return useMutation({
         mutationKey: ['user', 'login'],
         mutationFn: async ({ userId, userPw }) => {
-            const res = await api.post('/api/user/login', { userId, userPw }, { withCredentials: true });
+            const res = await api.post('/api/users/login', { userId, userPw }, { withCredentials: true });
             return res.data; // { userId, username }
         },
         onSuccess: async (data) => {
