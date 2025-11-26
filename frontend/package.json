@@ -29,6 +29,7 @@
     "@tiptap/extension-text-align": "^2.6.6",
     "@tiptap/react": "^2.6.6",
     "@tiptap/starter-kit": "^2.6.6",
+    "aos": "^2.3.4",
     "axios": "^1.12.2",
     "dotenv": "^17.2.3",
     "file-saver": "^2.0.5",
