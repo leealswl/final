@@ -1,21 +1,9 @@
 import { useCallback } from 'react';
-import { useDocumentSaveStore } from '../store/useDocumentSaveStore';
+import { useDocumentStore } from '../store/useDocumentStore';
 import api from '../utils/api';
 
 export default function useDocumentSave() {
-    const {
-        projectIdx,
-        documentIdx,
-        fileName,
-        content,
-        isDirty,
-        saving,
-        saveError,
-        setSaving,
-        markSaved,
-        setSaveError,
-        setMeta,
-    } = useDocumentSaveStore();
+    const { projectIdx, documentIdx, fileName, content, isDirty, saving, saveError, setSaving, markSaved, setSaveError, setMeta } = useDocumentStore();
 
     // 실제 저장 함수
     const saveDocument = useCallback(
@@ -24,6 +12,8 @@ export default function useDocumentSave() {
             if (saving) {
                 return { ok: false, error: '이미 저장 중입니다.' };
             }
+
+            console.log('projectIdx: ', projectIdx);
 
             if (!projectIdx) {
                 const msg = 'projectIdx가 설정되어 있지 않습니다.';
@@ -87,28 +77,14 @@ export default function useDocumentSave() {
                 };
             } catch (error) {
                 console.error('문서 저장 실패:', error);
-                const msg =
-                    error?.response?.data?.message ||
-                    error?.message ||
-                    '저장 중 오류가 발생했습니다.';
+                const msg = error?.response?.data?.message || error?.message || '저장 중 오류가 발생했습니다.';
                 setSaveError(msg);
                 return { ok: false, error: msg };
             } finally {
                 setSaving(false);
             }
         },
-        [
-            projectIdx,
-            documentIdx,
-            fileName,
-            content,
-            isDirty,
-            saving,
-            setSaving,
-            markSaved,
-            setSaveError,
-            setMeta,
-        ],
+        [projectIdx, documentIdx, fileName, content, isDirty, saving, setSaving, markSaved, setSaveError, setMeta],
     );
 
     return {
