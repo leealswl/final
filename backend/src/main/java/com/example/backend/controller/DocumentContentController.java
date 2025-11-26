@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RestController
-@RequestMapping("/api/document")
+@RequestMapping("/api/documents")
 public class DocumentContentController {
 
     @Autowired
