@@ -353,7 +353,7 @@ const AnalyzeView = () => {
                 <Typography fontSize="1.6rem" fontWeight={700} mb={3} fontFamily={'Isamanru-Bold'}>
                     🔑 핵심 정보
                 </Typography>
-                <Grid container spacing={3}>
+                <Stack spacing={3}>
                     {featureCards
                         .filter((feature) => {
                             // 핵심 정보로 분류할 feature_code들
@@ -362,28 +362,24 @@ const AnalyzeView = () => {
                         })
                         .slice(0, 6) // 최대 6개만 표시
                         .map((feature) => (
-                            <Grid item xs={12} sm={6} md={4} key={feature.card_id}>
-                                <Box sx={{ mb: 2 }}>
-                                    <Typography fontSize="1.4rem" color="#262626" mb={1} fontWeight={700}>
-                                        {feature.feature_name || feature.feature_code}
-                                    </Typography>
-                                    <Typography fontSize="1.1rem" fontWeight={400} color="#595959">
-                                        {feature.summary || feature.full_content?.substring(0, 50) || '정보 없음'}
-                                    </Typography>
-                                </Box>
-                            </Grid>
+                            <Box key={feature.card_id} sx={{ mb: 2 }}>
+                                <Typography fontSize="1.4rem" color="#262626" mb={1} fontWeight={700}>
+                                    {feature.feature_name || feature.feature_code}
+                                </Typography>
+                                <Typography fontSize="1.1rem" fontWeight={400} color="#595959">
+                                    {feature.summary || feature.full_content?.substring(0, 50) || '정보 없음'}
+                                </Typography>
+                            </Box>
                         ))}
                     {featureCards.filter((f) => {
                         const coreFeatures = ['project_name', 'announcement_date', 'application_period', 'project_period', 'support_scale', 'deadline'];
                         return coreFeatures.includes(f.feature_code);
                     }).length === 0 && (
-                        <Grid item xs={12}>
-                            <Typography color="#8C8C8C" textAlign="center">
-                                핵심 정보가 없습니다.
-                            </Typography>
-                        </Grid>
+                        <Typography color="#8C8C8C" textAlign="center">
+                            핵심 정보가 없습니다.
+                        </Typography>
                     )}
-                </Grid>
+                </Stack>
             </Paper>
 
             {/* Feature 카드 박스 */}
