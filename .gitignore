@@ -45,9 +45,8 @@ docs/
 chroma_db/
 alice/db/
 
-alice/fastAPI/src/extracted_texts
-
-alice/fastAPI/src/law_pipeline_data/vectordb
-
-alice/fastAPI/src/chroma_db
+alice/fastAPI/src/extracted_texts/
 alice/fastAPI/src/law_pipeline_data/
+
+alice/fastAPI/src/law_pipeline_data/vectordb/
+alice/fastAPI/src/chroma_db/
