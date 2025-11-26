@@ -165,8 +165,7 @@ const ChatBotMUI = () => {
                                     wordBreak: 'break-word',
                                 }}
                             >
-                                <Typography variant="body2" sx={{whiteSpace: "pre-line"}}>{msg.text}</Typography>
-                            </Box>
+                                {/* <Typography variant="body2" sx={{whiteSpace: "pre-line"}}>{msg.text}</Typography> */}
                             {msg.sender === 'user' ? (
                                 // 사용자 메시지는 즉시 출력
                                 <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
@@ -183,9 +182,10 @@ const ChatBotMUI = () => {
                                         typeSpeed={30} // 타이핑 속도
                                         deleteSpeed={0} // 삭제 속도 0으로 설정
                                         delaySpeed={1000} // 다음 문장 전 딜레이
-                                    />
+                                        />
                                 </Typography>
                             )}
+                            </Box>
                         </Box>
                     ))}
                     {/* 🔹 AI 답변 로딩 중일 때 표시 */}
