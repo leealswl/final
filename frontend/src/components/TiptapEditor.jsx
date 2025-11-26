@@ -147,6 +147,107 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
         }
     }, [editor, registerEditor]);
 
+    // ---------------------- A4 페이지 실제 분할 (CSS 기반 - 높이 고정) ----------------------
+    useEffect(() => {
+        if (!editor) return;
+
+        const PAGE_CONTENT_HEIGHT = 1011; // A4 내용 영역 높이 (1123 - 112)
+        const PAGE_FULL_HEIGHT = 1123; // A4 전체 높이
+        const PAGE_GAP = 40;
+
+        const updatePageLayout = () => {
+            const editorElement = editor.view.dom;
+            if (!editorElement) return;
+
+            const proseMirror = editorElement.querySelector('.ProseMirror');
+            if (!proseMirror) return;
+
+            // 현재 내용의 실제 높이 측정
+            const contentHeight = proseMirror.scrollHeight;
+            const pagesNeeded = Math.max(1, Math.ceil(contentHeight / PAGE_CONTENT_HEIGHT));
+
+            // 페이지 컨테이너 찾기 또는 생성
+            let container = editorElement.querySelector('.editor-pages-container');
+            const existingPage = editorElement.querySelector('.editor-page');
+            
+            if (!container && pagesNeeded > 1) {
+                container = document.createElement('div');
+                container.className = 'editor-pages-container';
+                container.style.cssText = `
+                    display: flex;
+                    flex-direction: column;
+                    gap: ${PAGE_GAP}px;
+                    width: 100%;
+                `;
+                
+                // 기존 페이지를 컨테이너로 이동
+                if (existingPage && existingPage.parentNode) {
+                    existingPage.parentNode.insertBefore(container, existingPage);
+                    container.appendChild(existingPage);
+                }
+            }
+
+            // 여러 페이지가 필요한 경우 추가 페이지 생성
+            if (container && pagesNeeded > 1) {
+                const existingPages = container.querySelectorAll('.editor-page');
+                const currentPageCount = existingPages.length;
+
+                // 페이지가 부족하면 추가
+                if (pagesNeeded > currentPageCount) {
+                    for (let i = currentPageCount; i < pagesNeeded; i++) {
+                        const page = document.createElement('div');
+                        page.className = 'editor-page';
+                        page.style.cssText = `
+                            width: 794px;
+                            height: ${PAGE_FULL_HEIGHT}px;
+                            min-height: ${PAGE_FULL_HEIGHT}px;
+                            max-height: ${PAGE_FULL_HEIGHT}px;
+                            margin: 0 auto ${PAGE_GAP}px;
+                            padding: 56px;
+                            background: #ffffff;
+                            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.05);
+                            position: relative;
+                            page-break-after: always;
+                            break-after: page;
+                            overflow: hidden;
+                            display: flex;
+                            flex-direction: column;
+                        `;
+                        container.appendChild(page);
+                    }
+                }
+
+                // 불필요한 페이지 제거
+                if (currentPageCount > pagesNeeded) {
+                    const pages = container.querySelectorAll('.editor-page');
+                    for (let i = pagesNeeded; i < pages.length; i++) {
+                        pages[i].remove();
+                    }
+                }
+            } else if (container && pagesNeeded === 1) {
+                // 한 페이지만 필요하면 컨테이너 제거
+                const firstPage = container.querySelector('.editor-page');
+                if (firstPage && firstPage.parentNode) {
+                    firstPage.parentNode.insertBefore(firstPage, container);
+                    container.remove();
+                }
+            }
+        };
+
+        const handleUpdate = () => {
+            setTimeout(updatePageLayout, 100);
+        };
+
+        editor.on('update', handleUpdate);
+        
+        // 초기 실행
+        setTimeout(updatePageLayout, 200);
+
+        return () => {
+            editor.off('update', handleUpdate);
+        };
+    }, [editor]);
+
     // ---------------------- 파일/JSON 변경 즉시 반영 ----------------------
     useEffect(() => {
         if (!editor) return;

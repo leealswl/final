@@ -368,10 +368,10 @@ public class AnalysisController {
             if (filePath.startsWith("/uploads/")) {
                 // /uploads/ 제거하고 backend/uploads/와 결합
                 String relativePart = filePath.substring("/uploads/".length());
-                absolutePath = "/uploads/" + relativePart;
+                absolutePath = "backend/uploads/" + relativePart;
             } else if (filePath.startsWith("uploads/")) {
                 // uploads/로 시작하면 backend/ 추가
-                absolutePath = "/" + filePath;
+                absolutePath = "backend/" + filePath;
             } else {
                 // 이미 절대 경로이거나 다른 형식
                 absolutePath = filePath;
