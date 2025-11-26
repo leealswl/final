@@ -14,8 +14,8 @@ import { useDocumentStore } from '../../../store/useDocumentStore';
  * 2025-11-17 수정:
  * EditView는 이제 2분할 레이아웃만 관리
  * 좌측 목차는 Layout.jsx에서 관리하도록 변경
- * - 좌측: AI Chatbot
- * - 우측: TipTap Editor (항상 표시)
+ * - 중앙: TipTap Editor (항상 표시)
+ * - 우측: AI Chatbot
  */
 
 const toAbs = (p) => (p?.startsWith('http') ? p : `http://localhost:8081${p}`);
@@ -111,10 +111,18 @@ export default function EditView() {
     return (
         <Box display="flex" flex={1} height="100vh">
             <PanelGroup direction="horizontal" style={{ display: 'flex', width: '100%' }}>
-                {/* 좌측: AI Chatbot Panel */}
-                <Panel defaultSize={50} minSize={30}>
-                    <Box height="100%" bgcolor="grey.100" p={1} overflow="auto">
-                        <ChatBotMUI />
+                {/* 중앙: TipTap Editor Panel */}
+                <Panel defaultSize={70} minSize={40}>
+                    <Box display="flex" flexDirection="column" height="100%" bgcolor="white">
+                        <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                            <TiptapEditor initialContent={initialContent} contentKey={docId || 'default'} onContentChange={setDocumentContent} readOnly={false} registerEditor={setEditorInstance} />
+                            {/* <Editor /> */}
+                        </Box>
+                        <Box sx={{ px: 2, py: 1, borderTop: '1px solid #e5e7eb', bgcolor: '#fafafa' }}>
+                            <Typography variant="caption" color="text.secondary">
+                                📋 좌측 목차를 클릭하면 해당 섹션으로 이동합니다. Heading 레벨, 목록, 표 삽입이 지원됩니다.
+                            </Typography>
+                        </Box>
                     </Box>
                 </Panel>
 
@@ -131,18 +139,10 @@ export default function EditView() {
                     />
                 </PanelResizeHandle>
 
-                {/* 우측: TipTap Editor Panel */}
-                <Panel defaultSize={50} minSize={30}>
-                    <Box display="flex" flexDirection="column" height="100%" bgcolor="white">
-                        <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                            <TiptapEditor initialContent={initialContent} contentKey={docId || 'default'} onContentChange={setDocumentContent} readOnly={false} registerEditor={setEditorInstance} />
-                            {/* <Editor /> */}
-                        </Box>
-                        <Box sx={{ px: 2, py: 1, borderTop: '1px solid #e5e7eb', bgcolor: '#fafafa' }}>
-                            <Typography variant="caption" color="text.secondary">
-                                📋 좌측 목차를 클릭하면 해당 섹션으로 이동합니다. Heading 레벨, 목록, 표 삽입이 지원됩니다.
-                            </Typography>
-                        </Box>
+                {/* 우측: AI Chatbot Panel */}
+                <Panel defaultSize={30} minSize={20}>
+                    <Box height="100%" bgcolor="grey.100" p={1} overflow="auto">
+                        <ChatBotMUI />
                     </Box>
                 </Panel>
             </PanelGroup>

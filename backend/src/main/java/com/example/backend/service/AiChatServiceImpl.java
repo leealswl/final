@@ -62,6 +62,8 @@ public class AiChatServiceImpl implements AiChatService {
                 activeThreadId // 🚨 필수 수정: 네 번째 인자(threadId)로 null 전달
             );
 
+            System.out.println("fastApiResponse: " + fastApiResponse);
+
             // 💡 LangGraph 또는 Chatbot 응답을 최종 응답 필드에 매핑
             if (fastApiResponse != null) {
                 
@@ -83,10 +85,24 @@ public class AiChatServiceImpl implements AiChatService {
                 chat.setThreadId(fastApiResponse.getThreadId()); 
                 chat.setStatus(fastApiResponse.getStatus());
                 chat.setMessage(fastApiResponse.getMessage()); // ⬅️ NEW: message 필드도 명시적으로 매핑
+                
+                // 🔑 ProseMirror JSON 형식의 완성된 콘텐츠 매핑 (에디터용)
+                chat.setCompletedContent(fastApiResponse.getCompletedContent());
+                
+                // 🔍 [디버깅] completedContent 설정 확인
+                logger.info("🔍 [디버깅] FastAPI에서 받은 completedContent: {}", 
+                            fastApiResponse.getCompletedContent() != null ? "존재함" : "null");
+                logger.info("🔍 [디버깅] chat 객체에 설정된 completedContent: {}", 
+                            chat.getCompletedContent() != null ? "존재함" : "null");
 
                 logger.info("FastAPI 응답 성공 (Type: {}): {}", 
                             fastApiResponse.getGeneratedContent() != null ? "LangGraph Draft" : (fastApiResponse.getMessage() != null ? "LangGraph Query" : "Chat"),
                             finalResponse);
+                if (fastApiResponse.getCompletedContent() != null) {
+                    logger.info("✅ completedContent 포함됨 (ProseMirror JSON)");
+                } else {
+                    logger.warn("⚠️ completedContent가 null입니다. generate_draft 노드가 실행되지 않았을 수 있습니다.");
+                }
             } else {
                 chat.setAiResponse("FastAPI 응답이 없습니다.");
                 logger.warn("FastAPI 응답이 null입니다. userMessage={}", userMessage);
@@ -102,6 +118,12 @@ public class AiChatServiceImpl implements AiChatService {
         // ...
 
         // 4️⃣ 최종 반환
+        // 🔍 [디버깅] 최종 반환 전 completedContent 확인
+        logger.info("🔍 [디버깅] 최종 반환 전 chat.completedContent: {}", 
+                    chat.getCompletedContent() != null ? "존재함" : "null");
+        logger.info("🔍 [디버깅] 최종 반환 전 chat.aiResponse: {}", chat.getAiResponse());
+        logger.info("🔍 [디버깅] 최종 반환 전 chat.message: {}", chat.getMessage());
+        
         return chat;
     }
 
