@@ -10,7 +10,7 @@ export default function useSignOut(opts = {}) {
     return useMutation({
         mutationKey: ['user', 'logout'],
         mutationFn: async () => {
-            await api.post('/api/user/logout');
+            await api.post('/api/users/logout');
         },
         onSuccess: async () => {
             clear();

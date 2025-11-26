@@ -82,6 +82,7 @@ public class DocumentContentController {
 
         @PostMapping("/save")
     public ResponseEntity<Map<String, Long>> saveDocument(@RequestBody Document request) {
+        System.out.println("request: " + request);
     Long documentIdx = documentService.saveDocument(request);
     return ResponseEntity.ok(Map.of("documentIdx", documentIdx));
 }
