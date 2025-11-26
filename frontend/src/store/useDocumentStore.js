@@ -2,15 +2,32 @@ import { create } from 'zustand';
 import api from '../utils/api';
 
 export const useDocumentStore = create((set, get) => ({
-    documentId: null,
     content: null,
     status: 'idle',
     error: null,
     saveTimer: null,
 
-    setDocumentId: (id) => set({ documentId: id }),
-    setContent: (content) => {
+    projectIdx: null,
+    documentIdx: null,
+    fileName: '',
+
+    isDirty: false, // 수정됨 여부
+
+    saving: false, // 서버 저장 중
+    saveError: null, // 마지막 에러
+    lastSavedAt: null, // 마지막 저장 시각
+
+    setMeta: ({ projectIdx, documentIdx, fileName }) =>
+        set(() => ({
+            projectIdx,
+            documentIdx,
+            fileName: fileName || '',
+        })),
+    setContent: (content, shouldSave = true) => {
         set({ content });
+
+        // shouldSave가 false면 저장하지 않음
+        if (!shouldSave) return;
 
         const { saveTimer } = get();
         if (saveTimer) clearTimeout(saveTimer);
@@ -24,6 +41,37 @@ export const useDocumentStore = create((set, get) => ({
 
         set({ saveTimer: newTimer });
     },
+    setSaving: (saving) =>
+        set(() => ({
+            saving,
+            ...(saving ? { saveError: null } : {}),
+        })),
+
+    markSaved: () =>
+        set(() => ({
+            isDirty: false,
+            saving: false,
+            saveError: null,
+            lastSavedAt: new Date(),
+        })),
+
+    setSaveError: (errorMessage) =>
+        set(() => ({
+            saving: false,
+            saveError: errorMessage || '저장 중 오류가 발생했습니다.',
+        })),
+
+    resetDocument: () =>
+        set(() => ({
+            projectIdx: null,
+            documentIdx: null,
+            fileName: '',
+            content: null,
+            isDirty: false,
+            saving: false,
+            saveError: null,
+            lastSavedAt: null,
+        })),
 
     loadDocument: async (id) => {
         const targetId = id ?? get().documentId;

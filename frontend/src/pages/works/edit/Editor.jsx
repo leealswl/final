@@ -241,15 +241,17 @@ export default function Editor() {
         //     cancelled = true;
         // };
 
-        fetch(toAbs(filePath))
+        const url = `${toAbs(filePath)}?t=${Date.now()}`;
+
+        fetch(url)
             .then(async (res) => {
                 if (!res.ok) throw new Error(res.statusText || 'JSON 파일을 불러오지 못했습니다.');
                 const jsonData = await res.json(); // JSON 파싱
+                console.log('jsondata: ', jsonData);
                 // 이미 언마운트된 경우 무시
-                if (!cancelled) {
-                    setInitialContent(jsonData);
-                    setDocumentContent(jsonData);
-                }
+
+                setInitialContent(jsonData);
+                setDocumentContent(jsonData, false);
             })
             .catch((error) => {
                 console.warn('[Editor] JSON 로드 실패', error);
@@ -266,11 +268,8 @@ export default function Editor() {
             });
 
         // cleanup 함수: 컴포넌트 언마운트 시 중단
-        return () => {
-            cancelled = true;
-        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [setDocumentId, setDocumentContent, reloadTrigger]);
+    }, [setDocumentId, setDocumentContent, reloadTrigger, filePath]);
 
     // 파일이 선택되지 않은 경우
     // if (!file) return <Pad>왼쪽에서 파일을 선택하세요.</Pad>;
@@ -312,7 +311,7 @@ export default function Editor() {
             {/* Tiptap 에디터 영역 */}
             <Box sx={{ flex: 1, minHeight: 0 }}>
                 {/* <TiptapEditor initialContent={initialContent} contentKey={file.id} onContentChange={setDocumentContent} readOnly={false} registerEditor={setEditorInstance} /> */}
-                <TiptapEditor initialContent={initialContent} onContentChange={setDocumentContent} readOnly={false} registerEditor={setEditorInstance} />
+                <TiptapEditor initialContent={initialContent} onContentChange={setDocumentContent} contentKey={'default'} readOnly={false} registerEditor={setEditorInstance} />
             </Box>
             {/* 하단 안내 메시지 */}
             <Box sx={{ px: 2, py: 1, borderTop: '1px solid #e5e7eb', bgcolor: '#fafafa' }}>

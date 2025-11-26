@@ -5,55 +5,55 @@ export const useDocumentSaveStore = create((set, get) => ({
     documentIdx: null,
     fileName: '',
 
-    content: null,        // TipTap JSON
-    isDirty: false,       // 수정됨 여부
+    content: null, // TipTap JSON
+    isDirty: false, // 수정됨 여부
 
-    saving: false,        // 서버 저장 중
-    saveError: null,      // 마지막 에러
-    lastSavedAt: null,    // 마지막 저장 시각
+    saving: false, // 서버 저장 중
+    saveError: null, // 마지막 에러
+    lastSavedAt: null, // 마지막 저장 시각
 
     setMeta: ({ projectIdx, documentIdx, fileName }) =>
         set(() => ({
-        projectIdx,
-        documentIdx,
-        fileName: fileName || '',
+            projectIdx,
+            documentIdx,
+            fileName: fileName || '',
         })),
 
     setContent: (content) =>
         set(() => ({
-        content,
-        isDirty: true,
+            content,
+            isDirty: true,
         })),
 
     setSaving: (saving) =>
         set(() => ({
-        saving,
-        ...(saving ? { saveError: null } : {}),
+            saving,
+            ...(saving ? { saveError: null } : {}),
         })),
 
     markSaved: () =>
         set(() => ({
-        isDirty: false,
-        saving: false,
-        saveError: null,
-        lastSavedAt: new Date(),
+            isDirty: false,
+            saving: false,
+            saveError: null,
+            lastSavedAt: new Date(),
         })),
 
     setSaveError: (errorMessage) =>
         set(() => ({
-        saving: false,
-        saveError: errorMessage || '저장 중 오류가 발생했습니다.',
+            saving: false,
+            saveError: errorMessage || '저장 중 오류가 발생했습니다.',
         })),
 
     resetDocument: () =>
         set(() => ({
-        projectIdx: null,
-        documentIdx: null,
-        fileName: '',
-        content: null,
-        isDirty: false,
-        saving: false,
-        saveError: null,
-        lastSavedAt: null,
+            projectIdx: null,
+            documentIdx: null,
+            fileName: '',
+            content: null,
+            isDirty: false,
+            saving: false,
+            saveError: null,
+            lastSavedAt: null,
         })),
-    }));
+}));

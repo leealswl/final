@@ -16,12 +16,10 @@ import TableRowsIcon from '@mui/icons-material/TableRows';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import useDocumentSave from '../../hooks/useDocumentSave';
 
-
 import CreateTableModal from './CreateTableModal';
 
 import { asBlob } from 'html-docx-js-typescript';
 import { saveAs } from 'file-saver';
-
 
 const headingOptions = [
     { value: 'paragraph', label: '본문' },
@@ -78,7 +76,7 @@ export default function Toolbar({ editor }) {
     const [activeTab, setActiveTab] = useState('home');
     const [tableModalOpen, setTableModalOpen] = useState(false);
     const imageInputRef = useRef(null);
-    const { saveDocument,saving,isDirty } = useDocumentSave();
+    const { saveDocument, saving, isDirty } = useDocumentSave();
 
     const activeHeading = useMemo(() => {
         if (!editor) return 'paragraph';
@@ -149,7 +147,7 @@ export default function Toolbar({ editor }) {
         setActiveTab(value);
     };
 
-      // ★ 서버 저장 핸들러 (버튼에서 부를 함수)
+    // ★ 서버 저장 핸들러 (버튼에서 부를 함수)
     // const handleSaveToServer = async () => {
     //     const result = await saveDocument();
     //     if (!result.ok) {
@@ -160,8 +158,7 @@ export default function Toolbar({ editor }) {
     //     }
     // };
 
-
-        // DOCX 저장 핸들러
+    // DOCX 저장 핸들러
     const handleExportDocx = async () => {
         if (!editor) return;
 
@@ -175,13 +172,13 @@ export default function Toolbar({ editor }) {
 
         // 1) 에디터 내용을 HTML로 가져오기
         const htmlBody = editor.getHTML();
+        console.log('htmlBody: ', htmlBody);
+
+        const textbody = editor.getText();
+        console.log('textbody: ', textbody);
 
         // 2) Word가 이해할 수 있는 전체 HTML 문서 형태로 감싸기
-        const fullHtml =
-            '<!DOCTYPE html>' +
-            '<html><head><meta charset="UTF-8"></head><body>' +
-            htmlBody +
-            '</body></html>';
+        const fullHtml = '<!DOCTYPE html>' + '<html><head><meta charset="UTF-8"></head><body>' + htmlBody + '</body></html>';
 
         try {
             // 3) HTML → DOCX Blob 변환
@@ -193,7 +190,7 @@ export default function Toolbar({ editor }) {
             console.error('DOCX 내보내기 실패', err);
             alert('DOCX 파일 생성 중 오류가 발생했습니다.');
         }
-        };
+    };
 
     const headingValue = typeof activeHeading === 'number' ? activeHeading : 'paragraph';
     const isImageActive = editor?.isActive('image');
@@ -288,18 +285,12 @@ export default function Toolbar({ editor }) {
 
                     <RibbonSection title="내보내기">
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
-                            <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={handleExportDocx}
-                            sx={{ textTransform: 'none', minWidth: 120 }}
-                            disabled={!editor || saving}
-                            >
-                            {saving ? '저장 중…' : 'DOCX 저장'}
+                            <Button size="small" variant="outlined" onClick={handleExportDocx} sx={{ textTransform: 'none', minWidth: 120 }} disabled={!editor || saving}>
+                                {saving ? '저장 중…' : 'DOCX 저장'}
                             </Button>
                         </Box>
-                        </RibbonSection>
-                    </Box>
+                    </RibbonSection>
+                </Box>
             )}
 
             {activeTab === 'insert' && (
