@@ -216,6 +216,7 @@ export default function Toolbar({ editor }) {
             // 3) HTML → DOCX Blob 변환
             const blob = await asBlob(fullHtml);
 
+
             // 4) 파일 저장
             saveAs(blob, '제안서초안.docx');
         } catch (err) {
