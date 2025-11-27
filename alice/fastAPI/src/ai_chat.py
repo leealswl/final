@@ -4,7 +4,7 @@ from openai import OpenAI
 import json
 import os
 
-async def handle_chat_message(user_message, user_id, project_id, openai_api_key):
+async def handle_chat_message(user_message, user_idx, project_id, openai_api_key):
     print("handle_chat_message (일반 챗봇) 실행")
     
     openai_client = OpenAI(api_key=openai_api_key)
@@ -30,7 +30,7 @@ async def handle_chat_message(user_message, user_id, project_id, openai_api_key)
 
     result = {
         "aiResponse": ai_response_content,
-        "userIdx": user_id,
+        "userIdx": user_idx,
         "projectIdx": project_id,
         "userMessage": user_message
     }

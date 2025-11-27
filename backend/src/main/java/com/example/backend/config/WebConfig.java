@@ -29,10 +29,15 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     // 2. 정적 리소스 매핑
+    // @Override
+    // public void addResourceHandlers(ResourceHandlerRegistry registry) {
+    //     // /uploads/** 요청 → backend/uploads/ 폴더
+    //     registry.addResourceHandler("/uploads/**")
+    //             .addResourceLocations("file:backend/uploads/");
+    // }
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // /uploads/** 요청 → backend/uploads/ 폴더
-        registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:backend/uploads/");
+        registry.addResourceHandler("/documents/**")
+                .addResourceLocations("file:backend/documents/");
     }
 }

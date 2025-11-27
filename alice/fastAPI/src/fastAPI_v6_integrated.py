@@ -72,6 +72,7 @@ class ChatRequest(BaseModel):
     thread_id: Optional[str] = None # [추가] 대화 이어서 하려면 이게 필요함
     userIdx: int | None = None
     projectIdx: int | None = None
+    userId: str
 
 class VerifyRequest(BaseModel):
     text: str              # 검증할 초안 텍스트 (섹션 하나)
@@ -204,13 +205,34 @@ async def analyze_documents(
         # ========================================
         # 5단계 LLM 호출 → JSON Plan 생성 [분리함]
         # ========================================
+
+        # 1. BASE_DIR: 프로젝트 최상위 root(final) 계산
+        BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
+
+        # 2. 실제 생성 경로
+        real_dir = os.path.join(BASE_DIR, "backend", "documents", str(userid), str(projectidx))
+        real_path = os.path.join(real_dir, "초안.json")
+
+        # 3. 폴더 생성
+        os.makedirs(real_dir, exist_ok=True)
+
+        # 4. 파일 생성 (빈 JSON)
+        with open(real_path, "w", encoding="utf-8") as f:
+            json.dump({}, f, ensure_ascii=False, indent=2)
+
+        # 5. API 응답용 URL 경로 (프론트에서 사용)
+        api_path = f"/documents/{userid}/{projectidx}/초안.json"
+
        
         # ========================================
         # 6단계: 분석 결과 반환
         # ========================================
         return JSONResponse(
             status_code=200,
-            content=result['response_data']
+            content={
+                **result['response_data'],
+                "filePath": api_path
+            }
         )
 
     except Exception as e:
@@ -306,8 +328,9 @@ async def generate_content(request: ChatRequest):
         current_thread_id = request.thread_id if request.thread_id else str(uuid.uuid4())
         # 2. 초기 상태 설정
         input_state = {
-                    "user_id": str(request.userIdx) if request.userIdx else "unknown",
+                    "user_idx": str(request.userIdx) if request.userIdx else "unknown",
                     "project_idx": request.projectIdx,
+                    "user_id": request.userId,
                     
                     # 🚨 [수정] generate_query 노드가 'user_prompt'를 참조하므로 이 키를 꼭 넣어줘야 합니다!
                     "user_prompt": request.userMessage, 
@@ -339,7 +362,7 @@ async def generate_content(request: ChatRequest):
         # [주석 처리] 기존의 복잡한 DB 저장 및 Interrupt 방식
         # ---------------------------------------------------------------------
         # thread_id_to_use = request.thread_id if request.thread_id else str(uuid.uuid4())
-        thread_id_to_use = "sdfesdfsdf" # str값이 바로넘어가서 오류생겨서 이렇게바꿈
+        thread_id_to_use = "sdfwerwrsxcxx" # str값이 바로넘어가서 오류생겨서 이렇게바꿈
 
         async with AsyncSqliteSaver.from_conn_string(DB_PATH) as saver:
             app_run = proposal_graph.compile(checkpointer=saver)

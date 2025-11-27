@@ -21,9 +21,8 @@ def get_json_file_path() -> Path:
     # → alice/fastAPI/src/v11_generator/ → alice/fastAPI/src/ → alice/fastAPI/ → alice/ → final/ (프로젝트 루트)
     project_root = current_file.parent.parent.parent.parent.parent.parent
     # Spring Boot가 서빙하는 backend/uploads/ 경로에 저장
-    save_dir = project_root / "backend" / "uploads" / "admin" / "1" / "1"
-    save_dir.mkdir(parents=True, exist_ok=True)
-    return save_dir / "234.json"
+    save_dir = project_root / "backend" / "documents"
+    return save_dir
 
 
 def load_existing_json() -> Optional[Dict[str, Any]]:
@@ -205,6 +204,7 @@ def _extract_relevant_guide(guide_data: dict, chapter_number: str, chapter_title
 
 
 def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGenerationState:
+    import os
     """
     [작가 노드 - 비활성화 상태]
     현재는 초안 생성 로직을 주석 처리하여 실행되지 않도록 막아두었습니다.
@@ -424,7 +424,7 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
         print(f"✅ JSON 파싱 완료: {len(completed_content.get('content', []))}개 문단")
         
         # 파일 저장 경로 설정 (get_json_file_path 함수 재사용)
-        save_path = get_json_file_path()
+        save_path = Path(get_json_file_path()) / str(state.get("user_id")) / str(state.get("project_idx")) / "초안.json"
         
         # 절대 경로 명확히 출력
         absolute_path = save_path.resolve()

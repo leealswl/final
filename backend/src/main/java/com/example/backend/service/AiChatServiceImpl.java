@@ -31,17 +31,19 @@ public class AiChatServiceImpl implements AiChatService {
 
     @Override
     @Transactional
-    public AiChat processChat(String userMessage, Long userIdx, Long projectIdx) {
+    public AiChat processChat(String userMessage, Long userIdx, Long projectIdx, String userId) {
 
         System.out.println("userMessage: " + userMessage);
         System.out.println("userIdx: " + userIdx);
         System.out.println("projectIdx: " + projectIdx);
+        System.out.println("userId: " + userId);
 
         // 1️⃣ AiChat 객체 초기화 (DB 저장을 위해)
         AiChat chat = new AiChat();
         chat.setUserIdx(userIdx);
         chat.setProjectIdx(projectIdx);
         chat.setUserMessage(userMessage);
+        chat.setUserId(userId);
 
         System.out.println("chat: " + chat);
 
@@ -59,6 +61,7 @@ public class AiChatServiceImpl implements AiChatService {
                 userMessage, 
                 userIdx.toString(), // Long을 String으로 변환하여 전달
                 projectIdx,
+                userId,
                 activeThreadId // 🚨 필수 수정: 네 번째 인자(threadId)로 null 전달
             );
 

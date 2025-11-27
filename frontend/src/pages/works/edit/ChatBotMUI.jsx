@@ -8,12 +8,14 @@ import robotIcon from '../robot-icon.png.png';
 import { useFileStore } from '../../../store/useFileStore';
 import { Typewriter } from 'react-simple-typewriter';
 
+const toAbs = (p) => (p?.startsWith('http') ? p : `http://localhost:8081${p}`);
+
 const ChatBotMUI = () => {
     const [messages, setMessages] = useState([{ sender: 'bot', text: '안녕하세요! 기획서 작성을 도와드릴 ai도우미입니다 목차를 보고 원하는 챕터를 알려주세요' }]);
     const [inputValue, setInputValue] = useState('');
     const { mutate: sendChatMessage } = useChatbot();
     const [isLoading, setIsLoading] = useState(false);
-    const setFilePath = useFileStore((s) => s.setFilePath);
+    const filePath = useFileStore((s) => s.filePath);
 
     // 사용자 정보 및 프로젝트 정보 가져오기
     const user = useAuthStore((s) => s.user);
@@ -47,24 +49,25 @@ const ChatBotMUI = () => {
                 userMessage: userText,
                 userIdx: user?.idx || 1,
                 projectIdx: project?.projectIdx || 1,
+                userId: user.userId,
             },
             {
                 onSuccess: async (data) => {
                     // 챗봇 UI용 메시지 추가
                     setMessages((prev) => [...prev, { sender: 'bot', text: data.aiResponse }]);
-                    setFilePath('/uploads/admin/1/1/234.json');
 
                     // 파일에서 JSON 읽어서 에디터에 출력
                     if (editorInstance) {
                         try {
                             // 파일 경로 설정 (캐시 방지를 위해 타임스탬프 추가)
                             const timestamp = new Date().getTime();
-                            const filePath = `/uploads/admin/1/1/234.json?t=${timestamp}`;
+                            // const filePath = `/uploads/admin/1/1/234.json?t=${timestamp}`;
 
                             console.log('[ChatBotMUI] 📂 파일 읽기 시도:', filePath);
 
                             // 파일에서 JSON 읽기 (캐시 방지 헤더 추가)
-                            const response = await fetch(filePath, {
+                            const response = await fetch(toAbs(`${filePath}?t=${timestamp}`), {
+                                // const response = await fetch(filePath, {
                                 method: 'GET',
                                 headers: {
                                     'Cache-Control': 'no-cache',

@@ -1,13 +1,12 @@
-import { useMutation } from "@tanstack/react-query";
-import api from "../utils/api";
+import { useMutation } from '@tanstack/react-query';
+import api from '../utils/api';
 
 export default function useChatbot() {
     return useMutation({
         mutationKey: ['chatbot', 'message'],
-        mutationFn: async ({userMessage, userIdx, projectIdx}) => {
-            const res = await api.post('/api/ai-chat/response',{ userMessage, userIdx, projectIdx}, { withCredentials: true })
+        mutationFn: async ({ userMessage, userIdx, projectIdx, userId }) => {
+            const res = await api.post('/api/ai-chat/response', { userMessage, userIdx, projectIdx, userId }, { withCredentials: true });
             return res.data;
-
-        }
-    })
+        },
+    });
 }

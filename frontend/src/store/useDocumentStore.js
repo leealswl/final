@@ -7,6 +7,7 @@ export const useDocumentStore = create((set, get) => ({
     error: null,
     saveTimer: null,
 
+    userId: null,
     projectIdx: null,
     documentIdx: null,
     fileName: '',
@@ -18,6 +19,9 @@ export const useDocumentStore = create((set, get) => ({
     saving: false, // 서버 저장 중
     saveError: null, // 마지막 에러
     lastSavedAt: null, // 마지막 저장 시각
+
+    setUserId: (userid) => set({ userId: userid }),
+    setProjectIdx: (projectidx) => set({ projectIdx: projectidx }),
 
     setMeta: ({ projectIdx, documentIdx, fileName, filePath }) =>
         set(() => ({
@@ -92,7 +96,7 @@ export const useDocumentStore = create((set, get) => ({
         }
     },
 
-    saveDocument: async ({ content } = {}) => {
+    saveDocument: async ({ content, userId, projectIdx } = {}) => {
         // const targetId = id ?? get().documentId;
         const payload = content ?? get().content;
         // if (!targetId) throw new Error('문서 ID가 설정되어 있지 않습니다.');
@@ -103,7 +107,7 @@ export const useDocumentStore = create((set, get) => ({
         set({ status: 'saving', error: null });
         try {
             // await api.post(`/api/documents/${targetId}/content`, { content: payload });
-            await api.post(`/api/documents/1/content`, { content: payload });
+            await api.post(`/api/documents/${userId}/${projectIdx}/content`, { content: payload });
             set({ status: 'success' });
         } catch (error) {
             set({ status: 'error', error: error.message });

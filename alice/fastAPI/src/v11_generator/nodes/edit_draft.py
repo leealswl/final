@@ -20,9 +20,8 @@ def get_json_file_path() -> Path:
     # → alice/fastAPI/src/v11_generator/ → alice/fastAPI/src/ → alice/fastAPI/ → alice/ → final/ (프로젝트 루트)
     project_root = current_file.parent.parent.parent.parent.parent.parent
     # Spring Boot가 서빙하는 backend/uploads/ 경로에 저장
-    save_dir = project_root / "backend" / "uploads" / "admin" / "1" / "1"
-    save_dir.mkdir(parents=True, exist_ok=True)
-    return save_dir / "234.json"
+    save_dir = project_root / "backend" / "documents"
+    return save_dir
 
 
 def load_existing_json() -> Optional[Dict[str, Any]]:
@@ -68,6 +67,7 @@ def load_existing_json() -> Optional[Dict[str, Any]]:
 
 
 def edit_proposal_draft(state: ProposalGenerationState) -> ProposalGenerationState:
+    import os
     """
     에디터 내용 수정 노드
     사용자 요청에 따라 기존 JSON 파일을 수정하고 저장
@@ -159,7 +159,7 @@ def edit_proposal_draft(state: ProposalGenerationState) -> ProposalGenerationSta
         print(f"✅ JSON 파싱 완료: {len(modified_json.get('content', []))}개 요소")
         
         # 파일 저장 경로 설정
-        save_path = get_json_file_path()
+        save_path = Path(get_json_file_path()) / str(state.get("user_id")) / str(state.get("project_idx")) / "초안.json"
         absolute_path = save_path.resolve()
         print(f"💾 파일 저장 시작: {absolute_path}")
         

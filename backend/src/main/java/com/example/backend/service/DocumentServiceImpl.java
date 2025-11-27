@@ -128,6 +128,13 @@ public class DocumentServiceImpl implements DocumentService{
     }
 
     @Override
+    public int insertDocument(Document document) {
+        documentMapper.insertDocument(document);
+        
+        return 0;
+    }
+
+    @Override
     public Long saveDocument(Document request) {
         if (request.getProjectIdx() == null) {
             throw new IllegalArgumentException("projectIdx는 필수입니다.");

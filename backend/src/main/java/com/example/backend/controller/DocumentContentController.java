@@ -33,8 +33,8 @@ public class DocumentContentController {
     private final Path storageDir;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public DocumentContentController(@Value("${upload.dir}") String uploadDir) {
-        this.storageDir = Paths.get(uploadDir, "admin").toAbsolutePath();
+    public DocumentContentController(@Value("${document.dir}") String documentDir) {
+        this.storageDir = Paths.get(documentDir, "admin").toAbsolutePath();
         System.out.println("storageDir: " + storageDir);
         try {
             Files.createDirectories(this.storageDir);
@@ -67,13 +67,14 @@ public class DocumentContentController {
     //     return ResponseEntity.ok(Map.of("status", "success"));
     // }
 
-    @PostMapping("/1/content")
+    @PostMapping("/{userid}/{projectidx}/content")
     public ResponseEntity<Map<String, Object>> saveDocument(
-        @RequestBody SaveRequest content
+        @RequestBody SaveRequest content, @PathVariable String userid, @PathVariable String projectidx
     ) throws IOException {
         System.out.println("작동하는거니?");
         // Path target = storageDir.resolve(docId + ".json");
-        Path target = storageDir.resolve("1/1/234.json");
+        // Path target = storageDir.resolve("107/초안.json");
+        Path target = storageDir.resolve(userid + "/" + projectidx + "/초안.json");
         System.out.println("target: " + target);
         JsonNode result = content.content == null ? objectMapper.createObjectNode() : content.content;
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(target.toFile(), result);
