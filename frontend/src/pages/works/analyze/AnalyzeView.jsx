@@ -8,6 +8,7 @@ import 폴더아이콘 from './icons/폴더 아이콘.png';
 import Upload from '../../../components/Upload';
 import { useProjectStore } from '../../../store/useProjectStore';
 import { useAuthStore } from '../../../store/useAuthStore';
+import { useDocumentStore } from '../../../store/useDocumentStore';
 
 /**
  * 프로젝트 분석 페이지 (분석 전/후 통합 컴포넌트)
@@ -22,6 +23,12 @@ const AnalyzeView = () => {
     const analysisResult = useAnalysisStore((state) => state.analysisResult); // 분석 결과 데이터
     const analysisData = analysisResult?.data || {}; // 분석 결과 내부 data 객체
 
+    // 상태 불러오기
+    const filePath = useFileStore((state) => state.filePath);
+
+    // 액션 불러오기
+    const setFilePath = useFileStore((state) => state.setFilePath);
+
     // 로컬 상태 관리
     const [loading, setLoading] = useState(false); // 분석 진행 중 상태
     const [error, setError] = useState(null); // 에러 메시지 상태
@@ -30,6 +37,12 @@ const AnalyzeView = () => {
     // 사용자 및 프로젝트 정보
     const user = useAuthStore((s) => s.user);
     const project = useProjectStore((s) => s.project);
+
+    const setUserId = useDocumentStore((state) => state.setUserId);
+    const setProjectIdx = useDocumentStore((state) => state.setProjectIdx);
+
+    setUserId(user.userId);
+    setProjectIdx(project.projectIdx);
 
     console.log('projectIdx: ', project.projectIdx);
     console.log('user: ', user.userId);
@@ -196,6 +209,9 @@ const AnalyzeView = () => {
             const response = await api.post('/api/analysis/start', payload);
 
             console.log('✅ 분석 완료:', response.data);
+
+            setFilePath(response.data.data.filePath);
+            console.log(filePath);
 
             // 분석 결과를 store에 저장 (이 시점에서 화면이 결과 화면으로 전환됨)
             setAnalysisResult(response.data);

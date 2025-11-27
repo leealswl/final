@@ -10,6 +10,7 @@ import lombok.Data;
 @Data
 public class AiChat {
     private Long userIdx;
+    private String userId;
     private Long projectIdx;
     private String userMessage;
     private String aiResponse;

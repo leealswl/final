@@ -45,7 +45,8 @@ public class AiChatController {
         return aiChatService.processChat(
             chatRequest.getUserMessage(),
             chatRequest.getUserIdx(),
-            chatRequest.getProjectIdx()
+            chatRequest.getProjectIdx(),
+            chatRequest.getUserId()
         );
     }
 
