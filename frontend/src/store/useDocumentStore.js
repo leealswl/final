@@ -96,11 +96,13 @@ export const useDocumentStore = create((set, get) => ({
         }
     },
 
-    saveDocument: async ({ content, userId, projectIdx } = {}) => {
+    saveDocument: async ({ content } = {}) => {
         // const targetId = id ?? get().documentId;
         const payload = content ?? get().content;
         // if (!targetId) throw new Error('문서 ID가 설정되어 있지 않습니다.');
         if (!payload) throw new Error('저장할 문서 내용이 없습니다.');
+        const userId = get().userId;
+        const projectIdx = get().projectIdx;
 
         console.log('[DEBUG] AutoSave 요청 발생', payload);
 
