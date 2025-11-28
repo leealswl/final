@@ -212,15 +212,19 @@ public class AnalysisController {
 
             String filePath = (String) fastApiResult.get("filePath");
 
-
-
             document.setFilePath(filePath);
             document.setProjectIdx(projectId);
             document.setFileName("초안.json");
             document.setFolder("0");
 
-            documentService.insertDocument(document);
-            
+            try {
+                    documentService.insertDocument(document);
+                    System.out.println("문서 저장 성공");
+                } catch (Exception e) {
+                    System.err.println("문서 저장 실패: " + e.getMessage());
+                    // 필요하면 로깅 추가
+                    e.printStackTrace();
+                }
 
             // 4. 분석 결과 반환
             return ResponseEntity.ok(Map.of(
