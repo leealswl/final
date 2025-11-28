@@ -44,6 +44,7 @@ const AnalyzeView = () => {
     setUserId(user.userId);
     setProjectIdx(project.projectIdx);
 
+    console.log('project: ', project);
     console.log('projectIdx: ', project.projectIdx);
     console.log('user: ', user.userId);
 
