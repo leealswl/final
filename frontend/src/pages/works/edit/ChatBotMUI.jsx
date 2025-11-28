@@ -4,7 +4,7 @@ import useChatbot from '../../../hooks/useChatbot';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useProjectStore } from '../../../store/useProjectStore';
 import { useTocStore } from '../../../store/useTocStore';
-import robotIcon from '../robot-icon.png.png';
+import robotIcon from '../edit/icon/robot-icon.png';
 import { useFileStore } from '../../../store/useFileStore';
 import { Typewriter } from 'react-simple-typewriter';
 
