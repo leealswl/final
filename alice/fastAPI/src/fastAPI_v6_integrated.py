@@ -325,7 +325,7 @@ async def generate_content(request: ChatRequest):
                 print(f"  ❌ 로컬 파일 로드도 실패: {file_error}")
 
         new_thread_id = str(uuid.uuid4()) # 로그용 ID
-        current_thread_id = request.thread_id if request.thread_id else str(uuid.uuid4())
+        current_thread_id = request.threadId if request.threadId else str(uuid.uuid4())
         # 2. 초기 상태 설정
         input_state = {
                     "user_idx": str(request.userIdx) if request.userIdx else "unknown",
@@ -362,7 +362,7 @@ async def generate_content(request: ChatRequest):
         # [주석 처리] 기존의 복잡한 DB 저장 및 Interrupt 방식
         # ---------------------------------------------------------------------
         # thread_id_to_use = request.thread_id if request.thread_id else str(uuid.uuid4())
-        thread_id_to_use = "sdfwerwersdf" # str값이 바로넘어가서 오류생겨서 이렇게바꿈
+        thread_id_to_use = request.threadId # str값이 바로넘어가서 오류생겨서 이렇게바꿈
 
         async with AsyncSqliteSaver.from_conn_string(DB_PATH) as saver:
             app_run = proposal_graph.compile(checkpointer=saver)
