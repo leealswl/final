@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { draftApi } from '../../../utils/draftApi';
 import { tiptapDocToPlainText } from '../../../utils/tiptapText';
 import { verifyLawSection } from '../../../utils/fastapi';
+import { useFileStore } from '../../../store/useFileStore';
 
 const FOCUSES = [
     {
@@ -30,12 +31,13 @@ function VerifyLawTestView() {
     const [text, setText] = useState('');
     const [results, setResults] = useState({}); // 관점별 결과
     const [loading, setLoading] = useState(false);
+    const filePath = useFileStore((state) => state.filePath);
 
     // ✅ 초안 JSON → plain text 변환
     useEffect(() => {
         (async () => {
             try {
-                const docJson = await draftApi(); // 234.json 요청
+                const docJson = await draftApi(filePath); // 234.json 요청
                 const plain = tiptapDocToPlainText(docJson); // Tiptap JSON → 텍스트
                 console.log('초안 텍스트:', plain);
                 setText(plain);

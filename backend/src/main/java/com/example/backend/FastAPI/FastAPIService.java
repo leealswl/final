@@ -17,6 +17,7 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.example.backend.domain.AiChat;
+import com.example.backend.domain.Verify;
 
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
@@ -60,6 +61,31 @@ public class FastAPIService {
             ))
             .codecs(c -> c.defaultCodecs().maxInMemorySize(50 * 1024 * 1024)) // 50MB 버퍼
             .build();
+    }
+
+    public Map<String, Object> verifyLaw(Verify verify){
+
+        Map<String, Object> requestBody = Map.of(
+                "text", verify.getText(), 
+                "focus", verify.getFocus()
+            );
+
+        try {
+            System.out.println("fastapi 보내기 전");
+            Map<String, Object> result = webClient.post()
+                .uri("/verify/law")
+                .bodyValue(requestBody)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                .block(); 
+
+            System.out.println("fastapi 작동 완료");
+            return result;
+        } catch (Exception e) {
+            System.err.println("[FastAPI] 연동 실패: " + e.getMessage());
+            throw e;
+        }
+
     }
 
     /**

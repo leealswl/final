@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const FASTAPI_BASE_URL = 'http://localhost:8001'; // 나중에 env로 빼도 됨
+const FASTAPI_BASE_URL = 'http://localhost:8081/api/verifies'; // 나중에 env로 빼도 됨
 
 export async function verifyLawSection({ text, focus }) {
     const payload = {
@@ -8,6 +8,8 @@ export async function verifyLawSection({ text, focus }) {
         focus: focus || null,
     };
 
-    const res = await axios.post(`${FASTAPI_BASE_URL}/verify/law`, payload);
+    console.log('payload: ', payload)
+
+    const res = await axios.post(`${FASTAPI_BASE_URL}/law`, payload);
     return res.data;
 }

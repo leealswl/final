@@ -34,7 +34,7 @@ public class DocumentContentController {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public DocumentContentController(@Value("${document.dir}") String documentDir) {
-        this.storageDir = Paths.get(documentDir, "admin").toAbsolutePath();
+        this.storageDir = Paths.get(documentDir).toAbsolutePath();
         System.out.println("storageDir: " + storageDir);
         try {
             Files.createDirectories(this.storageDir);

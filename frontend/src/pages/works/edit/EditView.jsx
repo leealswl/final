@@ -9,6 +9,7 @@ import ChatBotMUI from './ChatBotMUI';
 import TiptapEditor from '../../../components/TiptapEditor';
 import Editor from './Editor';
 import { useDocumentStore } from '../../../store/useDocumentStore';
+import { useProjectStore } from '../../../store/useProjectStore';
 
 /**
  * 2025-11-17 수정:
@@ -18,7 +19,7 @@ import { useDocumentStore } from '../../../store/useDocumentStore';
  * - 우측: AI Chatbot
  */
 
-const toAbs = (p) => (p?.startsWith('http') ? p : `http://localhost:8081${p}`);
+// const toAbs = (p) => (p?.startsWith('http') ? p : `http://localhost:8081${p}`);
 
 export default function EditView() {
     const params = useParams();
@@ -28,14 +29,13 @@ export default function EditView() {
 
     const getById = useFileStore((s) => s.getById);
     const setSelectedFile = useFileStore((s) => s.setSelectedFile);
-    const currentProjectIdx = useFileStore((s) => s.currentProjectId);
+    const projectIdx = useProjectStore((state) => state.project.projectIdx);
 
     //const { setDocumentId, content: docContent, setContent: setDocumentContent } = useDocumentStore();
     const {
         content: docContent, // TipTap 내용(JSON)
         setContent: setDocumentContent, // onContentChange에서 호출
         setMeta,
-        projectIdx,
         documentIdx, // projectIdx, documentIdx, fileName 설정
     } = useDocumentStore();
 
@@ -48,14 +48,12 @@ export default function EditView() {
 
     // URL의 docId → 전역 선택(단방향 동기화)
     useEffect(() => {
-        const tmpProjectIdx = currentProjectIdx ?? 1;
-        console.log('tmpProjectIdx: ', tmpProjectIdx);
         // 🔹 1) docId 없는 경우: 새 문서 모드
         if (!isExistingDoc) {
             console.log('[EditView] 새 문서 모드(/edit) – docId 없음');
 
             setMeta({
-                projectIdx: tmpProjectIdx,
+                projectIdx: projectIdx,
                 documentIdx: null, // 아직 문서 row 없음
                 fileName: '제안서_초안',
                 filePath: filePath,
@@ -73,21 +71,21 @@ export default function EditView() {
             setSelectedFile(f);
 
             setMeta({
-                projectIdx: f.projectIdx ?? f.project_idx ?? f.projectId ?? f.project_id ?? currentProjectIdx ?? 1,
+                projectIdx: projectIdx,
                 documentIdx: f.documentIdx ?? f.document_idx ?? f.id ?? docId ?? 1,
-                fileName: f.fileName ?? f.name ?? f.label ?? '제안서_초안',
+                fileName: '제안서_초안',
                 filePath: filePath,
             });
         } else {
             console.warn('[EditView] getById로 파일을 찾지 못했습니다.', { docId });
             setMeta({
-                projectIdx: currentProjectIdx ?? 1,
+                projectIdx: projectIdx,
                 documentIdx: docId, // 일단 라우트에서 온 값 넣어둠
                 fileName: '제안서_초안',
                 filePath: filePath,
             });
         }
-    }, [isExistingDoc, docId, getById, setSelectedFile, setMeta, currentProjectIdx, filePath]);
+    }, [isExistingDoc, docId, getById, setSelectedFile, setMeta, filePath, projectIdx]);
 
     // useEffect(() => {
     //     fetch(toAbs(filePath))
