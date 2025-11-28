@@ -19,7 +19,7 @@ import { useProjectStore } from '../../../store/useProjectStore';
  * - 우측: AI Chatbot
  */
 
-// const toAbs = (p) => (p?.startsWith('http') ? p : `http://localhost:8081${p}`);
+const toAbs = (p) => (p?.startsWith('http') ? p : `http://localhost:8081${p}`);
 
 export default function EditView() {
     const params = useParams();

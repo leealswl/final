@@ -11,6 +11,7 @@ public class Project {
     private String projectName = "새 프로젝트";
     private Date createdAt;
     private Date updatedAt;
+    private String threadId;
 
     private User user;
 

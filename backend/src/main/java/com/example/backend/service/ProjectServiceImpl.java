@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import com.example.backend.domain.Project;
 import com.example.backend.mapper.ProjectMapper;
 
+import java.util.UUID;
+
 @Service
 public class ProjectServiceImpl implements ProjectService{
     
@@ -28,6 +30,7 @@ public class ProjectServiceImpl implements ProjectService{
 
     @Override
     public int insertProject(Project project) {
+        project.setThreadId(UUID.randomUUID().toString());
 
         return projectMapper.insertProject(project);
     }

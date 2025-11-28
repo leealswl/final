@@ -31,7 +31,7 @@ public class AiChatServiceImpl implements AiChatService {
 
     @Override
     @Transactional
-    public AiChat processChat(String userMessage, Long userIdx, Long projectIdx, String userId) {
+    public AiChat processChat(String userMessage, Long userIdx, Long projectIdx, String userId, String threadId) {
 
         System.out.println("userMessage: " + userMessage);
         System.out.println("userIdx: " + userIdx);
@@ -44,6 +44,7 @@ public class AiChatServiceImpl implements AiChatService {
         chat.setProjectIdx(projectIdx);
         chat.setUserMessage(userMessage);
         chat.setUserId(userId);
+        chat.setThreadId(threadId);
 
         System.out.println("chat: " + chat);
 
@@ -54,7 +55,6 @@ public class AiChatServiceImpl implements AiChatService {
             
             // 💡 [수정된 부분 A: threadId 처리] 💡
             // (실제 서비스에서는 projectIdx나 userIdx에 연결된 활성 threadId를 DB나 세션에서 조회해야 합니다.)
-            String activeThreadId = null; 
 
             // 🔑 [수정된 부분 B: 메서드 시그니처 맞춤] 🔑
             fastApiResponse = fastAPIService.ChatbotMessage(
@@ -62,7 +62,7 @@ public class AiChatServiceImpl implements AiChatService {
                 userIdx.toString(), // Long을 String으로 변환하여 전달
                 projectIdx,
                 userId,
-                activeThreadId // 🚨 필수 수정: 네 번째 인자(threadId)로 null 전달
+                threadId // 🚨 필수 수정: 네 번째 인자(threadId)로 null 전달
             );
 
             System.out.println("fastApiResponse: " + fastApiResponse);

@@ -69,7 +69,7 @@ class ResumeRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     userMessage: str
-    thread_id: Optional[str] = None # [추가] 대화 이어서 하려면 이게 필요함
+    threadId: str = None # [추가] 대화 이어서 하려면 이게 필요함
     userIdx: int | None = None
     projectIdx: int | None = None
     userId: str
@@ -269,7 +269,7 @@ async def root():
 @app.post("/generate")
 async def generate_content(request: ChatRequest):
     try:
-        print(f"📢 요청 수신: '{request.userMessage}' (Thread: {request.thread_id})")
+        print(f"📢 요청 수신: '{request.userMessage}' (Thread: {request.threadId})")
         
         # ========================================
         # [수정 전 코드] 로컬 파일에서 컨텍스트 로드
@@ -362,7 +362,7 @@ async def generate_content(request: ChatRequest):
         # [주석 처리] 기존의 복잡한 DB 저장 및 Interrupt 방식
         # ---------------------------------------------------------------------
         # thread_id_to_use = request.thread_id if request.thread_id else str(uuid.uuid4())
-        thread_id_to_use = "sdfwerwrsxcxx" # str값이 바로넘어가서 오류생겨서 이렇게바꿈
+        thread_id_to_use = "sdfwerwersdf" # str값이 바로넘어가서 오류생겨서 이렇게바꿈
 
         async with AsyncSqliteSaver.from_conn_string(DB_PATH) as saver:
             app_run = proposal_graph.compile(checkpointer=saver)
