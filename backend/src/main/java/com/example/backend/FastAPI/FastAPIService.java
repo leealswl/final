@@ -142,11 +142,12 @@ public class FastAPIService {
      * @param threadId LangGraph 세션 ID (재개 요청 시 필수)
      * @return FastAPI 응답 (AiChat 객체)
      */
-    public AiChat ChatbotMessage(String message, String userIdx, Long projectIdx, String threadId) {
+    public AiChat ChatbotMessage(String message, String userIdx, Long projectIdx, String userId, String threadId) {
 
         System.out.println("message: "+ message);
         System.out.println("userIdx: "+ userIdx);
         System.out.println("projectIdx: "+ projectIdx);
+        System.out.println("userId: "+ userId);
         System.out.println("threadId (현재 세션 ID): "+ threadId); // 💡 세션 ID 확인
 
         // 1. 의도 분류 (Dispatcher)
@@ -164,7 +165,8 @@ public class FastAPIService {
             requestBody = Map.of(
                 "userMessage", message, 
                 "userIdx", userIdx, 
-                "projectIdx", projectIdx 
+                "projectIdx", projectIdx,
+                "userId", userId
             );
 
         

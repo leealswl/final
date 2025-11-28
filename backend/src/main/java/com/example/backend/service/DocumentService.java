@@ -12,6 +12,8 @@ public interface DocumentService {
     public int saveFilesAndDocuments(List<MultipartFile> files, List<Long> folders, String userId, Long projectIdx)
             throws Exception;
 
+        public int insertDocument(Document document);
+
     /**
      * 2025-11-09 수연 추가: 파일 정보와 함께 저장 (경로 정보 반환)
      */
@@ -19,5 +21,7 @@ public interface DocumentService {
             throws Exception;
 
         Long saveDocument(Document request);
+
+
 
 }

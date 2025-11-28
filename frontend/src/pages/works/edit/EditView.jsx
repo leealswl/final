@@ -58,7 +58,7 @@ export default function EditView() {
                 projectIdx: tmpProjectIdx,
                 documentIdx: null, // 아직 문서 row 없음
                 fileName: '제안서_초안',
-                filePath: filePath ?? '/uploads/admin/1/1/234.json',
+                filePath: filePath,
             });
 
             // 새 문서일 땐 굳이 파일 트리에서 찾을 게 없으니 바로 리턴
@@ -76,7 +76,7 @@ export default function EditView() {
                 projectIdx: f.projectIdx ?? f.project_idx ?? f.projectId ?? f.project_id ?? currentProjectIdx ?? 1,
                 documentIdx: f.documentIdx ?? f.document_idx ?? f.id ?? docId ?? 1,
                 fileName: f.fileName ?? f.name ?? f.label ?? '제안서_초안',
-                filePath: filePath ?? '/uploads/admin/1/1/234.json',
+                filePath: filePath,
             });
         } else {
             console.warn('[EditView] getById로 파일을 찾지 못했습니다.', { docId });
@@ -84,31 +84,31 @@ export default function EditView() {
                 projectIdx: currentProjectIdx ?? 1,
                 documentIdx: docId, // 일단 라우트에서 온 값 넣어둠
                 fileName: '제안서_초안',
-                filePath: filePath ?? '/uploads/admin/1/1/234.json',
+                filePath: filePath,
             });
         }
     }, [isExistingDoc, docId, getById, setSelectedFile, setMeta, currentProjectIdx, filePath]);
 
-    useEffect(() => {
-        fetch(toAbs('/uploads/admin/1/1/234.json'))
-            .then(async (res) => {
-                if (!res.ok) throw new Error(res.statusText || 'JSON 파일을 불러오지 못했습니다.');
-                const jsonData = await res.json(); // JSON 파싱
-                console.log('jsondata: ', jsonData);
-                // 이미 언마운트된 경우 무시
-                setInitialContent(jsonData);
-                setDocumentContent(jsonData, false);
-            })
-            .catch((error) => {
-                console.warn('[Editor] JSON 로드 실패', error);
-                // 에러 발생 시 빈 문서로 시작
-                const emptyDoc = { type: 'doc', content: [] };
-                setInitialContent(emptyDoc);
-                setDocumentContent(emptyDoc);
-            });
-        // cleanup 함수: 컴포넌트 언마운트 시 중단
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [reloadTrigger, setDocumentContent]);
+    // useEffect(() => {
+    //     fetch(toAbs(filePath))
+    //         .then(async (res) => {
+    //             if (!res.ok) throw new Error(res.statusText || 'JSON 파일을 불러오지 못했습니다.');
+    //             const jsonData = await res.json(); // JSON 파싱
+    //             console.log('jsondata: ', jsonData);
+    //             // 이미 언마운트된 경우 무시
+    //             setInitialContent(jsonData);
+    //             setDocumentContent(jsonData, false);
+    //         })
+    //         .catch((error) => {
+    //             console.warn('[Editor] JSON 로드 실패', error);
+    //             // 에러 발생 시 빈 문서로 시작
+    //             const emptyDoc = { type: 'doc', content: [] };
+    //             setInitialContent(emptyDoc);
+    //             setDocumentContent(emptyDoc);
+    //         });
+    //     // cleanup 함수: 컴포넌트 언마운트 시 중단
+    //     // eslint-disable-next-line react-hooks/exhaustive-deps
+    // }, [reloadTrigger, setDocumentContent, filePath]);
 
     return (
         <Box display="flex" flex={1} height="100vh">

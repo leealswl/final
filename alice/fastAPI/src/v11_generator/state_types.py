@@ -4,6 +4,7 @@ class ProposalGenerationState(TypedDict):
     """기획서 생성 LangGraph에서 사용되는 공유 상태"""
     
     # === 1. 초기 입력 ===
+    user_idx: str
     user_id: str
     project_idx: int
     user_prompt: str 

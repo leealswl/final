@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.backend.FastAPI.FastAPIService;
+import com.example.backend.domain.Document;
 import com.example.backend.service.AnalysisService;
 import com.example.backend.service.DocumentService;
 import com.example.backend.util.CustomMultipartFile;
@@ -201,6 +202,25 @@ public class AnalysisController {
             Map<String, Object> fastApiResult = fastApi.sendFilesToFastAPI(files, folders, userId, projectId);
 
             System.out.println("✅ FastAPI 분석 완료");
+
+            System.out.println("fastApiResult: " + fastApiResult.get("user_id"));
+            System.out.println("fastApiResult: " + fastApiResult.get("project_idx"));
+            System.out.println("fastApiResult: " + fastApiResult.get("filePath"));
+
+            // project_idx, folder, file_name, file_path
+            Document document = new Document();
+
+            String filePath = (String) fastApiResult.get("filePath");
+
+
+
+            document.setFilePath(filePath);
+            document.setProjectIdx(projectId);
+            document.setFileName("초안.json");
+            document.setFolder("0");
+
+            documentService.insertDocument(document);
+            
 
             // 4. 분석 결과 반환
             return ResponseEntity.ok(Map.of(
