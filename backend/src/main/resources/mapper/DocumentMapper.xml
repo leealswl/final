@@ -22,7 +22,7 @@
             values (#{documentIdx}, #{projectIdx}, #{folder}, #{fileName}, #{filePath})
         </insert>
 
-        <update id="updateDocumentContent" parameterType="com.example.backend.domain.Document">
+        <update id="updateDocument" parameterType="com.example.backend.domain.Document">
             UPDATE documents
             SET
                 <!-- content    = #{content}, -->
