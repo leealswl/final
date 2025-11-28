@@ -42,7 +42,7 @@ export default function useDocumentSave() {
                 const payload = {
                     projectIdx,
                     documentIdx: documentIdx ?? null, // ★ 새 문서면 null 그대로 보냄
-                    fileName: finalFileName,
+                    fileName: "draft", // ★ 임시 고정
                     content: JSON.stringify(content), // ★ Tiptap JSON → 문자열
                     filePath: filePath,
                     folder: folder,
