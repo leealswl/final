@@ -19,7 +19,7 @@ import { useProjectStore } from '../../../store/useProjectStore';
  * - 우측: AI Chatbot
  */
 
-// const toAbs = (p) => (p?.startsWith('http') ? p : `http://localhost:8081${p}`);
+const toAbs = (p) => (p?.startsWith('http') ? p : `http://localhost:8081${p}`);
 
 export default function EditView() {
     const params = useParams();
@@ -87,26 +87,26 @@ export default function EditView() {
         }
     }, [isExistingDoc, docId, getById, setSelectedFile, setMeta, filePath, projectIdx]);
 
-    // useEffect(() => {
-    //     fetch(toAbs(filePath))
-    //         .then(async (res) => {
-    //             if (!res.ok) throw new Error(res.statusText || 'JSON 파일을 불러오지 못했습니다.');
-    //             const jsonData = await res.json(); // JSON 파싱
-    //             console.log('jsondata: ', jsonData);
-    //             // 이미 언마운트된 경우 무시
-    //             setInitialContent(jsonData);
-    //             setDocumentContent(jsonData, false);
-    //         })
-    //         .catch((error) => {
-    //             console.warn('[Editor] JSON 로드 실패', error);
-    //             // 에러 발생 시 빈 문서로 시작
-    //             const emptyDoc = { type: 'doc', content: [] };
-    //             setInitialContent(emptyDoc);
-    //             setDocumentContent(emptyDoc);
-    //         });
-    //     // cleanup 함수: 컴포넌트 언마운트 시 중단
-    //     // eslint-disable-next-line react-hooks/exhaustive-deps
-    // }, [reloadTrigger, setDocumentContent, filePath]);
+    useEffect(() => {
+        fetch(toAbs(filePath))
+            .then(async (res) => {
+                if (!res.ok) throw new Error(res.statusText || 'JSON 파일을 불러오지 못했습니다.');
+                const jsonData = await res.json(); // JSON 파싱
+                console.log('jsondata: ', jsonData);
+                // 이미 언마운트된 경우 무시
+                setInitialContent(jsonData);
+                setDocumentContent(jsonData, false);
+            })
+            .catch((error) => {
+                console.warn('[Editor] JSON 로드 실패', error);
+                // 에러 발생 시 빈 문서로 시작
+                const emptyDoc = { type: 'doc', content: [] };
+                setInitialContent(emptyDoc);
+                setDocumentContent(emptyDoc);
+            });
+        // cleanup 함수: 컴포넌트 언마운트 시 중단
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [reloadTrigger, setDocumentContent, filePath]);
 
     return (
         <Box display="flex" flex={1} height="100vh">
