@@ -399,16 +399,31 @@ def find_toc_page_range_with_vision(file_bytes: bytes, file_name: str, max_pages
 JSON 형식으로 반환:
 {
   "has_toc_start": true/false,
-  "toc_start_page": 페이지번호 (없으면 null),
+  "toc_start_page": 배치 내 상대 페이지 번호 (없으면 null),
   "has_toc_end": true/false,
-  "toc_end_page": 페이지번호 (없으면 null),
-  "detection_method": "title" 또는 "pattern" (목차 제목으로 찾았으면 "title", 번호 패턴으로 찾았으면 "pattern")
-}"""
+  "toc_end_page": 배치 내 상대 페이지 번호 (없으면 null),
+  "detection_method": "title" 또는 "pattern"
+}
 
-            user_prompt = f"""첨부된 이미지들은 '{file_name}' 파일의 페이지 {start_idx + 1}-{end_idx}입니다.
+⚠️ 매우 중요 - 페이지 번호:
+- toc_start_page와 toc_end_page는 **제공된 배치 내에서의 상대 페이지 번호**만 반환하세요
+- 첫 번째 이미지 = 1, 두 번째 이미지 = 2, 세 번째 이미지 = 3 ...
+- 절대 페이지 번호가 아닙니다!"""
 
-이 페이지 범위에서 목차가 시작하는지, 끝나는지 판단하여 JSON 형식으로 반환하세요.
-페이지 번호는 1부터 시작합니다 (첫 번째 페이지 = 1).
+            batch_start_page = start_idx + 1
+            batch_end_page = end_idx
+            batch_size = len(batch_images)
+            
+            user_prompt = f"""첨부된 이미지들은 '{file_name}' 파일의 **{batch_size}개 페이지**입니다.
+- 이 배치의 실제 PDF 페이지 범위: {batch_start_page}-{batch_end_page} 페이지
+- 이미지 순서: 1번째 이미지 = PDF {batch_start_page}페이지, 2번째 이미지 = PDF {batch_start_page + 1}페이지, ... {batch_size}번째 이미지 = PDF {batch_end_page}페이지
+
+이 배치 내에서 목차가 시작하는지, 끝나는지 판단하여 JSON 형식으로 반환하세요.
+
+⚠️ 매우 중요 - 페이지 번호 지정:
+- toc_start_page와 toc_end_page에는 **이 배치 내에서의 순서 번호 (1~{batch_size})**만 반환하세요
+- 1번째 이미지 = 1, 2번째 이미지 = 2, 3번째 이미지 = 3, ... {batch_size}번째 이미지 = {batch_size}
+- **절대 페이지 번호(예: 7, 9)를 반환하지 마세요!** 오직 배치 내 순서만 반환하세요.
 
 중요: 
 - "목차" 제목이 없어도 1., 2., 3. 또는 I., II., III. 같은 패턴으로 
@@ -435,22 +450,36 @@ JSON 형식으로 반환:
                     detection_method = result.get('detection_method', 'title')
                     
                     if toc_start is None:
-                        # detected_page가 배치 내 상대 페이지 번호일 수 있음
-                        # 일단 시작 인덱스를 기준으로 설정하고, detected_page가 있으면 조정
                         if detected_page and isinstance(detected_page, int):
-                            # 배치 내에서 실제 페이지 번호 계산
-                            # detected_page가 1-based라면, 배치의 첫 페이지는 start_idx + 1
-                            toc_start = start_idx + detected_page
+                            # detected_page는 배치 내 상대 페이지 번호 (1-based)
+                            # 배치의 첫 번째 이미지 = 1 → 실제 PDF 페이지 = start_idx + 1
+                            # 배치의 두 번째 이미지 = 2 → 실제 PDF 페이지 = start_idx + 2
+                            # 따라서: 실제 페이지 = start_idx + detected_page
+                            
+                            # 검증: detected_page가 배치 범위 내에 있는지 확인
+                            if 1 <= detected_page <= len(batch_images):
+                                toc_start = start_idx + detected_page
+                            else:
+                                # 범위를 벗어난 경우, 배치의 첫 페이지로 설정
+                                toc_start = start_idx + 1
+                                print(f"    ⚠️  감지된 페이지 번호({detected_page})가 배치 범위를 벗어남 → 배치 첫 페이지({toc_start})로 설정")
                         else:
                             toc_start = start_idx + 1  # 배치의 첫 페이지
                         
                         method_str = "제목 기반" if detection_method == "title" else "패턴 기반"
-                        print(f"    ✅ 목차 시작 페이지 발견: {toc_start} ({method_str})")
+                        print(f"    ✅ 목차 시작 페이지 발견: {toc_start} ({method_str}, 배치:{start_idx+1}-{end_idx}, 감지값:{detected_page})")
                 
                 if result.get('has_toc_end'):
                     detected_page = result.get('toc_end_page')
                     if toc_end is None and detected_page and isinstance(detected_page, int):
-                        toc_end = start_idx + detected_page
+                        # 검증: detected_page가 배치 범위 내에 있는지 확인
+                        if 1 <= detected_page <= len(batch_images):
+                            toc_end = start_idx + detected_page
+                        else:
+                            # 범위를 벗어난 경우, 배치의 마지막 페이지로 설정
+                            toc_end = end_idx
+                            print(f"    ⚠️  감지된 페이지 번호({detected_page})가 배치 범위를 벗어남 → 배치 마지막 페이지({toc_end})로 설정")
+                        
                         print(f"    ✅ 목차 종료 페이지 발견: {toc_end}")
                         break
 
@@ -492,17 +521,30 @@ JSON 형식으로 반환:
 JSON 형식으로 반환:
 {
   "has_toc_pattern": true/false,
-  "toc_start_page": 페이지번호 (패턴 시작 페이지),
-  "toc_end_page": 페이지번호 (패턴 종료 페이지 또는 null)
-}"""
+  "toc_start_page": 배치 내 상대 페이지 번호 (패턴 시작 페이지),
+  "toc_end_page": 배치 내 상대 페이지 번호 (패턴 종료 페이지 또는 null)
+}
 
-                pattern_user_prompt = f"""첨부된 이미지들은 '{file_name}' 파일의 페이지 {start_idx + 1}-{end_idx}입니다.
+⚠️ 매우 중요 - 페이지 번호:
+- toc_start_page와 toc_end_page는 **제공된 배치 내에서의 상대 페이지 번호**만 반환하세요
+- 첫 번째 이미지 = 1, 두 번째 이미지 = 2, 세 번째 이미지 = 3 ...
+- 절대 페이지 번호가 아닙니다!"""
 
-이 페이지들에서 "목차" 제목 없이 번호 패턴(1., 2., 3. 또는 I., II., III.)으로 
+                batch_start_page = start_idx + 1
+                batch_end_page = end_idx
+                batch_size = len(batch_images)
+                
+                pattern_user_prompt = f"""첨부된 이미지들은 '{file_name}' 파일의 **{batch_size}개 페이지**입니다.
+- 이 배치의 실제 PDF 페이지 범위: {batch_start_page}-{batch_end_page} 페이지
+- 이미지 순서: 1번째 이미지 = PDF {batch_start_page}페이지, 2번째 이미지 = PDF {batch_start_page + 1}페이지, ... {batch_size}번째 이미지 = PDF {batch_end_page}페이지
+
+이 배치 내에서 "목차" 제목 없이 번호 패턴(1., 2., 3. 또는 I., II., III.)으로 
 나열된 목차 구조가 있는지 확인하세요.
 
-중요: toc_start_page와 toc_end_page는 배치 내에서의 상대 페이지 번호를 반환하세요.
-예: 배치의 첫 번째 페이지 = 1, 두 번째 페이지 = 2, 세 번째 페이지 = 3"""
+⚠️ 매우 중요 - 페이지 번호 지정:
+- toc_start_page와 toc_end_page에는 **이 배치 내에서의 순서 번호 (1~{batch_size})**만 반환하세요
+- 1번째 이미지 = 1, 2번째 이미지 = 2, 3번째 이미지 = 3, ... {batch_size}번째 이미지 = {batch_size}
+- **절대 페이지 번호(예: 7, 9)를 반환하지 마세요!** 오직 배치 내 순서만 반환하세요."""
 
                 messages_content = [{"type": "text", "text": pattern_user_prompt}]
                 messages_content.extend(image_contents)
@@ -527,26 +569,33 @@ JSON 형식으로 반환:
                         if not toc_start and detected_start:
                             # 배치 내 상대 페이지 번호를 절대 페이지 번호로 변환
                             if isinstance(detected_start, int):
-                                # detected_start가 1-based 상대 페이지 번호라면
+                                # detected_start는 배치 내 상대 페이지 번호 (1-based)
+                                # 검증: 배치 범위 내에 있는지 확인
                                 if 1 <= detected_start <= len(batch_images):
-                                    toc_start = start_idx + detected_start  # start_idx는 0-based이므로 +1 필요
+                                    # 실제 PDF 페이지 = start_idx (0-based) + detected_start (1-based)
+                                    # 예: start_idx=5, detected_start=2 → 실제 페이지 = 5 + 2 = 7
+                                    toc_start = start_idx + detected_start
                                 else:
-                                    # 만약 절대 페이지 번호로 반환된 경우
-                                    toc_start = detected_start
+                                    # 범위를 벗어난 경우, 배치의 첫 페이지로 설정
+                                    toc_start = start_idx + 1
+                                    print(f"    ⚠️  감지된 페이지 번호({detected_start})가 배치 범위를 벗어남 → 배치 첫 페이지({toc_start})로 설정")
                             else:
                                 # 배치의 첫 페이지를 시작으로 설정
                                 toc_start = start_idx + 1
                             
-                            print(f"    ✅ 목차 패턴 시작 페이지 발견: {toc_start} (패턴 기반)")
+                            print(f"    ✅ 목차 패턴 시작 페이지 발견: {toc_start} (패턴 기반, 배치:{start_idx+1}-{end_idx}, 감지값:{detected_start})")
                         
                         if not toc_end and detected_end:
                             if isinstance(detected_end, int):
+                                # 검증: 배치 범위 내에 있는지 확인
                                 if 1 <= detected_end <= len(batch_images):
                                     toc_end = start_idx + detected_end
                                 else:
-                                    toc_end = detected_end
+                                    # 범위를 벗어난 경우, 배치의 마지막 페이지로 설정
+                                    toc_end = end_idx
+                                    print(f"    ⚠️  감지된 페이지 번호({detected_end})가 배치 범위를 벗어남 → 배치 마지막 페이지({toc_end})로 설정")
                             else:
-                                toc_end = start_idx + len(batch_images)
+                                toc_end = end_idx
                             
                             if toc_end:
                                 print(f"    ✅ 목차 패턴 종료 페이지 발견: {toc_end}")

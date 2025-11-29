@@ -1,6 +1,17 @@
 """
 양식 기반 목차 추출 모듈
 제안서 양식 파일에서 목차를 추출하는 세부 로직
+
+⚠️ [DEPRECATED] 이 파일은 더 이상 사용되지 않습니다.
+
+Vision API 기반 배치 처리가 도입되면서 이 텍스트 기반 추출 방식은 
+toc_extraction.py의 extract_toc_from_template 함수로 대체되었습니다.
+
+현재 목차 추출 전략:
+- extract_toc_from_template: Vision API로 목차 페이지 범위를 찾고 
+  배치 방식으로 목차를 추출하며 각 항목의 작성요령도 함께 찾습니다.
+
+이 파일은 참고용으로만 유지되며, 실제 실행 경로에서 사용되지 않습니다.
 """
 
 import json
