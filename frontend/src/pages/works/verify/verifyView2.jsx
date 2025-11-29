@@ -14,7 +14,6 @@ import {
   ListItem,
   ListItemText,
   Button,
-  CircularProgress,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
@@ -29,6 +28,8 @@ import {
 import { draftApi } from '../../../utils/draftApi';
 import { tiptapDocToPlainText } from '../../../utils/tiptapText';
 import { verifyLawSection } from '../../../utils/fastapi';
+
+import { useFileStore } from '../../../store/useFileStore';
 
 // =============================
 // FOCUSES 정의
@@ -485,11 +486,12 @@ function VerifyView() {
   const [loading, setLoading] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
   const [verified, setVerified] = useState(false);
+  const filePath = useFileStore((state) => state.filePath);
 
   useEffect(() => {
     (async () => {
       try {
-        const docJson = await draftApi();
+        const docJson = await draftApi(filePath);
         const plain = tiptapDocToPlainText(docJson);
         console.log('초안 텍스트:', plain);
         setText(plain);

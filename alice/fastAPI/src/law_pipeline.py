@@ -215,3 +215,4 @@ if __name__ == "__main__":
 
 
 # 법령 rag -> python law_pipeline.py 실행하면 law_pipeline_data/parsed/ 와 vectordb/ 생성됨
+# fastapi 종료 / 벡터디비 삭제 / 파이프라인실행
