@@ -412,44 +412,110 @@ def process_llm_response(
 ) -> Dict:
     """
     LLM 응답을 base_sections와 병합하여 최종 목차 생성
+
+    주요 개선사항:
+    1. 폼 필드 필터링을 항상 실행 (base_sections 유무와 관계없이)
+    2. 페이지 번호 패턴 제외 ("- 10 -" 같은 패턴)
+    3. 표 내용 패턴 제외 ("TO BE >", "AS IS" 등)
+    4. 중복 제거 (같은 title이 여러 번 나오면 첫 번째만 유지)
+    5. Description 길이 제한 (최대 200자)
     """
+    # 🔧 개선 1: 폼 필드 및 제외 키워드 정의 (항상 적용)
+    form_field_keywords = [
+        'mail', 'e-mail', '이메일', '팩스', '휴대전화', '전화', '주소',
+        '생년월일', '성별', '직위', '부서', '과제명', '기관명', '사업비',
+        '대표자', '실무책임자', '연락처', '담당자'
+    ]
+
+    # 페이지 번호 패턴
+    page_number_pattern = re.compile(r'^-\s*\d+\s*-$')
+
+    # 표 내용 패턴
+    table_content_keywords = ['TO BE', 'AS IS', 'IS TO', 'BE 기대효과', '⇨']
+
+    # 예시/샘플 패턴
+    example_keywords = ['홍길동', 'OO천원', '예시', '샘플', '작성예']
+
+    # 체크박스 반복 항목 (성과지표 관련)
+    checkbox_duplicates = ['투입', '과정', '산출', '결과']
+
     if base_sections:
         # base_sections가 있으면 LLM 결과와 병합
         llm_map = {sec.get('number'): sec for sec in llm_sections}
-        final_sections = []
+        raw_sections = []
+
         for base in base_sections:
             llm_candidate = llm_map.get(base['number'], {})
             description = llm_candidate.get('description') or base.get('excerpt', '')
+
             if not isinstance(description, str):
                 description = str(description) if description is not None else ''
+
+            # 🔧 개선 5: Description 길이 제한 (최대 200자)
+            if len(description) > 200:
+                description = description[:197] + '...'
+
             merged = {
                 'number': base['number'],
                 'title': base['title'],
                 'description': description.strip()
             }
-            final_sections.append(merged)
+            raw_sections.append(merged)
     else:
-        # base_sections가 없으면 폼 필드 필터링
-        form_field_keywords = ['mail', 'e-mail', '이메일', '팩스', '휴대전화', '전화', '주소', '생년월일', '성별', '직위', '부서']
-        final_sections = []
-        for sec in llm_sections:
-            original_title = sec.get('title', '')
-            title_lower = original_title.lower()
+        # base_sections가 없으면 LLM 결과를 그대로 사용
+        raw_sections = llm_sections
 
-            # 1. 폼 필드 키워드 체크
-            if any(keyword in title_lower for keyword in form_field_keywords):
+    # 🔧 개선 1-4: 모든 섹션에 대해 필터링 적용
+    final_sections = []
+    seen_titles = set()  # 중복 체크용
+    checkbox_count = {}  # 체크박스 항목 카운트
+
+    for sec in raw_sections:
+        original_title = sec.get('title', '')
+        title_lower = original_title.lower()
+
+        # 🔧 필터 1: 폼 필드 키워드 체크
+        if any(keyword in title_lower for keyword in form_field_keywords):
+            continue
+
+        # 🔧 필터 2: 페이지 번호 패턴 체크 ("- 10 -" 같은 패턴)
+        if page_number_pattern.match(original_title.strip()):
+            continue
+
+        # 🔧 필터 3: 표 내용 패턴 체크
+        if any(keyword in original_title for keyword in table_content_keywords):
+            continue
+
+        # 🔧 필터 4: 예시/샘플 패턴 체크
+        if any(keyword in original_title for keyword in example_keywords):
+            continue
+
+        # 🔧 필터 5: 체크박스 중복 항목 제한 (최대 2번까지만)
+        if original_title in checkbox_duplicates:
+            checkbox_count[original_title] = checkbox_count.get(original_title, 0) + 1
+            if checkbox_count[original_title] > 2:
                 continue
 
-            # 2. □, ■, ● 마커 체크
-            has_marker = any(marker in original_title for marker in ['□', '■', '●', '○'])
-            if not has_marker:
-                continue
+        # 🔧 필터 6: 중복 제거 (같은 title이 여러 번 나오면 첫 번째만 유지)
+        if original_title in seen_titles:
+            continue
 
-            final_sections.append(sec)
+        seen_titles.add(original_title)
 
-        if not final_sections:
-            print(f"    ⚠️  폼 필드 필터링 후 섹션이 없음")
-            raise ValueError("유효한 섹션이 없습니다.")
+        # Description 길이 제한 적용 (base_sections가 없는 경우에도)
+        description = sec.get('description', '')
+        if len(description) > 200:
+            description = description[:197] + '...'
+
+        final_sections.append({
+            'number': sec.get('number', ''),
+            'title': original_title,
+            'description': description
+        })
+
+    if not final_sections:
+        print(f"    ⚠️  필터링 후 섹션이 없음")
+        raise ValueError("유효한 섹션이 없습니다.")
 
     toc = {
         'source': 'template',
