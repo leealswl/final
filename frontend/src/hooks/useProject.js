@@ -10,6 +10,7 @@ import { useFileStore } from '../store/useFileStore';
  */
 export default function UseProject(opts = {}) {
     const setProject = useProjectStore((s) => s.setProject);
+    //const setFileProjectIdx = useFileStore((s) => s.setProjectIdx);
     // const resetTree = useFileStore((s) => s.resetTree);
 
     return useMutation({
@@ -25,6 +26,7 @@ export default function UseProject(opts = {}) {
             
             // 프로젝트 정보 저장
             setProject(data);
+            //setFileProjectIdx(data.projectIdx);
             opts.onSuccess?.(data);
         },
         onError: (err) => {

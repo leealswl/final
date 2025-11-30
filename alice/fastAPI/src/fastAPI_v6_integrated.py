@@ -78,6 +78,10 @@ class VerifyRequest(BaseModel):
     text: str              # 검증할 초안 텍스트 (섹션 하나)
     focus: str | None = None   # 예: "연구개발비", "수행계획", "기관요건" 등
 
+# class DraftCompareRequest(BaseModel):
+#     project_idx: int
+#     draft_json: dict
+
 app = FastAPI(
     title=settings.API_TITLE,
     version=settings.API_VERSION,
@@ -515,7 +519,9 @@ async def verify_law(req: VerifyRequest):
                 "detail": str(e)
             }
         )
-
+    
+from comparison import router as compare_router
+app.include_router(compare_router, prefix="/compare")
 # ========================================
 # 실행 (개발용)
 # ========================================

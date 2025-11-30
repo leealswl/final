@@ -1,0 +1,15 @@
+import axios from "axios";
+
+const FASTAPI_COMPARE_URL = "http://localhost:8001/compare"; 
+
+export async function compareDraft(projectIdx, draftJson) {
+  const payload = {
+    project_idx: projectIdx,
+    draft_json: draftJson,
+  };
+
+  console.log("📤 초안 비교 요청:", payload);
+
+  const res = await axios.post(`${FASTAPI_COMPARE_URL}/draft`, payload);
+  return res.data;
+}
