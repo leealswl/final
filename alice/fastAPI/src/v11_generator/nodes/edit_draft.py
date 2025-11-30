@@ -122,7 +122,7 @@ def edit_proposal_draft(state: ProposalGenerationState) -> ProposalGenerationSta
     # 3. LLM 호출
     try:
         prompt = PromptTemplate.from_template(EDIT_PROMPT)
-        llm = ChatOpenAI(temperature=0, model="gpt-4o")
+        llm = ChatOpenAI(temperature=0, model="gpt-4o-mini")
         chain = prompt | llm | StrOutputParser()
         
         existing_json_str = json.dumps(existing_json, ensure_ascii=False, indent=2)

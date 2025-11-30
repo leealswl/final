@@ -27,6 +27,7 @@ import numpy as np
 from ..state_types import BatchState
 from ..config import FEATURES, CSV_OUTPUT_DIR
 from ..utils import chunk_by_sections
+from .metadata_vision import extract_metadata_with_vision
 
 # OpenAI 클라이언트 초기화
 load_dotenv()
@@ -390,6 +391,108 @@ def extract_features_rag(state: BatchState) -> BatchState:
             announcement_chunks = [c for c in retrieved_chunks if c['metadata']['document_type'] == 'ANNOUNCEMENT']
             attachment_chunks = [c for c in retrieved_chunks if c['metadata']['document_type'] == 'ATTACHMENT']
 
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            # 5-1️⃣ 핵심 정보 Feature의 경우: Vision API 우선 사용
+            # 사용자에게 우선적으로 보여줄 핵심 정보를 Vision API로 정확하게 추출
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            # Frontend AnalyzeView.jsx의 coreFeatures와 일치시킴
+            # 사용자가 첫 화면에서 보는 핵심 정보들
+            core_features = [
+                'project_name',           # 사업명
+                'announcement_date',      # 공고일
+                'application_period',     # 접수기간
+                'project_period',         # 사업기간
+                'support_scale',          # 지원규모
+                'announcing_agency',      # 공고기관 (핵심 정보)
+            ]
+            is_core_feature = feature_def['feature_key'] in core_features
+            
+            vision_result = None
+            
+            # 핵심 정보 feature인 경우 Vision API를 먼저 시도 (사용자 우선 표시 정보)
+            if is_core_feature:
+                announcement_doc = None
+                announcement_file_bytes = None
+                
+                # 공고문 문서 찾기
+                for doc in documents:
+                    if doc.get('document_type') == 'ANNOUNCEMENT':
+                        announcement_doc = doc
+                        break
+                
+                # 공고문 파일의 bytes 찾기
+                if announcement_doc:
+                    announcement_file_name = announcement_doc.get('file_name', '')
+                    for file_info in state.get('files', []):
+                        file_name = file_info.get('filename') or file_info.get('file_name', '')
+                        if file_name == announcement_file_name:
+                            announcement_file_bytes = file_info.get('bytes')
+                            break
+                
+                # Vision API로 메타 정보 추출 시도
+                if announcement_file_bytes and announcement_doc:
+                    print(f"      (Vision API 시도 중...) ", end="")
+                    vision_result = extract_metadata_with_vision(
+                        file_bytes=announcement_file_bytes,
+                        file_name=announcement_doc.get('file_name', ''),
+                        feature_type=feature_def['feature_type'],
+                        feature_description=feature_def['description'],
+                        feature_key=feature_def['feature_key']  # 날짜 포함 여부 판단용
+                    )
+                    
+                    # Vision API로 값을 찾은 경우, RAG 방식 건너뛰기
+                    if vision_result and vision_result.get("found"):
+                        print(f"✓ Vision API 성공 → RAG 건너뛰기")
+                        result = vision_result
+                        
+                        # 결과 저장
+                        all_features.append({
+                            'feature_code': feature_def['feature_key'],
+                            'feature_name': feature_def['feature_type'],
+                            'title': result.get('title', ''),
+                            'summary': result.get('content', ''),
+                            'full_content': result.get('full_content', ''),
+                            'key_points': result.get('key_points', []),
+                            'writing_strategy': result.get('writing_strategy', {}),
+                            
+                            # Vision API 메타데이터
+                            'extraction_method': 'vision_api',
+                            'chunks_from_announcement': 0,
+                            'chunks_from_attachments': 0,
+                            'vector_similarity': None,
+                            
+                            # 프로젝트 정보
+                            'project_idx': state['project_idx'],
+                            'extracted_at': datetime.now().isoformat()
+                        })
+                        
+                        continue  # RAG 방식 건너뛰기
+                    else:
+                        print(f"→ RAG로 fallback")
+                
+                # Vision API 실패 시 텍스트 기반 fallback: 공고문 첫 페이지 우선 확인
+                if announcement_doc and announcement_doc.get('page_texts'):
+                    # 첫 3페이지 우선 추가
+                    first_pages_text = []
+                    for page_num in sorted(announcement_doc['page_texts'].keys())[:3]:
+                        page_text = announcement_doc['page_texts'][page_num]
+                        if page_text:
+                            first_pages_text.append(f"[공고문 첫 페이지 {page_num}]\n{page_text[:2000]}")
+                    
+                    if first_pages_text:
+                        # 첫 페이지 내용을 맨 앞에 추가
+                        announcement_chunks.insert(0, {
+                            'chunk_id': 'first_pages',
+                            'text': '\n\n'.join(first_pages_text),
+                            'metadata': {
+                                'document_type': 'ANNOUNCEMENT',
+                                'page': 1,
+                                'section': '제목/서두',
+                                'file_name': announcement_doc.get('file_name', '')
+                            },
+                            'distance': 0.0  # 우선순위가 높음
+                        })
+
             # 6️⃣ LLM 컨텍스트 구성
             context_parts = []
 
@@ -411,8 +514,101 @@ def extract_features_rag(state: BatchState) -> BatchState:
 
             context_text = "\n\n---\n".join(context_parts)
 
-            # 7️⃣ LLM 호출
-            system_prompt = f"""당신은 정부 R&D 사업계획서 작성 컨설턴트입니다.
+            # 7️⃣ LLM 호출 - 핵심 정보 vs 작성 전략 구분
+            if is_core_feature:
+                # 날짜/기간이 필요한 Feature인지 판단
+                date_required_features = ['announcement_date', 'application_period', 'project_period']
+                requires_date = feature_def['feature_key'] in date_required_features
+                
+                # Feature 타입에 따라 프롬프트 조건부 작성
+                if requires_date:
+                    # 날짜/기간 정보가 필요한 Feature
+                    content_instruction = f"""실제 {feature_def['feature_type']} 값 - **구체적인 날짜/기간을 반드시 포함** (예: '2025년 9월 9일', '2025년 10월 1일 ~ 2026년 12월 31일')"""
+                    date_emphasis = """
+**⚠️ 매우 중요 (날짜/기간 정보):**
+- content 필드에는 **구체적인 날짜나 기간**을 반드시 포함하세요
+- 요약하지 말고, 공고문에 명시된 **정확한 날짜/기간**을 그대로 추출하세요
+- 예시: "2025년 9월 9일", "2025년 10월 1일 ~ 2026년 12월 31일", "2025.09.30(화) 14:00까지" 등"""
+                    user_examples = f"""
+  - {feature_def['feature_type']}: "2025년 9월 9일" 또는 "2025.09.09" (요약하지 말고 정확한 날짜)
+  - 또는 "2025년 10월 1일 ~ 2026년 12월 31일" (기간인 경우 시작일과 종료일 모두 포함)"""
+                    user_emphasis = "content 필드에는 구체적인 날짜/기간을 반드시 포함하세요."
+                elif feature_def['feature_key'] == 'support_scale':
+                    # 지원규모: 숫자/금액만 필요
+                    content_instruction = f"""실제 {feature_def['feature_type']} 값 - **구체적인 숫자/금액을 반드시 포함** (예: '연간 최대 20억원 이내', '7.35억원 이내')"""
+                    date_emphasis = """
+**⚠️ 매우 중요 (지원규모):**
+- content 필드에는 **구체적인 숫자/금액**을 반드시 포함하세요
+- 요약하지 말고, 공고문에 명시된 **정확한 금액/규모**를 그대로 추출하세요
+- 예시: "연간 최대 20억원 이내", "7.35억원 이내", "100억원" 등
+- **날짜나 기간 정보는 포함하지 마세요**"""
+                    user_examples = f"""
+  - {feature_def['feature_type']}: "연간 최대 20억원 이내" 또는 "7.35억원 이내" (정확한 숫자/금액)
+  - **날짜나 기간 정보는 포함하지 마세요**"""
+                    user_emphasis = "content 필드에는 구체적인 숫자/금액만 포함하세요. 날짜/기간은 포함하지 마세요."
+                else:
+                    # 사업명, 공고기관 등: 순수하게 해당 값만
+                    content_instruction = f"""실제 {feature_def['feature_type']} 값만 추출 (예: '2025년 공공AX 프로젝트 사업', '과학기술정보통신부')"""
+                    date_emphasis = f"""
+**⚠️ 매우 중요:**
+- content 필드에는 **{feature_def['feature_type']} 값만** 추출하세요
+- **다른 정보(날짜, 기간, 금액 등)를 섞지 마세요**
+- 요약하지 말고, 공고문에 명시된 **정확한 {feature_def['feature_type']} 값**만 그대로 추출하세요
+- 예시:
+  * 사업명: "2025년 공공AX 프로젝트 사업" (날짜나 기간 정보 포함 금지)
+  * 공고기관: "과학기술정보통신부" (날짜나 기간 정보 포함 금지)"""
+                    user_examples = f"""
+  - {feature_def['feature_type']}: "{feature_def['feature_type']} 값만" (예: 사업명이면 "2025년 공공AX 프로젝트 사업"만, 공고기관이면 "과학기술정보통신부"만)
+  - **다른 정보(날짜, 기간, 금액 등)를 섞지 마세요**"""
+                    user_emphasis = f"content 필드에는 {feature_def['feature_type']} 값만 추출하세요. 다른 정보를 섞지 마세요."
+                
+                # 메타 정보: 실제 값 추출에 집중
+                system_prompt = f"""당신은 정부 R&D 공고문을 분석하는 전문가입니다.
+공고문에서 '{feature_def['feature_type']}'의 **실제 값**을 추출해야 합니다.
+
+⚠️ 중요:
+- "{feature_def['feature_type']}" 작성 방법이나 가이드가 아닌, **공고문에 명시된 실제 값**을 찾으세요.
+- 공고문 제목, 첫 페이지, 헤더 부분을 우선 확인하세요.
+- 작성 방법/가이드가 아니라 실제로 명시된 값을 추출하세요.
+
+[분석 대상]
+- Feature: {feature_def['feature_type']}
+- 설명: {feature_def['description']}
+
+다음 정보를 JSON 형식으로 반환하세요:
+{{
+  "found": true/false,
+  "title": "추출된 실제 {feature_def['feature_type']} 값",
+  "content": "{content_instruction}",
+  "full_content": "해당 값이 나타난 전체 문맥",
+  "key_points": ["추출된 값의 특징이나 중요 사항"],
+  "writing_strategy": {{
+    "overview": "이 값의 의미 및 사업계획서 작성 시 활용 방법",
+    "writing_tips": ["이 값을 사업계획서에 어떻게 반영할지 팁"],
+    "common_mistakes": ["자주 발생하는 실수"],
+    "example_phrases": ["사업계획서에서 사용할 수 있는 예시 문구"]
+  }}
+}}
+
+{date_emphasis}
+
+**실제 값을 찾을 수 없으면 found를 false로 반환하세요.**"""
+
+                user_prompt = f"""공고문 내용:
+
+{context_text}
+
+위 내용에서 '{feature_def['feature_type']}'의 **실제 값**을 찾아서 추출하세요.
+
+⚠️ 매우 중요:
+- 요약하지 말고, 공고문에 명시된 **정확한 값**을 그대로 추출하세요
+- 예를 들어:{user_examples}
+
+작성 방법이나 가이드가 아니라, 공고문에 실제로 명시된 값을 찾으세요.
+{user_emphasis}"""
+            else:
+                # 일반 Feature: 작성 전략 추출
+                system_prompt = f"""당신은 정부 R&D 사업계획서 작성 컨설턴트입니다.
 공고문 및 첨부서류를 분석하여 '{feature_def['feature_type']}'에 대한 실질적인 작성 전략을 제시해야 합니다.
 
 [분석 대상]
@@ -436,7 +632,7 @@ def extract_features_rag(state: BatchState) -> BatchState:
 
 **해당 내용을 찾을 수 없으면 found를 false로 반환하세요.**"""
 
-            user_prompt = f"""검색된 관련 섹션:
+                user_prompt = f"""검색된 관련 섹션:
 
 {context_text}
 
@@ -475,7 +671,7 @@ def extract_features_rag(state: BatchState) -> BatchState:
                         for c in retrieved_chunks
                     ],
                     'keywords_detected': all_keywords if isinstance(keywords, dict) else keywords,
-                    'vector_similarity': float(top_distance),
+                    'vector_similarity': float(top_distance) if top_distance is not None else None,
                     'chunks_from_announcement': len(announcement_chunks),
                     'chunks_from_attachments': len(attachment_chunks),
                     'referenced_attachments': list(set(
@@ -556,7 +752,7 @@ def save_to_csv(state: BatchState) -> BatchState:
                 'full_content': feature.get('full_content', ''),
                 'key_points': feature.get('key_points', []),
                 'writing_strategy': feature.get('writing_strategy', {}),  # ✅ 작성 전략 추가
-                'vector_similarity': float(feature.get('vector_similarity', 0.0)),
+                'vector_similarity': float(v) if (v := feature.get('vector_similarity')) is not None else 0.0,
                 'chunks_from_announcement': int(feature.get('chunks_from_announcement', 0)),
                 'chunks_from_attachments': int(feature.get('chunks_from_attachments', 0)),
                 'referenced_attachments': feature.get('referenced_attachments', []),
@@ -573,7 +769,7 @@ def save_to_csv(state: BatchState) -> BatchState:
                 'full_content': feature.get('full_content', ''),
                 'key_points': '|'.join(feature.get('key_points', [])),
                 'writing_strategy': json.dumps(feature.get('writing_strategy', {}), ensure_ascii=False),  # ✅ JSON 문자열로 저장
-                'vector_similarity': feature.get('vector_similarity', 0.0),
+                'vector_similarity': feature.get('vector_similarity') if feature.get('vector_similarity') is not None else 0.0,
                 'chunks_from_announcement': feature.get('chunks_from_announcement', 0),
                 'chunks_from_attachments': feature.get('chunks_from_attachments', 0),
                 'referenced_attachments': '|'.join(feature.get('referenced_attachments', [])),

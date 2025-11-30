@@ -1,4 +1,7 @@
 # FastAPI v6 통합 요구사항
+# 
+# ⚠️ 실제 설치된 버전 기준으로 작성됨 (2025-11-29 확인)
+# 버전 확인: python3 check_versions.py
 
 # FastAPI 코어
 fastapi==0.115.6
@@ -6,21 +9,40 @@ uvicorn[standard]==0.34.0
 python-multipart==0.0.20
 
 # AI/ML 라이브러리
+openai==2.6.0
 sentence-transformers==5.1.2
-langchain==0.3.13
-langgraph==0.2.60
-langgraph-checkpoint==2.0.9
+langchain==1.0.7
+langgraph==1.0.3
+langgraph-checkpoint==3.0.1
 chromadb==1.3.3
 
 # PDF 처리
 pdfplumber==0.10.3
+pdf2image==1.17.0  # Vision API용 PDF → 이미지 변환
+
+# 이미지 처리 (pdf2image 의존성)
+pillow==12.0.0
 
 # 데이터 처리
 pandas==2.2.3
-numpy==1.26.4
+numpy==2.2.6
+
+# 텍스트 처리
+langchain-text-splitters==1.0.0  # RecursiveCharacterTextSplitter 사용
+
+# HTTP 클라이언트
+requests==2.32.5  # Backend API 호출용
+
+# 데이터 검증
+pydantic==2.12.3  # FastAPI BaseModel 사용
 
 # 환경 설정
 python-dotenv==1.0.1
 
 # Oracle DB 연동은 Backend에서 처리
 # FastAPI는 HTTP API를 통해 Backend와 통신
+
+# ⚠️ 시스템 라이브러리 설치 필요 (pdf2image 사용 시)
+# macOS: brew install poppler
+# Ubuntu/Debian: sudo apt-get install poppler-utils
+# Windows: https://github.com/oschwartz10612/poppler-windows/releases 에서 다운로드

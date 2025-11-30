@@ -389,7 +389,7 @@ const AnalyzeView = () => {
                             </Box>
                         ))}
                     {featureCards.filter((f) => {
-                        const coreFeatures = ['project_name', 'announcement_date', 'application_period', 'project_period', 'support_scale', 'deadline'];
+                        const coreFeatures = ['project_name', 'announcement_date', 'application_period', 'project_period', 'support_scale' ];
                         return coreFeatures.includes(f.feature_code);
                     }).length === 0 && (
                         <Typography color="#8C8C8C" textAlign="center">
