@@ -66,15 +66,15 @@
             #{featureCode},
             #{featureName},
             #{title},
-            #{summary},
-            #{fullContent},
-            #{keyPoints},
-            #{writingStrategy},
-            #{vectorSimilarity},
-            #{chunksFromAnnouncement},
-            #{chunksFromAttachments},
-            #{referencedAttachments},
-            #{extractedAt}
+            #{summary,jdbcType=CLOB},
+            #{fullContent,jdbcType=CLOB},
+            #{keyPoints,jdbcType=CLOB},
+            #{writingStrategy,jdbcType=CLOB},
+            #{vectorSimilarity,jdbcType=NUMERIC},
+            #{chunksFromAnnouncement,jdbcType=NUMERIC},
+            #{chunksFromAttachments,jdbcType=NUMERIC},
+            #{referencedAttachments,jdbcType=VARCHAR},
+            #{extractedAt,jdbcType=DATE}
         )
     </insert>
 

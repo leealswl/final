@@ -25,8 +25,39 @@ sudo apt-get install poppler-utils
 ```
 
 #### Windows
+⚠️ **중요**: poppler는 시스템 라이브러리이므로 `requirements.txt`에 포함할 수 없습니다. 수동 설치가 필요합니다.
+
+**자동 설치 (권장)**:
+
+1. **PowerShell 열기** (시작 메뉴에서 "PowerShell" 검색)
+   - ⚠️ **관리자 권한으로 실행** 권장 (우클릭 → "관리자 권한으로 실행")
+
+2. **실행 정책 변경** (최초 1회만):
+   ```powershell
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+   ```
+   - 보안 경고가 나오면 `Y` 입력
+
+3. **스크립트 실행**:
+   ```powershell
+   cd alice\fastAPI
+   .\install_poppler_windows.ps1
+   ```
+   
+   또는 절대 경로로:
+   ```powershell
+   .\alice\fastAPI\install_poppler_windows.ps1
+   ```
+
+**참고**: 
+- 실행 정책 변경 없이 실행하려면: `powershell -ExecutionPolicy Bypass -File .\install_poppler_windows.ps1`
+- 스크립트는 poppler를 자동으로 다운로드하고 PATH에 추가합니다
+
+**수동 설치**:
 1. https://github.com/oschwartz10612/poppler-windows/releases 에서 최신 버전 다운로드
-2. 압축 해제 후 `bin` 폴더를 시스템 PATH에 추가
+2. 압축 해제 후 `bin` 폴더 경로를 시스템 PATH 환경 변수에 추가
+3. PowerShell 재시작
+4. 설치 확인: `pdftoppm.exe -v`
 
 ### 3. 환경 변수 설정
 
