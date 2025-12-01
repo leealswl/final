@@ -598,8 +598,7 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
     return_value = {
         "current_query": comment,  # 코멘트 + 다음 챕터 description
         "completedContent": completed_content,
-        "messages": history,
-        "target_chapter": ""
+        "messages": history
     }
     print(f"🔍 [디버깅] generate_draft 반환값 - current_query 존재: {return_value.get('current_query') is not None}")
     print(f"🔍 [디버깅] generate_draft 반환값 - completedContent 존재: {return_value.get('completedContent') is not None}")
