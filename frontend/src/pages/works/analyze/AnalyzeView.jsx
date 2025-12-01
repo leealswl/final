@@ -33,7 +33,7 @@ const AnalyzeView = () => {
     const [loading, setLoading] = useState(false); // 분석 진행 중 상태
     const [error, setError] = useState(null); // 에러 메시지 상태
     const [loadingAnalysis, setLoadingAnalysis] = useState(false); // 분석 결과 로딩 상태
-
+    
     // 사용자 및 프로젝트 정보
     const user = useAuthStore((s) => s.user);
     const project = useProjectStore((s) => s.project);
@@ -371,31 +371,42 @@ const AnalyzeView = () => {
                     🔑 핵심 정보
                 </Typography>
                 <Stack spacing={3}>
-                    {featureCards
-                        .filter((feature) => {
-                            // 핵심 정보로 분류할 feature_code들
-                            const coreFeatures = ['project_name', 'announcement_date', 'application_period', 'project_period', 'support_scale', 'deadline'];
-                            return coreFeatures.includes(feature.feature_code);
-                        })
-                        .slice(0, 6) // 최대 6개만 표시
-                        .map((feature) => (
-                            <Box key={feature.card_id} sx={{ mb: 2 }}>
-                                <Typography fontSize="1.4rem" color="#262626" mb={1} fontWeight={700}>
-                                    {feature.feature_name || feature.feature_code}
+                    {(() => {
+                        // 백엔드 processing.py의 core_features와 일치 (deadline 제거, announcing_agency 추가)
+                        const coreFeatures = [
+                            'project_name',      // 사업명
+                            'announcement_date', // 공고일
+                            'application_period', // 접수기간
+                            'project_period',    // 사업기간
+                            'support_scale',     // 지원규모
+                            'announcing_agency', // 공고기관
+                        ];
+                        
+                        const coreFeatureCards = featureCards.filter((feature) => 
+                            coreFeatures.includes(feature.feature_code)
+                        );
+                        
+                        if (coreFeatureCards.length === 0) {
+                            return (
+                                <Typography color="#8C8C8C" textAlign="center">
+                                    핵심 정보가 없습니다.
                                 </Typography>
-                                <Typography fontSize="1.1rem" fontWeight={400} color="#595959">
-                                    {feature.summary || feature.full_content?.substring(0, 50) || '정보 없음'}
-                                </Typography>
-                            </Box>
-                        ))}
-                    {featureCards.filter((f) => {
-                        const coreFeatures = ['project_name', 'announcement_date', 'application_period', 'project_period', 'support_scale' ];
-                        return coreFeatures.includes(f.feature_code);
-                    }).length === 0 && (
-                        <Typography color="#8C8C8C" textAlign="center">
-                            핵심 정보가 없습니다.
-                        </Typography>
-                    )}
+                            );
+                        }
+                        
+                        return coreFeatureCards
+                            .slice(0, 6) // 최대 6개만 표시
+                            .map((feature) => (
+                                <Box key={feature.card_id} sx={{ mb: 2 }}>
+                                    <Typography fontSize="1.4rem" color="#262626" mb={1} fontWeight={700}>
+                                        {feature.feature_name || feature.feature_code}
+                                    </Typography>
+                                    <Typography fontSize="1.1rem" fontWeight={400} color="#595959">
+                                        {feature.summary || feature.full_content?.substring(0, 50) || '정보 없음'}
+                                    </Typography>
+                                </Box>
+                            ));
+                    })()}
                 </Stack>
             </Paper>
 

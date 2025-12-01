@@ -42,7 +42,21 @@ python-dotenv==1.0.1
 # Oracle DB 연동은 Backend에서 처리
 # FastAPI는 HTTP API를 통해 Backend와 통신
 
-# ⚠️ 시스템 라이브러리 설치 필요 (pdf2image 사용 시)
-# macOS: brew install poppler
-# Ubuntu/Debian: sudo apt-get install poppler-utils
-# Windows: https://github.com/oschwartz10612/poppler-windows/releases 에서 다운로드
+# ⚠️ 시스템 라이브러리 설치 필요 (pdf2image 사용 시 필수!)
+# 
+# poppler는 시스템 라이브러리이므로 requirements.txt에 포함할 수 없습니다.
+# 각 OS별로 수동 설치가 필요합니다:
+#
+# macOS:
+#   brew install poppler
+#
+# Ubuntu/Debian:
+#   sudo apt-get update && sudo apt-get install poppler-utils
+#
+# Windows:
+#   1. https://github.com/oschwartz10612/poppler-windows/releases 에서 최신 버전 다운로드
+#   2. 압축 해제 후 bin 폴더를 PATH 환경 변수에 추가
+#   3. 또는 설치 스크립트 실행: install_poppler_windows.ps1
+#
+# 설치 확인:
+#   pdftoppm -v  (또는 Windows: pdftoppm.exe -v)
