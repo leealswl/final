@@ -50,6 +50,7 @@ const ChatBotMUI = () => {
                 userIdx: user?.idx || 1,
                 projectIdx: project?.projectIdx || 1,
                 userId: user.userId,
+                threadId: project?.threadId,
             },
             {
                 onSuccess: async (data) => {

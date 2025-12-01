@@ -14,6 +14,7 @@ public class AiChat {
     private Long projectIdx;
     private String userMessage;
     private String aiResponse;
+    private String threadId;
 
 // ------------------- 💡 LangGraph 응답 수용 필드 (기존 필드) -------------------
     
@@ -29,8 +30,6 @@ public class AiChat {
     
     // 3. 현재 LangGraph 실행 스레드 ID (FastAPI: thread_id)
     // 멀티턴 실행 재개 시 필수
-    @JsonProperty("thread_id")
-    private String threadId;
 
     // 4. LangGraph의 현재 실행 상태 (FastAPI: status, 예: waiting_for_input, completed)
     // 프론트엔드에 다음 행동(질문 표시/결과 표시)을 지시하는 데 사용

@@ -533,7 +533,7 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
             print(f"✅ [저장 후 검증] 파일 paragraph 개수: {saved_para_count}")
             print(f"✅ [저장 후 검증] 첫 번째 paragraph 텍스트: {saved_first_text}...")
             print(f"✅ [저장 후 검증] 파일 크기: {save_path.stat().st_size} bytes")
-            
+            0
             # 내용 일치 확인
             expected_count = len(final_content.get('content', []))
             if saved_para_count == expected_count:

@@ -46,7 +46,8 @@ public class AiChatController {
             chatRequest.getUserMessage(),
             chatRequest.getUserIdx(),
             chatRequest.getProjectIdx(),
-            chatRequest.getUserId()
+            chatRequest.getUserId(),
+            chatRequest.getThreadId()
         );
     }
 

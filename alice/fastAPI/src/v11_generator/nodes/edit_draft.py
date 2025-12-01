@@ -24,13 +24,13 @@ def get_json_file_path() -> Path:
     return save_dir
 
 
-def load_existing_json() -> Optional[Dict[str, Any]]:
+def load_existing_json(state: ProposalGenerationState) -> Optional[Dict[str, Any]]:
     """
     기존 JSON 파일을 읽어서 반환
     Returns:
         Optional[Dict[str, Any]]: ProseMirror JSON 구조, 파일이 없으면 None
     """
-    file_path = get_json_file_path()
+    file_path = Path(get_json_file_path()) / str(state.get("user_id")) / str(state.get("project_idx")) / "초안.json"
     
     try:
         if not file_path.exists():
@@ -79,7 +79,7 @@ def edit_proposal_draft(state: ProposalGenerationState) -> ProposalGenerationSta
     print(f"🔍 수정 요청: {user_prompt}")
     
     # 1. 기존 JSON 파일 읽기
-    existing_json = load_existing_json()
+    existing_json = load_existing_json(state)
     
     if not existing_json:
         return {
@@ -122,7 +122,7 @@ def edit_proposal_draft(state: ProposalGenerationState) -> ProposalGenerationSta
     # 3. LLM 호출
     try:
         prompt = PromptTemplate.from_template(EDIT_PROMPT)
-        llm = ChatOpenAI(temperature=0, model="gpt-4o")
+        llm = ChatOpenAI(temperature=0, model="gpt-4o-mini")
         chain = prompt | llm | StrOutputParser()
         
         existing_json_str = json.dumps(existing_json, ensure_ascii=False, indent=2)

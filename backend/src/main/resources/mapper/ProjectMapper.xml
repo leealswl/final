@@ -11,6 +11,7 @@
         <result property="projectName" column="project_name"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
+        <result property="threadId" column="thread_id"/>
 
         <association property="user" javaType="User">
 			<result property="idx" column="idx"/>
@@ -23,8 +24,8 @@
             <selectKey keyProperty="projectIdx" order="BEFORE" resultType="long">
                 select project_seq.nextval from dual
             </selectKey>
-            insert into projects (project_idx, user_idx, project_name, created_at, updated_at)
-            values (#{projectIdx}, #{userIdx}, #{projectName}, sysdate, sysdate)
+            insert into projects (project_idx, user_idx, project_name, created_at, updated_at, thread_id)
+            values (#{projectIdx}, #{userIdx}, #{projectName}, sysdate, sysdate, #{threadId})
         </insert>
 
         <delete id="deleteProject">

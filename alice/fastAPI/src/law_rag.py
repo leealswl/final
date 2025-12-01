@@ -225,8 +225,12 @@ def verify_law_compliance(text: str, focus: str | None = None) -> dict:
         # -----------------------------
         query = build_query(text, focus)
 
+        print('query: ', query)
+
         try:
             docs = retriever.invoke(query)
+
+            print('docs: ', docs)
 
             # 🔍 디버그: 어떤 법령들이 걸렸는지 확인
             print("🔎 [RAG 결과 요약]")
@@ -244,6 +248,8 @@ def verify_law_compliance(text: str, focus: str | None = None) -> dict:
 
         # 👉 RAG에서 바로 추출한 법령 목록 (fallback용, 전부 실제 문서 기반)
         source_laws = build_related_laws_from_docs(docs)
+
+        print('source_laws: ', source_laws)
 
         context = docs_to_text(docs) if docs else "관련 법령을 찾지 못했습니다."
 

@@ -192,7 +192,8 @@ public class FastAPIService {
                 "userMessage", message, 
                 "userIdx", userIdx, 
                 "projectIdx", projectIdx,
-                "userId", userId
+                "userId", userId,
+                "threadId", threadId
             );
 
         
