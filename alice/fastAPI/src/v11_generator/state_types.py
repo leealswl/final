@@ -35,7 +35,7 @@ class ProposalGenerationState(TypedDict):
     current_chapter_index: int 
     
     # 현재 작업 중인 섹션의 제목.
-    target_chapter: str 
+    # target_chapter: str 
     
     # [핵심 필드] 완료된 섹션의 '요약된 최종 내용' 리스트. (List[str] 타입으로 변경됨)
     accumulated_data: List[str] 
