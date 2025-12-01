@@ -234,6 +234,8 @@ const ChatBotMUI = () => {
 
             <Stack direction="row" spacing={1}>
                 <TextField
+                    multiline
+                    maxRows={12}
                     variant="outlined"
                     size="small"
                     placeholder="메시지를 입력하세요..."
