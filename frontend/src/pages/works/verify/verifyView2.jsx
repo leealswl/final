@@ -8,6 +8,8 @@ import { tiptapDocToPlainText } from '../../../utils/tiptapText';
 import { verifyLawSection } from '../../../utils/fastapi';
 import { useFileStore } from '../../../store/useFileStore';
 
+import { useFileStore } from '../../../store/useFileStore';
+
 // =============================
 // FOCUSES 정의
 // =============================
