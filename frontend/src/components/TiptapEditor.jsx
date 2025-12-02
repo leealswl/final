@@ -19,7 +19,9 @@ import { mergeAttributes } from '@tiptap/core';
 import Toolbar from './editor/Toolbar';
 import TableToolbar from './editor/TableToolbar';
 import ImageNodeView from './editor/nodes/ImageNodeView';
+import ChartNodeView from './editor/nodes/ChartNodeView';
 import TableContextMenu from './editor/TableContextMenu';
+import { Node } from '@tiptap/core';
 
 // ---------------------- Custom Extensions ----------------------
 const headingLevels = [1, 2, 3];
@@ -70,6 +72,59 @@ const CustomImage = Image.extend({
     },
 });
 
+const Chart = Node.create({
+    name: 'chart',
+    group: 'block',
+    atom: true,
+    addAttributes() {
+        return {
+            chartType: {
+                default: 'line',
+                parseHTML: (element) => element.getAttribute('data-chart-type') || 'line',
+                renderHTML: (attributes) => ({ 'data-chart-type': attributes.chartType }),
+            },
+            title: {
+                default: '',
+                parseHTML: (element) => element.getAttribute('data-title') || '',
+                renderHTML: (attributes) => ({ 'data-title': attributes.title }),
+            },
+            data: {
+                default: { labels: [], datasets: [] },
+                parseHTML: (element) => {
+                    const dataAttr = element.getAttribute('data-chart-data');
+                    return dataAttr ? JSON.parse(dataAttr) : { labels: [], datasets: [] };
+                },
+                renderHTML: (attributes) => ({
+                    'data-chart-data': JSON.stringify(attributes.data),
+                }),
+            },
+            options: {
+                default: {},
+                parseHTML: (element) => {
+                    const optionsAttr = element.getAttribute('data-chart-options');
+                    return optionsAttr ? JSON.parse(optionsAttr) : {};
+                },
+                renderHTML: (attributes) => ({
+                    'data-chart-options': JSON.stringify(attributes.options),
+                }),
+            },
+        };
+    },
+    parseHTML() {
+        return [
+            {
+                tag: 'div[data-type="chart"]',
+            },
+        ];
+    },
+    renderHTML({ HTMLAttributes }) {
+        return ['div', { 'data-type': 'chart', ...HTMLAttributes }, 0];
+    },
+    addNodeView() {
+        return ReactNodeViewRenderer(ChartNodeView);
+    },
+});
+
 // ---------------------- Default Extensions ----------------------
 const defaultExtensions = [
     StarterKit.configure({
@@ -87,6 +142,7 @@ const defaultExtensions = [
     TableHeader,
     TableCell.configure({ resizable: true }),
     CustomImage,
+    Chart,
     CharacterCount.configure({ limit: 100000 }),
     Placeholder.configure({ placeholder: '내용을 입력하거나 AI 초안을 생성해 보세요…' }),
 ];
