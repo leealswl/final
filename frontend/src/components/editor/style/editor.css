@@ -189,10 +189,69 @@
   background: #f8fafc;
 }
 
-/* 페이지 넘김 방지 (표, 이미지 등 큰 요소) */
+/* 차트 스타일 */
+.paladoc-chart-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin: 20px auto;
+  max-width: 100%;
+}
+
+.paladoc-chart-inner {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 100%;
+}
+
+.paladoc-chart-wrapper.selected .paladoc-chart-inner {
+  outline: 2px solid #2563eb;
+  outline-offset: 4px;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.paladoc-chart-handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #2563eb;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.paladoc-chart-handle.handle-tl {
+  top: -4px;
+  left: -4px;
+}
+
+.paladoc-chart-handle.handle-tr {
+  top: -4px;
+  right: -4px;
+}
+
+.paladoc-chart-handle.handle-bl {
+  bottom: -4px;
+  left: -4px;
+}
+
+.paladoc-chart-handle.handle-br {
+  bottom: -4px;
+  right: -4px;
+}
+
+/* 페이지 넘김 방지 (표, 이미지, 차트 등 큰 요소) */
 .editor-page table,
 .editor-page img,
-.editor-page .paladoc-image-wrapper {
+.editor-page .paladoc-image-wrapper,
+.editor-page .paladoc-chart-wrapper {
   page-break-inside: avoid;
   break-inside: avoid;
 }

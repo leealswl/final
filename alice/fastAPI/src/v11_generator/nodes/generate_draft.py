@@ -255,7 +255,6 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
           * 시계열 데이터(연도별, 월별 추이)를 시각화할 때
           * 비율 데이터(파이 차트), 비교 데이터(막대 차트), 추이 데이터(라인 차트)를 표현할 때
           * 정량적 데이터를 시각적으로 보여주는 것이 텍스트보다 효과적인 경우
-
         - 가이드에 제시된 표 형식, 측정 방법, 정량적 지표, 예시 등의 요구사항이 있다면 반드시 반영하십시오.
         - 문단 형식으로 작성하고, 개조식 나열이 필요한 경우 적절히 혼합하십시오.
         - 사용자가 제공한 정보가 불충분한 영역이 있어도 추론 가능한 범위 내에서 자연스럽게 보완하십시오.
@@ -450,6 +449,8 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
             role = "👤" if msg.get("role") == "user" else "🤖"
             content = msg.get("content", "")
             recent_history += f"{role}: {content}\n"
+    
+    print(f"🔍 [디버깅] Recent Chat History:\n{recent_history}")
 
 
     prompt = PromptTemplate.from_template(DRAFT_PROMPT)
