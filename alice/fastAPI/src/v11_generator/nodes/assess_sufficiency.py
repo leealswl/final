@@ -64,24 +64,24 @@ def assess_info(state: ProposalGenerationState) -> Dict[str, Any]:
     # print('collected_data: ', collected_data)
     # print(f"--- 📊 ASSESS_INFO 수신 데이터 길이: {len(collected_data)}자 ---")
     
-    print('-'*50)
+    # print('-'*50)
     toc_structure = state.get("draft_toc_structure", [])
-    print('toc_structure: ', toc_structure)
+    # print('toc_structure: ', toc_structure)
     target_title = state.get("target_chapter", "").strip().strip('"')
-    print('target_title: ', target_title)
+    # print('target_title: ', target_title)
     current_idx = state.get("current_chapter_index", 0) 
-    print('current_idx: ', current_idx)
-    print('-'*50)
+    # print('current_idx: ', current_idx)
+    # print('-'*50)
 
     # print('toc_structure: ', toc_structure)
     
     # 🔑 history_checker의 결정을 반영하여 current_idx를 덮어씁니다.
     found_idx = -1
     for i, item in enumerate(toc_structure):
-        print('i: ', i)
-        print('item: ', item)
+        # print('i: ', i)
+        # print('item: ', item)
         item_title = item.get("title", "")
-        print('item_title: ', item_title)
+        # print('item_title: ', item_title)
         if item_title == target_title or target_title in item_title:
             print(item_title)
             print(i)
