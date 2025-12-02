@@ -64,10 +64,10 @@ const RibbonSection = ({ title, children, hideTitle = false }) => (
 const RibbonAction = ({ title, icon: Icon, active, onClick, disabled, compact = false, hideLabel = false }) => (
     <Tooltip title={title}>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, minWidth: compact ? 40 : 56 }}>
-            <IconButton 
-                sx={{ width: 'auto', padding: compact ? 0.5 : 1 }} 
-                onClick={onClick} 
-                color={active ? 'primary' : 'default'} 
+            <IconButton
+                sx={{ width: 'auto', padding: compact ? 0.5 : 1 }}
+                onClick={onClick}
+                color={active ? 'primary' : 'default'}
                 disabled={disabled}
                 size={compact ? 'small' : 'medium'}
             >
@@ -86,7 +86,7 @@ export default function Toolbar({ editor }) {
     const [activeTab, setActiveTab] = useState('home');
     const [tableModalOpen, setTableModalOpen] = useState(false);
     const imageInputRef = useRef(null);
-    const { saveDocument,saving,isDirty } = useDocumentSave();
+    const { saveDocument, saving, isDirty } = useDocumentSave();
     const toolbarRef = useRef(null);
     const [isCompact, setIsCompact] = useState(false);
     const [isVeryCompact, setIsVeryCompact] = useState(false);
@@ -285,12 +285,12 @@ export default function Toolbar({ editor }) {
                                         문단 스타일
                                     </Typography>
                                 )}
-                                <Select 
-                                    size="small" 
-                                    value={headingValue} 
-                                    onChange={(event) => applyHeading(event.target.value)} 
-                                    sx={{ 
-                                        width: isCompact ? '100%' : '80%', 
+                                <Select
+                                    size="small"
+                                    value={headingValue}
+                                    onChange={(event) => applyHeading(event.target.value)}
+                                    sx={{
+                                        width: isCompact ? '100%' : '80%',
                                         background: '#FFFFFF',
                                         fontSize: isCompact ? '0.75rem' : undefined,
                                     }}
@@ -306,36 +306,36 @@ export default function Toolbar({ editor }) {
                     )}
 
                     <RibbonSection title={isVeryCompact ? '' : (isCompact ? '' : '글꼴')}>
-                        <RibbonAction 
-                            title="굵게" 
-                            icon={FormatBoldIcon} 
-                            active={editor?.isActive('bold')} 
-                            onClick={() => toggle('toggleBold')} 
+                        <RibbonAction
+                            title="굵게"
+                            icon={FormatBoldIcon}
+                            active={editor?.isActive('bold')}
+                            onClick={() => toggle('toggleBold')}
                             compact={isCompact}
                             hideLabel={isVeryCompact}
                         />
-                        <RibbonAction 
-                            title="기울임" 
-                            icon={FormatItalicIcon} 
-                            active={editor?.isActive('italic')} 
-                            onClick={() => toggle('toggleItalic')} 
+                        <RibbonAction
+                            title="기울임"
+                            icon={FormatItalicIcon}
+                            active={editor?.isActive('italic')}
+                            onClick={() => toggle('toggleItalic')}
                             compact={isCompact}
                             hideLabel={isVeryCompact}
                         />
                         {!isVeryCompact && (
                             <>
-                                <RibbonAction 
-                                    title="밑줄" 
-                                    icon={FormatUnderlinedIcon} 
-                                    active={editor?.isActive('underline')} 
-                                    onClick={() => toggle('toggleUnderline')} 
+                                <RibbonAction
+                                    title="밑줄"
+                                    icon={FormatUnderlinedIcon}
+                                    active={editor?.isActive('underline')}
+                                    onClick={() => toggle('toggleUnderline')}
                                     compact={isCompact}
                                 />
-                                <RibbonAction 
-                                    title="취소선" 
-                                    icon={StrikethroughSIcon} 
-                                    active={editor?.isActive('strike')} 
-                                    onClick={() => toggle('toggleStrike')} 
+                                <RibbonAction
+                                    title="취소선"
+                                    icon={StrikethroughSIcon}
+                                    active={editor?.isActive('strike')}
+                                    onClick={() => toggle('toggleStrike')}
                                     compact={isCompact}
                                 />
                             </>
@@ -343,50 +343,50 @@ export default function Toolbar({ editor }) {
                     </RibbonSection>
 
                     <RibbonSection title={isVeryCompact ? '' : (isCompact ? '' : '문단')}>
-                        <RibbonAction 
-                            title="글머리 기호" 
-                            icon={FormatListBulletedIcon} 
-                            active={editor?.isActive('bulletList')} 
-                            onClick={() => toggle('toggleBulletList')} 
+                        <RibbonAction
+                            title="글머리 기호"
+                            icon={FormatListBulletedIcon}
+                            active={editor?.isActive('bulletList')}
+                            onClick={() => toggle('toggleBulletList')}
                             compact={isCompact}
                             hideLabel={isVeryCompact}
                         />
-                        <RibbonAction 
-                            title="번호 매기기" 
-                            icon={FormatListNumberedIcon} 
-                            active={editor?.isActive('orderedList')} 
-                            onClick={() => toggle('toggleOrderedList')} 
+                        <RibbonAction
+                            title="번호 매기기"
+                            icon={FormatListNumberedIcon}
+                            active={editor?.isActive('orderedList')}
+                            onClick={() => toggle('toggleOrderedList')}
                             compact={isCompact}
                             hideLabel={isVeryCompact}
                         />
                         {!isVeryCompact && (
                             <>
-                                <RibbonAction 
-                                    title="왼쪽 정렬" 
-                                    icon={FormatAlignLeftIcon} 
-                                    active={editor?.isActive({ textAlign: 'left' })} 
-                                    onClick={() => applyAlign('left')} 
+                                <RibbonAction
+                                    title="왼쪽 정렬"
+                                    icon={FormatAlignLeftIcon}
+                                    active={editor?.isActive({ textAlign: 'left' })}
+                                    onClick={() => applyAlign('left')}
                                     compact={isCompact}
                                 />
-                                <RibbonAction 
-                                    title="가운데 정렬" 
-                                    icon={FormatAlignCenterIcon} 
-                                    active={editor?.isActive({ textAlign: 'center' })} 
-                                    onClick={() => applyAlign('center')} 
+                                <RibbonAction
+                                    title="가운데 정렬"
+                                    icon={FormatAlignCenterIcon}
+                                    active={editor?.isActive({ textAlign: 'center' })}
+                                    onClick={() => applyAlign('center')}
                                     compact={isCompact}
                                 />
-                                <RibbonAction 
-                                    title="오른쪽 정렬" 
-                                    icon={FormatAlignRightIcon} 
-                                    active={editor?.isActive({ textAlign: 'right' })} 
-                                    onClick={() => applyAlign('right')} 
+                                <RibbonAction
+                                    title="오른쪽 정렬"
+                                    icon={FormatAlignRightIcon}
+                                    active={editor?.isActive({ textAlign: 'right' })}
+                                    onClick={() => applyAlign('right')}
                                     compact={isCompact}
                                 />
-                                <RibbonAction 
-                                    title="양쪽 맞춤" 
-                                    icon={FormatAlignJustifyIcon} 
-                                    active={editor?.isActive({ textAlign: 'justify' })} 
-                                    onClick={() => applyAlign('justify')} 
+                                <RibbonAction
+                                    title="양쪽 맞춤"
+                                    icon={FormatAlignJustifyIcon}
+                                    active={editor?.isActive({ textAlign: 'justify' })}
+                                    onClick={() => applyAlign('justify')}
                                     compact={isCompact}
                                 />
                             </>
@@ -396,30 +396,30 @@ export default function Toolbar({ editor }) {
                     {!isVeryCompact && (
                         <>
                             <RibbonSection title={isCompact ? '' : '표'}>
-                                <RibbonAction 
-                                    title="표 삽입" 
-                                    icon={TableRowsIcon} 
-                                    active={false} 
-                                    onClick={() => setTableModalOpen(true)} 
+                                <RibbonAction
+                                    title="표 삽입"
+                                    icon={TableRowsIcon}
+                                    active={false}
+                                    onClick={() => setTableModalOpen(true)}
                                     compact={isCompact}
                                 />
                             </RibbonSection>
 
                             <RibbonSection title={isCompact ? '' : '편집'}>
-                                <RibbonAction 
-                                    title="되돌리기" 
-                                    icon={UndoIcon} 
-                                    active={false} 
-                                    onClick={() => editor?.chain().focus().undo().run()} 
-                                    disabled={!editor?.can().undo()} 
+                                <RibbonAction
+                                    title="되돌리기"
+                                    icon={UndoIcon}
+                                    active={false}
+                                    onClick={() => editor?.chain().focus().undo().run()}
+                                    disabled={!editor?.can().undo()}
                                     compact={isCompact}
                                 />
-                                <RibbonAction 
-                                    title="다시 실행" 
-                                    icon={RedoIcon} 
-                                    active={false} 
-                                    onClick={() => editor?.chain().focus().redo().run()} 
-                                    disabled={!editor?.can().redo()} 
+                                <RibbonAction
+                                    title="다시 실행"
+                                    icon={RedoIcon}
+                                    active={false}
+                                    onClick={() => editor?.chain().focus().redo().run()}
+                                    disabled={!editor?.can().redo()}
                                     compact={isCompact}
                                 />
                             </RibbonSection>
@@ -427,24 +427,24 @@ export default function Toolbar({ editor }) {
                             <RibbonSection title={isCompact ? '' : '내보내기'}>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
                                     <Button
-                                    size="small"
-                                    variant="outlined"
-                                    onClick={handleExportDocx}
-                                    sx={{ 
-                                        textTransform: 'none', 
-                                        minWidth: isCompact ? 80 : 120,
-                                        fontSize: isCompact ? '0.75rem' : undefined,
-                                        padding: isCompact ? '4px 8px' : undefined,
-                                    }}
-                                    disabled={!editor || saving}
+                                        size="small"
+                                        variant="outlined"
+                                        onClick={handleExportDocx}
+                                        sx={{
+                                            textTransform: 'none',
+                                            minWidth: isCompact ? 80 : 120,
+                                            fontSize: isCompact ? '0.75rem' : undefined,
+                                            padding: isCompact ? '4px 8px' : undefined,
+                                        }}
+                                        disabled={!editor || saving}
                                     >
-                                    {saving ? '저장 중…' : (isCompact ? 'DOCX' : 'DOCX 저장')}
+                                        {saving ? '저장 중…' : (isCompact ? 'DOCX' : 'DOCX 저장')}
                                     </Button>
                                 </Box>
                             </RibbonSection>
                         </>
                     )}
-                    </Box>
+                </Box>
             )}
 
             {activeTab === 'insert' && (

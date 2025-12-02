@@ -227,6 +227,8 @@ async def analyze_documents(
         # 5. API 응답용 URL 경로 (프론트에서 사용)
         api_path = f"/documents/{userid}/{projectidx}/초안.json"
 
+        print('api_path: ', api_path)
+
        
         # ========================================
         # 6단계: 분석 결과 반환

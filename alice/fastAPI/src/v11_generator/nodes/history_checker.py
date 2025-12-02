@@ -244,7 +244,7 @@ def history_checker(state: ProposalGenerationState) -> ProposalGenerationState:
 
     print('target_chapter: ', target_chapter)
 
-    llm = ChatOpenAI( model="o3-mini")
+    llm = ChatOpenAI( model="gpt-4o")
    #  llm = ChatOpenAI(
    #  model_name="o3-mini",  # o3-mini 지원
    #  temperature=0.0         # 필수! validation 오류 방지
