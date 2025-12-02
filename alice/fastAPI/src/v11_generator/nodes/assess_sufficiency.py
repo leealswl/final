@@ -1,5 +1,6 @@
 from typing import Dict, Any, List
-from langchain_openai import ChatOpenAI 
+# from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import PromptTemplate 
 from ..state_types import ProposalGenerationState
 import re 
@@ -52,7 +53,12 @@ def assess_info(state: ProposalGenerationState) -> Dict[str, Any]:
     
     llm = None
     try:
-        llm = ChatOpenAI(temperature=0, model="gpt-4o")
+        # llm = ChatOpenAI(temperature=0, model="gpt-4o")
+        llm = ChatAnthropic(
+            model="claude-sonnet-4-5-20250929",
+            temperature=0,
+            max_tokens=4096
+        )
     except Exception as e:
         print(f"⚠️ LLM 초기화 오류: {e}")
     
