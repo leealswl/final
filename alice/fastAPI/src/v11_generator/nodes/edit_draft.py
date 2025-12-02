@@ -4,6 +4,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 import json
+from json_repair import repair_json
 import logging
 from pathlib import Path
 import os
@@ -154,8 +155,15 @@ def edit_proposal_draft(state: ProposalGenerationState) -> ProposalGenerationSta
             # 첫 줄과 마지막 줄 제거 (```json, ```)
             json_text = '\n'.join(lines[1:-1]) if len(lines) > 2 and lines[-1].strip() == '```' else '\n'.join(lines[1:])
         
-        # JSON 파싱
-        modified_json = json.loads(json_text)
+        try:
+            modified_json = repair_json(json_text, return_objects=True)
+        except Exception as e:
+            print(f"JSON 복구 실패: {e}")
+            # 실패 시 원본 텍스트를 로그에 남겨 확인 필요
+            print(json_text) 
+            raise e
+
+
         print(f"✅ JSON 파싱 완료: {len(modified_json.get('content', []))}개 요소")
         
         # 파일 저장 경로 설정

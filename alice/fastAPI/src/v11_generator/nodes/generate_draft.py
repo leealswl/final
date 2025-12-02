@@ -1,5 +1,6 @@
 from ..state_types import ProposalGenerationState
-from langchain_openai import ChatOpenAI
+# from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
 from dotenv import load_dotenv
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -7,6 +8,7 @@ import logging
 from typing import Dict, Any, Optional
 import re
 import json
+from json_repair import repair_json
 from pathlib import Path
 import os
 
@@ -380,7 +382,11 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
 
     llm = None
     try:
-        llm = ChatOpenAI(temperature=0, model="gpt-4o")
+        llm = ChatAnthropic(
+            model="claude-sonnet-4-5-20250929",
+            temperature=0,
+            max_tokens=8000
+        )
     except Exception as e:
         print(f"⚠️ LLM 초기화 오류: {e}")
 
@@ -420,7 +426,14 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
             json_text = '\n'.join(lines[1:-1]) if len(lines) > 2 and lines[-1].strip() == '```' else '\n'.join(lines[1:])
         
         # JSON 파싱
-        completed_content = json.loads(json_text)
+        # completed_content = json.loads(json_text)
+        try:
+            completed_content = repair_json(json_text, return_objects=True)
+        except Exception as e:
+            print(f"JSON 복구 실패: {e}")
+            # 실패 시 원본 텍스트를 로그에 남겨 확인 필요
+            print(json_text) 
+            raise e
         print(f"✅ JSON 파싱 완료: {len(completed_content.get('content', []))}개 문단")
         
         # 파일 저장 경로 설정 (get_json_file_path 함수 재사용)
