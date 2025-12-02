@@ -71,7 +71,7 @@ def generate_query(state: ProposalGenerationState) -> ProposalGenerationState:
     generated_response = ""
     
     try:
-        llm = ChatOpenAI(temperature=0.1, model="gpt-4o")
+        llm = ChatOpenAI(temperature=0.1, model="gpt-4o-mini")
     except Exception:
         return {"current_query": "LLM 초기화 오류 발생"}
 
