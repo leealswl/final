@@ -460,7 +460,7 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
         llm = ChatAnthropic(
             model="claude-sonnet-4-5-20250929",
             temperature=0,
-            max_tokens=8000
+            max_tokens=64000
         )
     except Exception as e:
         print(f"⚠️ LLM 초기화 오류: {e}")
