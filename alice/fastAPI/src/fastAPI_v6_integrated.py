@@ -275,7 +275,7 @@ async def root():
 @app.post("/generate")
 async def generate_content(request: ChatRequest):
     try:
-        print(f"📢 요청 수신: '{request.userMessage}' (Thread: {request.threadId})")
+        print(f"📢 요청 수신:\n'{request.userMessage}'\n(Thread: {request.threadId})")
         
         # ========================================
         # [수정 전 코드] 로컬 파일에서 컨텍스트 로드
