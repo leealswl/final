@@ -172,7 +172,10 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
         content: initialContent || undefined,
         editable: !readOnly,
         editorProps: {
-            attributes: { class: 'editor-page' },
+            attributes: {
+                class: 'editor-page',
+                style: 'overflow-y: auto; max-height: 1011px;'
+            },
             handleDOMEvents: {
                 contextmenu: (_view, event) => {
                     const target = event.target;
@@ -393,7 +396,6 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
                 className="editor-wrapper"
                 sx={{
                     flex: 1,
-                    overflowY: 'auto',
                     px: 3,
                     py: 3,
                     minHeight: 'calc(100vh - 200px)',

@@ -24,7 +24,7 @@
   margin: 0 auto 40px; /* 페이지 간 간격 */
   padding: 56px;
   background: #ffffff;
-  box-shadow: 
+  box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.05),
     0 2px 8px rgba(0, 0, 0, 0.1),
     0 4px 16px rgba(0, 0, 0, 0.05);
@@ -36,6 +36,31 @@
   overflow: hidden; /* 넘치는 내용 숨김 - 실제 페이지 분할 */
   display: flex;
   flex-direction: column;
+}
+
+/* 스크롤바 스타일링 - Webkit 브라우저 (Chrome, Safari, Edge) */
+.editor-page::-webkit-scrollbar {
+  width: 8px;
+}
+
+.editor-page::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.editor-page::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.editor-page::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* 스크롤바 스타일링 - Firefox */
+.editor-page {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
 }
 
 /* 페이지 컨테이너 */
