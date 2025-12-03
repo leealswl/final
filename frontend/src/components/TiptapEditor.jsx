@@ -429,9 +429,6 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
                             fontWeight: 600,
                         },
                     },
-                    '&:focus-within': {
-                        boxShadow: 'inset 0 0 0 2px #1976d2',
-                    },
                 }}
             >
                 <EditorContent editor={editor} />

@@ -285,7 +285,15 @@
 .ProseMirror {
   position: relative;
   min-height: 1011px; /* 최소 한 페이지 높이 */
+  outline: none !important; /* 포커스 시 파란색 테두리 제거 */
   /* 구분선 제거 - 실제 페이지로 분할됨 */
+}
+
+/* ProseMirror 포커스 상태에서도 테두리 제거 */
+.ProseMirror:focus,
+.ProseMirror-focused {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* 내용이 배경 위에 오도록 */

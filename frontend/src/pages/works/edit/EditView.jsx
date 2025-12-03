@@ -133,7 +133,7 @@ export default function EditView() {
                         sx={{
                             cursor: 'col-resize',
                             bgcolor: 'grey.300',
-                            '&:hover': { bgcolor: 'primary.main' },
+                            '&:hover': { bgcolor: 'grey.400' },
                             width: 4,
                         }}
                     />
