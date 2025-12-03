@@ -9,6 +9,7 @@ from .nodes.assess_sufficiency import assess_info
 from .nodes.history_checker import history_checker
 from .nodes.generate_draft import generate_proposal_draft
 from .nodes.edit_draft import edit_proposal_draft
+from .nodes.classify_intent import classify_user_intent
 
 # ----------------------------
 # 라우터 함수
@@ -28,6 +29,15 @@ def route_after_save_user(state: ProposalGenerationState) -> str:
     
     # 일반 요청 (정보 제공 또는 질문)
     return "history_checker"
+
+def route_after_classification(state: ProposalGenerationState) -> str:
+    """LLM이 판단한 의도(user_intent)에 따라 분기"""
+    intent = state.get("user_intent", "INFO")
+    
+    if intent == "EDIT":
+        return "edit_draft"
+    else:
+        return "history_checker"
 
 
 def route_after_history_check(state: ProposalGenerationState) -> str:
@@ -56,6 +66,7 @@ def create_proposal_graph() -> StateGraph:
     workflow.add_node("SAVE_USER", ask_user_and_update_data)
     workflow.add_node("history_checker", history_checker)
     workflow.add_node("ASSESS_INFO", assess_info)
+    workflow.add_node("classify_intent", classify_user_intent)
     workflow.add_node("GENERATE_QUERY", generate_query)
     workflow.add_node("generate_draft", generate_proposal_draft)
     workflow.add_node("edit_draft", edit_proposal_draft)
@@ -63,11 +74,12 @@ def create_proposal_graph() -> StateGraph:
     # 엣지 연결
     workflow.add_edge(START, "FETCH_CONTEXT")
     workflow.add_edge("FETCH_CONTEXT", "SAVE_USER")
+    workflow.add_edge("SAVE_USER", "classify_intent")
 
     # SAVE_USER 다음 분기: 수정 요청이면 edit_draft, 아니면 history_checker
     workflow.add_conditional_edges(
-        "SAVE_USER",
-        route_after_save_user,
+        "classify_intent",
+        route_after_classification,
         {
             "edit_draft": "edit_draft",  # 수정 요청 시
             "history_checker": "history_checker"  # 일반 요청 시
