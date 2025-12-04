@@ -79,3 +79,5 @@ class ProposalGenerationState(TypedDict):
     
     # === 7. 기타 ===
     messages: List[Dict[str, str]]
+
+    user_intent: str  # "INFO" or "EDIT"

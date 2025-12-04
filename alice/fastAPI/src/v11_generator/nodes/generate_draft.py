@@ -11,6 +11,7 @@ import json
 from json_repair import repair_json
 from pathlib import Path
 import os
+import time
 
 def get_json_file_path() -> Path:
     """
@@ -207,6 +208,7 @@ def _extract_relevant_guide(guide_data: dict, chapter_number: str, chapter_title
 
 def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGenerationState:
     import os
+    import time
     """
     [작가 노드 - 비활성화 상태]
     현재는 초안 생성 로직을 주석 처리하여 실행되지 않도록 막아두었습니다.
@@ -287,7 +289,7 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
             {{
               "type": "paragraph",
               "attrs": {{ "textAlign": "left", "paragraphIndex": 1 }},
-              "content": [{{ "type": "text", "text": "​" }}]
+              "content": [{{ "type": "text", "text": "\u200b" }}]
             }}
           ]
         }}
@@ -389,8 +391,10 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
         ⚠️ 중요:
         - **반드시 첫 번째 요소로 heading을 생성하세요** (제목 텍스트: "{chapter_title}")
         - 각 paragraph는 paragraphIndex를 0부터 순차적으로 부여하세요
-        - 빈 줄은 text: "​" (zero-width space)로 처리하세요
-        - **표 생성 시**: table → tableRow → tableHeader/tableCell → paragraph → text 구조를 정확히 지키세요
+        - 빈 줄은 text: "\u200b" (zero-width space)로 처리하세요
+        - **표 생성 시**:
+            1. table → tableRow → tableHeader/tableCell → paragraph → text 구조를 정확히 지키세요.
+            2. **내용이 없는 빈 셀(Empty Cell)일 경우**, 비워두지 말고 반드시 **text: "\u200b"**를 넣어 에러를 방지하세요.
         - **차트 생성 시**: chart 노드의 attrs에 chartType, title, data, options를 Chart.js 형식으로 작성하세요
         - 코드 블록 마커(```)를 사용하지 마세요
         - 순수 JSON만 출력하세요
@@ -416,6 +420,9 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
 
     # 2. 현재 목표 섹션 정보 설정 (history_checker의 결정 반영 로직)
     collected_data = state.get("collected_data", "")
+
+    if len(collected_data) > 65000:
+        time.sleep(61)
     # print('collected_data: ', collected_data)
     # print(f"--- 📊 ASSESS_INFO 수신 데이터 길이: {len(collected_data)}자 ---")
 
@@ -503,6 +510,15 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
         # completed_content = json.loads(json_text)
         try:
             completed_content = repair_json(json_text, return_objects=True)
+            # ---------------- [수정된 부분 시작] ----------------
+            # repair_json 결과가 list인 경우(content 배열만 반환된 경우 등) 처리
+            if isinstance(completed_content, list):
+                print("⚠️ [Warning] JSON이 list 형식으로 반환됨. 자동으로 doc 구조로 래핑합니다.")
+                completed_content = {
+                    "type": "doc",
+                    "content": completed_content
+                }
+            # ---------------- [수정된 부분 끝] ----------------
         except Exception as e:
             print(f"JSON 복구 실패: {e}")
             # 실패 시 원본 텍스트를 로그에 남겨 확인 필요
