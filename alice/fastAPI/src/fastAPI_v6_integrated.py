@@ -9,12 +9,9 @@ import uuid
 from typing import Dict, Any, Optional
 from pydantic import BaseModel # ChatRequest, ResumeRequest 정의를 위해 필요
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
-# from langgraph.checkpoint.memory import MemorySaver
-# from langgraph.checkpoint.sqlite import SqliteSaver
 
 from v11_generator.nodes.fetch_context import fetch_context_for_proposal
 from v11_generator.nodes.assess_sufficiency import assess_info
-# from v11_generator.nodes.generate_section_draft import generate_section_draft
 from v11_generator.nodes.generate_draft import generate_proposal_draft
 
 import sys
@@ -80,9 +77,6 @@ class VerifyRequest(BaseModel):
     text: str              # 검증할 초안 텍스트 (섹션 하나)
     focus: str | None = None   # 예: "연구개발비", "수행계획", "기관요건" 등
 
-# class DraftCompareRequest(BaseModel):
-#     project_idx: int
-#     draft_json: dict
 
 app = FastAPI(
     title=settings.API_TITLE,

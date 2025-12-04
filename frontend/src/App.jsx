@@ -9,10 +9,12 @@ import AnalyzeDashboard from './pages/works/analyze/AnalyzeDashboard';
 import CreateView from './pages/works/create/CreateView';
 import GenerateView from './pages/works/create/GenerateView';
 import EditView from './pages/works/edit/EditView';
-import VerifyView from './pages/works/verify/VerifyView';
+import VerifyView3 from './pages/works/verify/VerifyView3';
+import VerifyReport from "./pages/works/verify/VerifyReport";
 import Dashboard from './pages/main/Dashboard';
 import { useEffect } from 'react';
 import AOS from 'aos';
+
 
 function App() {
     useEffect(() => {
@@ -37,7 +39,8 @@ function App() {
                 <Route path="generate" element={<GenerateView />} />
                 <Route path="edit" element={<EditView />} />
                 <Route path="edit/:docId" element={<EditView />} />
-                <Route path="verify" element={<VerifyView />} />
+                <Route path="verify" element={<VerifyView3 />} />
+                <Route path="verify/report" element={<VerifyReport />} />
             </Route>
         </Routes>
     );
