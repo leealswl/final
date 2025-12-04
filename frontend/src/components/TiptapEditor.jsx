@@ -209,7 +209,7 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
                             position: relative;
                             page-break-after: always;
                             break-after: page;
-                            overflow: hidden;
+                            overflow: auto;
                             display: flex;
                             flex-direction: column;
                         `;

@@ -19,7 +19,6 @@ BASE_DIR = Path(__file__).resolve().parent
 VECTORDB_DIR = BASE_DIR / "law_pipeline_data" / "vectordb"
 LAW_COLLECTION_NAME = "law_articles"
 
-
 emb = OpenAIEmbeddings(
     model="text-embedding-3-small",
     api_key=os.getenv("OPENAI_API_KEY"),
@@ -51,6 +50,7 @@ def docs_to_text(docs, max_chars: int = 8000) -> str:
     """
     여러 문서를 하나의 문자열로 합치되,
     전체 길이가 max_chars를 넘지 않도록 잘라준다.
+    (법령 컨텍스트용)
     """
     chunks = []
     total = 0
@@ -79,7 +79,7 @@ def docs_to_text(docs, max_chars: int = 8000) -> str:
 def build_related_laws_from_docs(docs, max_items: int = 5, max_per_law: int = 2):
     """
     - 한 법령(law_name)에서 너무 많은 조문이 몰리지 않게 max_per_law로 제한.
-    - 예: max_items=5, max_per_law=2 → 
+    - 예: max_items=5, max_per_law=2 →
       정보통신망법 2개 + 개인정보보호법 2개 + SW진흥법 1개 이런 식으로 diversity 확보.
     """
     related = []
@@ -151,7 +151,7 @@ def build_query(text: str, focus: str | None) -> str:
 # ============================
 
 VERIFY_PROMPT = """
-당신은 국가연구개발사업(R&D) 법령 및 지침 준수 검토 전문가입니다.
+당신은 정부 지원 사업(일반회계 비R&D 사업 및 R&D 사업을 포함)의 법령 및 지침 준수 검토 전문가입니다.
 
 [법령 검색 결과]
 {context}
@@ -168,13 +168,21 @@ VERIFY_PROMPT = """
 - 법령 검색 결과에 근거하지 않는 추측은 하지 말고, 근거가 없으면 '근거 부족'이라고 쓰세요.
 - related_laws 항목에 적는 법령명과 조문 제목은 반드시 [법령 검색 결과]에 실제로 등장한 것만 사용하세요.
   새로운 법령명이나 조문을 만들어내지 마세요.
-- 각 필드의 의미는 아래와 같이 구분해서 작성하세요:
-  - status: 전반적인 판정 (적합/보완/부적합)
-  - risk_level: 리스크 수준 (LOW/MEDIUM/HIGH)
-  - reason: 왜 이런 판정이 나왔는지에 대한 **요약 설명**
-  - missing: 기획서에서 **부족하거나 빠진 요소 목록**
-  - evidence: 기획서에서 **실제로 근거가 되는 문장** 또는 **문제되는 문장**
-  - suggestion: 어떻게 고치면 좋을지에 대한 **구체적인 보완 제안**
+
+각 필드의 의미:
+- status: 전반적인 판정 (적합/보완/부적합)
+- risk_level: 리스크 수준 (LOW/MEDIUM/HIGH)
+- reason: 왜 이런 판정이 나왔는지에 대한 **요약 설명**
+- missing: 기획서에서 **부족하거나 빠진 요소 목록**
+- evidence: 기획서에서 **실제로 근거가 되는 문장** 또는 **문제되는 문장**
+- suggestion: 어떻게 고치면 좋을지에 대한 **구체적인 보완 제안**
+- violation_judgment:
+  - "NO_ISSUE" : 현재 텍스트에서 법령 위반 리스크가 뚜렷하게 보이지 않는 경우
+  - "POTENTIAL_VIOLATION" : 특정 법령·조항과 충돌할 가능성이 있는 경우
+  - "POSSIBLE_ISSUE" : 바로 위반이라고 보긴 어렵지만, 해석 또는 추후 검토가 필요한 애매한 리스크가 있는 경우
+  - "UNCLEAR" : 법령 검색 결과나 기획서 내용이 부족해서 판단이 어려운 경우
+- violation_summary: 주요 위반/리스크 가능성을 한 줄로 요약
+- violations: 위반 또는 리스크가 있다고 판단한 법령·조항별 상세 목록
 
 evidence 작성 규칙 (중요):
 - evidence 필드는 다음 두 가지 중 하나만 허용합니다.
@@ -183,10 +191,10 @@ evidence 작성 규칙 (중요):
 - '기획서에서 문제로 지적한 부분(또는 '근거 부족')' 같은 설명 문장은 evidence에 절대 쓰지 마세요.
 - focus 문장(예: '연구개발비·예산 관점에서 이 초안을 검토하라.')을 evidence에 반복해서 쓰지 마세요.
 
-- reason,suggestion 문체 규칙:
-  - reason, suggestion 은 보고서용 공손한 문체로 작성하고, 문장 끝은 되도록
-    "~인 것으로 보입니다.", "~인 것으로 판단됩니다." 와 같은 형태로 통일하세요.
-  - 반말 또는 명사형 어미("~함")로 끝나는 표현은 사용하지 마세요.
+reason, suggestion 문체 규칙:
+- reason, suggestion 은 보고서용 공손한 문체로 작성하고, 문장 끝은 되도록
+  "~인 것으로 보입니다.", "~인 것으로 판단됩니다." 와 같은 형태로 통일하세요.
+- 반말 또는 명사형 어미("~함")로 끝나는 표현은 사용하지 마세요.
 
 JSON 스키마:
 {{
@@ -201,6 +209,19 @@ JSON 스키마:
       "law_name": "법령명",
       "article_title": "조문 제목",
       "snippet": "법령 내용 요약 또는 관련 부분 발췌"
+    }}
+  ],
+  "violation_judgment": "NO_ISSUE" | "POTENTIAL_VIOLATION" | "POSSIBLE_ISSUE" | "UNCLEAR",
+  "violation_summary": "법령 위반/리스크에 대한 한 줄 요약",
+  "violations": [
+    {{
+      "law_name": "법령명",
+      "article_no": "조문 번호 (예: 제32조)",
+      "article_title": "조문 제목",
+      "violation_type": "어떤 유형의 위반/리스크인지 간단한 이름",
+      "severity": "LOW" | "MEDIUM" | "HIGH",
+      "reason": "왜 이 법령에 위배될 가능성이 있는지",
+      "recommendation": "어떻게 보완하면 좋을지"
     }}
   ]
 }}
@@ -225,12 +246,12 @@ def verify_law_compliance(text: str, focus: str | None = None) -> dict:
         # -----------------------------
         query = build_query(text, focus)
 
-        print('query: ', query)
+        print("query: ", query)
 
         try:
             docs = retriever.invoke(query)
 
-            print('docs: ', docs)
+            print("docs: ", docs)
 
             # 🔍 디버그: 어떤 법령들이 걸렸는지 확인
             print("🔎 [RAG 결과 요약]")
@@ -249,17 +270,12 @@ def verify_law_compliance(text: str, focus: str | None = None) -> dict:
         # 👉 RAG에서 바로 추출한 법령 목록 (fallback용, 전부 실제 문서 기반)
         source_laws = build_related_laws_from_docs(docs)
 
-        print('source_laws: ', source_laws)
+        print("source_laws: ", source_laws)
 
         context = docs_to_text(docs) if docs else "관련 법령을 찾지 못했습니다."
 
-        # 텍스트도 너무 길면 잘라주기 (예: 8000자)
-        MAX_TEXT_CHARS = 8000
-        if len(text) > MAX_TEXT_CHARS:
-            print(f"⚠️ 검증 대상 텍스트가 너무 길어 앞 {MAX_TEXT_CHARS}자만 사용합니다.")
-            text_for_prompt = text[:MAX_TEXT_CHARS]
-        else:
-            text_for_prompt = text
+        # 🔹 텍스트 전체 사용 (길이 제한 제거)
+        text_for_prompt = text
 
         # -----------------------------
         # 2) 프롬프트 구성
@@ -329,6 +345,30 @@ def verify_law_compliance(text: str, focus: str | None = None) -> dict:
             # LLM이 related_laws를 안 채웠으면, RAG에서 가져온 실제 조문으로 세팅
             parsed["related_laws"] = source_laws
 
+        # -----------------------------
+        # 7) violation_* 필드 기본값 보정
+        # -----------------------------
+        vj = parsed.get("violation_judgment")
+        if vj not in ("NO_ISSUE", "POTENTIAL_VIOLATION", "POSSIBLE_ISSUE", "UNCLEAR"):
+            parsed["violation_judgment"] = "UNCLEAR"
+
+        if not isinstance(parsed.get("violation_summary"), str):
+            parsed["violation_summary"] = ""
+
+        vlist = parsed.get("violations")
+        if not isinstance(vlist, list):
+            parsed["violations"] = []
+        else:
+            cleaned = []
+            for v in vlist:
+                if not isinstance(v, dict):
+                    continue
+                # severity 기본값 보정
+                if v.get("severity") not in ("LOW", "MEDIUM", "HIGH"):
+                    v["severity"] = "MEDIUM"
+                cleaned.append(v)
+            parsed["violations"] = cleaned
+
         return parsed
 
     except Exception as e:
@@ -343,10 +383,10 @@ def verify_law_compliance(text: str, focus: str | None = None) -> dict:
         }
 
 
-if __name__ == "__main__":
-    from pprint import pprint
+# if __name__ == "__main__":
+#     from pprint import pprint
 
-    text = "연구개발비에서 간접비와 직접비를 어떻게 구분해서 편성해야 하는지 설명하는 문단"
-    result = verify_law_compliance(text, focus="연구개발비")
+#     text = "연구개발비에서 간접비와 직접비를 어떻게 구분해서 편성해야 하는지 설명하는 문단"
+#     result = verify_law_compliance(text, focus="연구개발비")
 
-    pprint(result, width=120, compact=True)
+#     pprint(result, width=120, compact=True)

@@ -10,6 +10,12 @@ export async function compareDraft(projectIdx, draftJson) {
 
   console.log("📤 초안 비교 요청:", payload);
 
-  const res = await axios.post(`${FASTAPI_COMPARE_URL}/draft`, payload);
-  return res.data;
+  try {
+    const res = await axios.post(`${FASTAPI_COMPARE_URL}/draft`, payload);
+    console.log("✅ 초안 비교 응답:", res.data);
+    return res.data;
+  } catch (error) {
+    console.error("❌ 초안 비교 요청 실패:", error.response?.data || error.message);
+    throw error;
+  }
 }
