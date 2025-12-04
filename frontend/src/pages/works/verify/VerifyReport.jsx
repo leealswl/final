@@ -32,6 +32,8 @@ import { useNavigate } from "react-router-dom";
 const STATUS_COLORS = { 적합: "#4caf50", 보완: "#ffb300", 부적합: "#f44336" };
 const SEVERITY_COLORS = { LOW: "#4caf50", MEDIUM: "#ffb300", HIGH: "#f44336" };
 
+const PROGRESS_COLORS = ["#1976d2", "#e0e0e0"];
+
 // 🔹 사용자에게 보여줄 한글 라벨
 const SEVERITY_LABELS = {
   LOW: "위험도 낮음",
@@ -84,6 +86,9 @@ const FEATURE_EXCLUDE_KEYWORDS = [
   "작성 방법",
   "기술제안서",
   "제안요청서",
+  "모집공고",
+  "지원기간",
+  "최종평가"
 ];
 
 // ✅ 비슷한 의미의 Feature를 하나로 묶기 위한 규칙
@@ -232,15 +237,28 @@ function SummaryHeader({ results, compareResult }) {
     };
   }, [compareResult, hasCompare]);
 
+  // 🔹 법령 상태 분포 (적합/보완/부적합)
   const statusChartData =
     lawSummary &&
     Object.entries(lawSummary.statusCounts)
       .filter(([, count]) => count > 0)
       .map(([name, value]) => ({ name, value }));
 
+  // 🔹 공고문 전체 충족률 도넛 (충족 / 미충족)
+  const compareChartData =
+    compareSummary && typeof compareSummary.combinedPercent === "number"
+      ? [
+          { name: "충족", value: compareSummary.combinedPercent },
+          {
+            name: "미충족",
+            value: Math.max(0, 100 - compareSummary.combinedPercent),
+          },
+        ]
+      : null;
+
   return (
     <Stack direction={{ xs: "column", md: "row" }} spacing={3} sx={{ mt: 3 }}>
-      {/* 전체 요약 카드 */}
+      {/* 1. 전체 평가 요약 */}
       <Card sx={{ flex: 1 }}>
         <CardContent>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
@@ -339,9 +357,7 @@ function SummaryHeader({ results, compareResult }) {
                   </Typography>
                   <Typography sx={{ color: "text.secondary", fontSize: 13 }}>
                     {compareSummary.tocPercent !== null && (
-                      <>
-                        (목차 기준 {compareSummary.tocPercent}%{", "}
-                      </>
+                      <> (목차 기준 {compareSummary.tocPercent}% ) </>
                     )}
                     {compareSummary.featurePercent !== null && (
                       <>세부 요구사항 기준 {compareSummary.featurePercent}%</>
@@ -354,16 +370,69 @@ function SummaryHeader({ results, compareResult }) {
         </CardContent>
       </Card>
 
-      {/* 법령 상태 분포 + 공고문 차트 요약 */}
-      {(lawSummary || compareSummary) && (
-        <Card sx={{ width: { xs: "100%", md: 380 } }}>
+      {/* 2. 가운데 카드: 법령 검증 결과 (도넛 + 요약 텍스트) */}
+      {lawSummary && statusChartData && statusChartData.length > 0 && (
+        <Card sx={{ width: { xs: "100%", md: 300 } }}>
           <CardContent>
             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-              검사 결과 분포
+              법령 검증 결과
+            </Typography>
+            <Stack spacing={1.5}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <PieChart width={240} height={220}>
+                  <Pie
+                    data={statusChartData}
+                    dataKey="value"
+                    innerRadius={70}
+                    outerRadius={95}
+                    paddingAngle={3}
+                  >
+                    {statusChartData.map((entry, idx) => (
+                      <Cell
+                        key={idx}
+                        fill={STATUS_COLORS[entry.name] || "#999"}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </Box>
+              <Typography
+                variant="caption"
+                sx={{ color: "text.secondary", textAlign: "center" }}
+              >
+                주요 관점별 적합/보완/부적합 분포입니다.
+                <br />
+                
+              </Typography>
+              <Typography sx={{ fontSize: 14, mt: 0.5 }}>
+                전체 법령 검증 평과 결과로
+                  적합 {lawSummary.statusCounts.적합 ?? 0}개 · 보완{" "}
+                      {lawSummary.statusCounts.보완 ?? 0}개 · 부적합{" "}
+                        {lawSummary.statusCounts.부적합 ?? 0}개 입니다.
+                </Typography>
+            </Stack>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 3. 오른쪽 카드: 공고문 vs 초안 도넛 + 한 줄 요약 */}
+      {compareSummary && (
+        <Card sx={{ width: { xs: "100%", md: 300 } }}>
+          <CardContent>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+              공고문 요구사항 충족률
             </Typography>
 
             <Stack spacing={2}>
-              {lawSummary && statusChartData && statusChartData.length > 0 && (
+              {compareChartData && (
                 <Box
                   sx={{
                     display: "flex",
@@ -371,18 +440,18 @@ function SummaryHeader({ results, compareResult }) {
                     alignItems: "center",
                   }}
                 >
-                  <PieChart width={220} height={200}>
+                  <PieChart width={240} height={220}>
                     <Pie
-                      data={statusChartData}
+                      data={compareChartData}
                       dataKey="value"
-                      innerRadius={60}
-                      outerRadius={80}
+                      innerRadius={70}
+                      outerRadius={95}
                       paddingAngle={3}
                     >
-                      {statusChartData.map((entry, idx) => (
+                      {compareChartData.map((entry, idx) => (
                         <Cell
                           key={idx}
-                          fill={STATUS_COLORS[entry.name] || "#999"}
+                          fill={PROGRESS_COLORS[idx] || "#999"}
                         />
                       ))}
                     </Pie>
@@ -392,29 +461,24 @@ function SummaryHeader({ results, compareResult }) {
                 </Box>
               )}
 
-              {compareSummary && (
-                <Box sx={{ textAlign: "left" }}>
-                  <Typography
-                    variant="caption"
-                    sx={{ color: "text.secondary" }}
-                  >
-                    공고문 비교 한 줄 요약
-                  </Typography>
-                  <Typography sx={{ fontSize: 14, mt: 0.5 }}>
-                    공고문 형식 기준으로는{" "}
-                    <b>{compareSummary.tocPercent ?? 0}%</b>, 세부 요구사항
-                    기준으로는 <b>{compareSummary.featurePercent ?? 0}%</b>가
-                    초안에 반영되어 있습니다.
-                    <br />
-                    두 관점을 평균한 전체 공고문 요구사항 충족률은{" "}
-                    <b>
-                      {compareSummary.combinedPercent ?? 0}
-                      %
-                    </b>
-                    입니다.
-                  </Typography>
-                </Box>
-              )}
+              <Box sx={{ textAlign: "left" }}>
+                <Typography
+                  variant="caption"
+                  sx={{ color: "text.secondary" }}
+                >
+                  공고문 비교 한 줄 요약
+                </Typography>
+                <Typography sx={{ fontSize: 14, mt: 0.5 }}>
+                  공고문 형식 기준으로는{" "}
+                  <b>{compareSummary.tocPercent ?? 0}%</b>가 초안에 반영되어
+                  있습니다.
+                  <br />
+                  <b>
+                    전체 공고문 요구사항 충족률은{" "}
+                    {compareSummary.combinedPercent ?? 0}%입니다.
+                  </b>
+                </Typography>
+              </Box>
             </Stack>
           </CardContent>
         </Card>
@@ -422,6 +486,8 @@ function SummaryHeader({ results, compareResult }) {
     </Stack>
   );
 }
+
+
 
 // =======================================================
 // 🧩 Top 3 보완 포인트 (법령 + 공고문 통합)
