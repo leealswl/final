@@ -32,7 +32,7 @@ RAW_DIR.mkdir(parents=True, exist_ok=True)
 PARSED_DIR.mkdir(parents=True, exist_ok=True)
 VECTORDB_DIR.mkdir(parents=True, exist_ok=True)
 
-LAW_COLLECTION_NAME = "law_articles_V1"
+LAW_COLLECTION_NAME = "law_articles"
 
 
 # ----------------------------------------------------------
