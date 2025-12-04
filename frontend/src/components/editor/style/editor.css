@@ -24,7 +24,7 @@
   margin: 0 auto 40px; /* 페이지 간 간격 */
   padding: 56px;
   background: #ffffff;
-  box-shadow: 
+  box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.05),
     0 2px 8px rgba(0, 0, 0, 0.1),
     0 4px 16px rgba(0, 0, 0, 0.05);
@@ -36,6 +36,31 @@
   overflow: hidden; /* 넘치는 내용 숨김 - 실제 페이지 분할 */
   display: flex;
   flex-direction: column;
+}
+
+/* 스크롤바 스타일링 - Webkit 브라우저 (Chrome, Safari, Edge) */
+.editor-page::-webkit-scrollbar {
+  width: 8px;
+}
+
+.editor-page::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.editor-page::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.editor-page::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* 스크롤바 스타일링 - Firefox */
+.editor-page {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
 }
 
 /* 페이지 컨테이너 */
@@ -189,10 +214,69 @@
   background: #f8fafc;
 }
 
-/* 페이지 넘김 방지 (표, 이미지 등 큰 요소) */
+/* 차트 스타일 */
+.paladoc-chart-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin: 20px auto;
+  max-width: 100%;
+}
+
+.paladoc-chart-inner {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 100%;
+}
+
+.paladoc-chart-wrapper.selected .paladoc-chart-inner {
+  outline: 2px solid #2563eb;
+  outline-offset: 4px;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.paladoc-chart-handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #2563eb;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.paladoc-chart-handle.handle-tl {
+  top: -4px;
+  left: -4px;
+}
+
+.paladoc-chart-handle.handle-tr {
+  top: -4px;
+  right: -4px;
+}
+
+.paladoc-chart-handle.handle-bl {
+  bottom: -4px;
+  left: -4px;
+}
+
+.paladoc-chart-handle.handle-br {
+  bottom: -4px;
+  right: -4px;
+}
+
+/* 페이지 넘김 방지 (표, 이미지, 차트 등 큰 요소) */
 .editor-page table,
 .editor-page img,
-.editor-page .paladoc-image-wrapper {
+.editor-page .paladoc-image-wrapper,
+.editor-page .paladoc-chart-wrapper {
   page-break-inside: avoid;
   break-inside: avoid;
 }
@@ -201,7 +285,15 @@
 .ProseMirror {
   position: relative;
   min-height: 1011px; /* 최소 한 페이지 높이 */
+  outline: none !important; /* 포커스 시 파란색 테두리 제거 */
   /* 구분선 제거 - 실제 페이지로 분할됨 */
+}
+
+/* ProseMirror 포커스 상태에서도 테두리 제거 */
+.ProseMirror:focus,
+.ProseMirror-focused {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* 내용이 배경 위에 오도록 */

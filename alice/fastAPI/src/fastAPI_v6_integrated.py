@@ -1,6 +1,8 @@
 ﻿import os
 from dotenv import load_dotenv
+import httpx
 load_dotenv()
+
 
 import json
 import uuid
@@ -221,6 +223,8 @@ async def analyze_documents(
         # 5. API 응답용 URL 경로 (프론트에서 사용)
         api_path = f"/documents/{userid}/{projectidx}/초안.json"
 
+        print('api_path: ', api_path)
+
        
         # ========================================
         # 6단계: 분석 결과 반환
@@ -267,7 +271,7 @@ async def root():
 @app.post("/generate")
 async def generate_content(request: ChatRequest):
     try:
-        print(f"📢 요청 수신: '{request.userMessage}' (Thread: {request.threadId})")
+        print(f"📢 요청 수신:\n'{request.userMessage}'\n(Thread: {request.threadId})")
         
         # ========================================
         # [수정 전 코드] 로컬 파일에서 컨텍스트 로드
@@ -293,11 +297,17 @@ async def generate_content(request: ChatRequest):
         
         try:
             print(f"📖 백엔드에서 분석 결과 조회: projectIdx={request.projectIdx}")
-            response = requests.get(
-                f"{backend_url}/api/analysis/get-context",
-                params={"projectIdx": request.projectIdx},
-                timeout=10
-            )
+            # response = requests.get(
+            #     f"{backend_url}/api/analysis/get-context",
+            #     params={"projectIdx": request.projectIdx},
+            #     timeout=10
+            # )
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{backend_url}/api/analysis/get-context",
+                    params={"projectIdx": request.projectIdx},
+                    timeout=10.0
+                )
             
             if response.status_code == 200:
                 result = response.json()

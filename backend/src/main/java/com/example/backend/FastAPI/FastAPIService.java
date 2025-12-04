@@ -44,7 +44,7 @@ public class FastAPIService {
     public FastAPIService(
         @Value("${fastapi.base-url:http://localhost:8001}") String baseUrl,
         @Value("${fastapi.path:/analyze}") String analyzePath,
-        @Value("${fastapi.timeout-seconds:600}") long timeoutSeconds
+        @Value("${fastapi.timeout-seconds:3000}") long timeoutSeconds
     ) {
         this.analyzePath = analyzePath;
         // WebClient 설정: 타임아웃, 메모리 버퍼 크기 등

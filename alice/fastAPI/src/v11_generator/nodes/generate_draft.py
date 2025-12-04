@@ -1,5 +1,6 @@
 from ..state_types import ProposalGenerationState
-from langchain_openai import ChatOpenAI
+# from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
 from dotenv import load_dotenv
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -7,8 +8,10 @@ import logging
 from typing import Dict, Any, Optional
 import re
 import json
+from json_repair import repair_json
 from pathlib import Path
 import os
+import time
 
 def get_json_file_path() -> Path:
     """
@@ -205,6 +208,7 @@ def _extract_relevant_guide(guide_data: dict, chapter_number: str, chapter_title
 
 def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGenerationState:
     import os
+    import time
     """
     [작가 노드 - 비활성화 상태]
     현재는 초안 생성 로직을 주석 처리하여 실행되지 않도록 막아두었습니다.
@@ -229,17 +233,30 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
 
         3. 현재까지 수집된 사용자 정보 (Collected Data)
         - {collected_data}
+        (작성 지침: 이 챕터를 작성하기 위해 사용자가 입력한 핵심 재료입니다. 이 내용을 중심으로 작성하십시오.)
 
-        4. 최근 대화 히스토리 (Recent Chat History)
-        - {recent_history}
-
-        5. 제안서 작성 가이드 (Writing Guide Reference)
+        4. 제안서 작성 가이드 (Writing Guide Reference)
         - {guide_reference}
         ======================================================================
 
         ✍️ <작성 지침>
-        - 위 다섯 가지 입력 정보를 모두 반영하여 **정부 제안서 공식 문체로 해당 목차의 완성된 단락**을 작성하십시오.
+        - 위 네 가지 입력 정보를 모두 반영하여 **정부 제안서 공식 문체로 해당 목차의 완성된 단락**을 작성하십시오.
         - **제안서 작성 가이드**에 명시된 해당 목차의 작성 요령, 핵심 포인트, 필수 포함 내용을 반드시 준수하십시오.
+        
+        📊 <표(Table) 생성 판단>
+        다음 경우에는 반드시 표(table)를 생성하십시오:
+          * 가이드에 "표 형식", "table_format", "required_tables" 등이 명시된 경우
+          * 정량적 데이터(수치, 금액, 일정, 성능지표 등)를 비교하거나 나열할 때
+          * 연차별 계획, 예산 구성, 조직 구성, 일정표 등 구조화된 정보를 표현할 때
+          * 여러 항목을 행과 열로 정리하면 가독성이 향상되는 경우
+
+        📈 <차트(Chart) 생성 판단>
+        다음 경우에는 반드시 차트(chart)를 생성하십시오:
+          * **(최우선)** 사용자가 입력 정보(Collected Data)에서 차트, 그래프, 시각화 등을 요청한 경우 (데이터가 부족하면 추론하여 생성)
+          * 가이드에 "차트", "그래프", "시각화", "chart" 등이 명시된 경우
+          * 시계열 데이터(연도별, 월별 추이)를 시각화할 때
+          * 비율 데이터(파이 차트), 비교 데이터(막대 차트), 추이 데이터(라인 차트)를 표현할 때
+          * 정량적 데이터를 시각적으로 보여주는 것이 텍스트보다 효과적인 경우
         - 가이드에 제시된 표 형식, 측정 방법, 정량적 지표, 예시 등의 요구사항이 있다면 반드시 반영하십시오.
         - 문단 형식으로 작성하고, 개조식 나열이 필요한 경우 적절히 혼합하십시오.
         - 사용자가 제공한 정보가 불충분한 영역이 있어도 추론 가능한 범위 내에서 자연스럽게 보완하십시오.
@@ -251,63 +268,122 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
         📌 <출력 형식>
         아래 ProseMirror JSON 형식을 반드시 준수하여 출력하십시오. 코드 블록 없이 순수 JSON만 출력하세요.
 
-        ⚠️ 중요: 반드시 **제목(heading)을 첫 번째 요소로** 생성하고, 그 다음에 내용(paragraph)을 생성하세요.
+        ⚠️ 중요: 반드시 **제목(heading)을 첫 번째 요소로** 생성하고, 그 다음에 내용(paragraph, table, 또는 chart)을 생성하세요.
         - 제목 텍스트: "{chapter_title}" 형식을 그대로 사용하세요 (예: "1. 기업현황")
         - 제목의 level은 1을 사용하세요
 
+        📋 <기본 구조 예시 (문단만 있는 경우)>
         {{
           "type": "doc",
           "content": [
             {{
               "type": "heading",
-              "attrs": {{
-                "level": 1
-              }},
-              "content": [
-                {{
-                  "type": "text",
-                  "text": "{chapter_title}"
-                }}
-              ]
+              "attrs": {{ "level": 1 }},
+              "content": [{{ "type": "text", "text": "{chapter_title}" }}]
             }},
             {{
               "type": "paragraph",
-              "attrs": {{
-                "textAlign": "left",
-                "paragraphIndex": 0
-              }},
-              "content": [
-                {{
-                  "type": "text",
-                  "text": "첫 번째 문단 내용"
-                }}
-              ]
+              "attrs": {{ "textAlign": "left", "paragraphIndex": 0 }},
+              "content": [{{ "type": "text", "text": "첫 번째 문단 내용" }}]
             }},
             {{
               "type": "paragraph",
-              "attrs": {{
-                "textAlign": "left",
-                "paragraphIndex": 1
-              }},
-              "content": [
-                {{
-                  "type": "text",
-                  "text": "​"
-                }}
-              ]
+              "attrs": {{ "textAlign": "left", "paragraphIndex": 1 }},
+              "content": [{{ "type": "text", "text": "\u200b" }}]
+            }}
+          ]
+        }}
+
+        📊 <표가 필요한 경우 구조 예시>
+        {{
+          "type": "doc",
+          "content": [
+            {{
+              "type": "heading",
+              "attrs": {{ "level": 1 }},
+              "content": [{{ "type": "text", "text": "{chapter_title}" }}]
             }},
             {{
               "type": "paragraph",
-              "attrs": {{
-                "textAlign": "left",
-                "paragraphIndex": 2
-              }},
+              "attrs": {{ "textAlign": "left", "paragraphIndex": 0 }},
+              "content": [{{ "type": "text", "text": "표 설명 문단" }}]
+            }},
+            {{
+              "type": "table",
+              "attrs": {{ "class": "paladoc-table" }},
               "content": [
                 {{
-                  "type": "text",
-                  "text": "두 번째 문단 내용"
+                  "type": "tableRow",
+                  "content": [
+                    {{
+                      "type": "tableHeader",
+                      "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "항목1" }}] }}]
+                    }},
+                    {{
+                      "type": "tableHeader",
+                      "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "항목2" }}] }}]
+                    }}
+                  ]
+                }},
+                {{
+                  "type": "tableRow",
+                  "content": [
+                    {{
+                      "type": "tableCell",
+                      "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "데이터1" }}] }}]
+                    }},
+                    {{
+                      "type": "tableCell",
+                      "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "데이터2" }}] }}]
+                    }}
+                  ]
                 }}
               ]
+            }}
+          ]
+        }}
+
+        📈 <차트가 필요한 경우 구조 예시>
+        {{
+          "type": "doc",
+          "content": [
+            {{
+              "type": "heading",
+              "attrs": {{ "level": 1 }},
+              "content": [{{ "type": "text", "text": "{chapter_title}" }}]
+            }},
+            {{
+              "type": "paragraph",
+              "attrs": {{ "textAlign": "left", "paragraphIndex": 0 }},
+              "content": [{{ "type": "text", "text": "차트 설명 문단" }}]
+            }},
+            {{
+              "type": "chart",
+              "attrs": {{
+                "chartType": "line",
+                "title": "연도별 매출 추이",
+                "data": {{
+                  "labels": ["2022", "2023", "2024"],
+                  "datasets": [
+                    {{
+                      "label": "매출액 (억원)",
+                      "data": [10, 15, 20],
+                      "backgroundColor": "rgba(54, 162, 235, 0.2)",
+                      "borderColor": "rgba(54, 162, 235, 1)",
+                      "borderWidth": 2
+                    }}
+                  ]
+                }},
+                "options": {{
+                  "responsive": true,
+                  "plugins": {{
+                    "legend": {{ "display": true }},
+                    "title": {{ "display": true, "text": "연도별 매출 추이" }}
+                  }},
+                  "scales": {{ "y": {{ "beginAtZero": true }} }}
+                }}
+              }},
+              "content": []
             }}
           ]
         }}
@@ -315,10 +391,13 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
         ⚠️ 중요:
         - **반드시 첫 번째 요소로 heading을 생성하세요** (제목 텍스트: "{chapter_title}")
         - 각 paragraph는 paragraphIndex를 0부터 순차적으로 부여하세요
-        - 빈 줄은 text: "​" (zero-width space)로 처리하세요
+        - 빈 줄은 text: "\u200b" (zero-width space)로 처리하세요
+        - **표 생성 시**:
+            1. table → tableRow → tableHeader/tableCell → paragraph → text 구조를 정확히 지키세요.
+            2. **내용이 없는 빈 셀(Empty Cell)일 경우**, 비워두지 말고 반드시 **text: "\u200b"**를 넣어 에러를 방지하세요.
+        - **차트 생성 시**: chart 노드의 attrs에 chartType, title, data, options를 Chart.js 형식으로 작성하세요
         - 코드 블록 마커(```)를 사용하지 마세요
         - 순수 JSON만 출력하세요
-        - 각 문단은 별도의 paragraph로 구분하세요
         """
     
     # 1. guide_claude.json 로드
@@ -341,6 +420,9 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
 
     # 2. 현재 목표 섹션 정보 설정 (history_checker의 결정 반영 로직)
     collected_data = state.get("collected_data", "")
+
+    if len(collected_data) > 65000:
+        time.sleep(61)
     # print('collected_data: ', collected_data)
     # print(f"--- 📊 ASSESS_INFO 수신 데이터 길이: {len(collected_data)}자 ---")
 
@@ -374,13 +456,19 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
             role = "👤" if msg.get("role") == "user" else "🤖"
             content = msg.get("content", "")
             recent_history += f"{role}: {content}\n"
+    
+    print(f"🔍 [디버깅] Recent Chat History:\n{recent_history}")
 
 
     prompt = PromptTemplate.from_template(DRAFT_PROMPT)
 
     llm = None
     try:
-        llm = ChatOpenAI(temperature=0, model="gpt-4o")
+        llm = ChatAnthropic(
+            model="claude-sonnet-4-5-20250929",
+            temperature=0,
+            max_tokens=64000
+        )
     except Exception as e:
         print(f"⚠️ LLM 초기화 오류: {e}")
 
@@ -391,7 +479,6 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
         'chapter_title': chapter_display,  # 제목을 별도로 전달
         'anal_guide_summary': anal_guide_summary,
         'collected_data': collected_data,
-        'recent_history': recent_history,
         'guide_reference': guide_reference
         })
     
@@ -420,7 +507,23 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
             json_text = '\n'.join(lines[1:-1]) if len(lines) > 2 and lines[-1].strip() == '```' else '\n'.join(lines[1:])
         
         # JSON 파싱
-        completed_content = json.loads(json_text)
+        # completed_content = json.loads(json_text)
+        try:
+            completed_content = repair_json(json_text, return_objects=True)
+            # ---------------- [수정된 부분 시작] ----------------
+            # repair_json 결과가 list인 경우(content 배열만 반환된 경우 등) 처리
+            if isinstance(completed_content, list):
+                print("⚠️ [Warning] JSON이 list 형식으로 반환됨. 자동으로 doc 구조로 래핑합니다.")
+                completed_content = {
+                    "type": "doc",
+                    "content": completed_content
+                }
+            # ---------------- [수정된 부분 끝] ----------------
+        except Exception as e:
+            print(f"JSON 복구 실패: {e}")
+            # 실패 시 원본 텍스트를 로그에 남겨 확인 필요
+            print(json_text) 
+            raise e
         print(f"✅ JSON 파싱 완료: {len(completed_content.get('content', []))}개 문단")
         
         # 파일 저장 경로 설정 (get_json_file_path 함수 재사용)
@@ -598,8 +701,7 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
     return_value = {
         "current_query": comment,  # 코멘트 + 다음 챕터 description
         "completedContent": completed_content,
-        "messages": history,
-        "target_chapter": ""
+        "messages": history
     }
     print(f"🔍 [디버깅] generate_draft 반환값 - current_query 존재: {return_value.get('current_query') is not None}")
     print(f"🔍 [디버깅] generate_draft 반환값 - completedContent 존재: {return_value.get('completedContent') is not None}")
