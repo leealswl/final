@@ -59,36 +59,44 @@ const ChatBotMUI = () => {
 
                     // 파일에서 JSON 읽어서 에디터에 출력
                     if (editorInstance) {
-                        try {
-                            // 파일 경로 설정 (캐시 방지를 위해 타임스탬프 추가)
-                            const timestamp = new Date().getTime();
-                            // const filePath = `/uploads/admin/1/1/234.json?t=${timestamp}`;
+                        // 1. 응답에 completedContent(JSON)가 포함되어 있으면 바로 적용 (가장 빠르고 정확함)
+                        if (data.completedContent) {
+                            console.log('[ChatBotMUI] 🚀 응답에 포함된 completedContent로 에디터 업데이트');
+                            editorInstance.commands.setContent(data.completedContent, false);
+                        }
+                        // 2. 없으면 파일에서 읽기 시도 (Fallback)
+                        else {
+                            try {
+                                // 파일 경로 설정 (캐시 방지를 위해 타임스탬프 추가)
+                                const timestamp = new Date().getTime();
+                                // const filePath = `/uploads/admin/1/1/234.json?t=${timestamp}`;
 
-                            console.log('[ChatBotMUI] 📂 파일 읽기 시도:', filePath);
+                                console.log('[ChatBotMUI] 📂 파일 읽기 시도 (Fallback):', filePath);
 
-                            // 파일에서 JSON 읽기 (캐시 방지 헤더 추가)
-                            const response = await fetch(toAbs(`${filePath}?t=${timestamp}`), {
-                                // const response = await fetch(filePath, {
-                                method: 'GET',
-                                headers: {
-                                    'Cache-Control': 'no-cache',
-                                    Pragma: 'no-cache',
-                                },
-                            });
+                                // 파일에서 JSON 읽기 (캐시 방지 헤더 추가)
+                                const response = await fetch(toAbs(`${filePath}?t=${timestamp}`), {
+                                    // const response = await fetch(filePath, {
+                                    method: 'GET',
+                                    headers: {
+                                        'Cache-Control': 'no-cache',
+                                        Pragma: 'no-cache',
+                                    },
+                                });
 
-                            if (!response.ok) {
-                                throw new Error(`파일 읽기 실패: ${response.status} ${response.statusText}`);
+                                if (!response.ok) {
+                                    throw new Error(`파일 읽기 실패: ${response.status} ${response.statusText}`);
+                                }
+
+                                const completedContent = await response.json();
+                                console.log('[ChatBotMUI] 📄 파일 읽기 성공, paragraph 개수:', completedContent?.content?.length || 0);
+
+                                // 에디터에 반영
+                                editorInstance.commands.setContent(completedContent, false);
+                                console.log('[ChatBotMUI] ✅ 에디터 업데이트 완료 (파일에서 읽음)');
+                            } catch (error) {
+                                console.error('[ChatBotMUI] ❌ 파일 읽기 또는 에디터 업데이트 실패:', error);
+                                console.error('[ChatBotMUI] 🔍 상세 오류:', error.message);
                             }
-
-                            const completedContent = await response.json();
-                            console.log('[ChatBotMUI] 📄 파일 읽기 성공, paragraph 개수:', completedContent?.content?.length || 0);
-
-                            // 에디터에 반영
-                            editorInstance.commands.setContent(completedContent, false);
-                            console.log('[ChatBotMUI] ✅ 에디터 업데이트 완료 (파일에서 읽음)');
-                        } catch (error) {
-                            console.error('[ChatBotMUI] ❌ 파일 읽기 또는 에디터 업데이트 실패:', error);
-                            console.error('[ChatBotMUI] 🔍 상세 오류:', error.message);
                         }
                     } else {
                         console.warn('[ChatBotMUI] ⚠️ editorInstance가 없습니다');
@@ -234,6 +242,8 @@ const ChatBotMUI = () => {
 
             <Stack direction="row" spacing={1}>
                 <TextField
+                    multiline
+                    maxRows={12}
                     variant="outlined"
                     size="small"
                     placeholder="메시지를 입력하세요..."

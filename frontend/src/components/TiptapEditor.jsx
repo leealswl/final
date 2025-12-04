@@ -19,7 +19,9 @@ import { mergeAttributes } from '@tiptap/core';
 import Toolbar from './editor/Toolbar';
 import TableToolbar from './editor/TableToolbar';
 import ImageNodeView from './editor/nodes/ImageNodeView';
+import ChartNodeView from './editor/nodes/ChartNodeView';
 import TableContextMenu from './editor/TableContextMenu';
+import { Node } from '@tiptap/core';
 
 // ---------------------- Custom Extensions ----------------------
 const headingLevels = [1, 2, 3];
@@ -70,6 +72,60 @@ const CustomImage = Image.extend({
     },
 });
 
+const Chart = Node.create({
+    name: 'chart',
+    group: 'block',
+    atom: true,
+    addAttributes() {
+        return {
+            chartType: {
+                default: 'line',
+                parseHTML: (element) => element.getAttribute('data-chart-type') || 'line',
+                renderHTML: (attributes) => ({ 'data-chart-type': attributes.chartType }),
+            },
+            title: {
+                default: '',
+                parseHTML: (element) => element.getAttribute('data-title') || '',
+                renderHTML: (attributes) => ({ 'data-title': attributes.title }),
+            },
+            data: {
+                default: { labels: [], datasets: [] },
+                parseHTML: (element) => {
+                    const dataAttr = element.getAttribute('data-chart-data');
+                    return dataAttr ? JSON.parse(dataAttr) : { labels: [], datasets: [] };
+                },
+                renderHTML: (attributes) => ({
+                    'data-chart-data': JSON.stringify(attributes.data),
+                }),
+            },
+            options: {
+                default: {},
+                parseHTML: (element) => {
+                    const optionsAttr = element.getAttribute('data-chart-options');
+                    return optionsAttr ? JSON.parse(optionsAttr) : {};
+                },
+                renderHTML: (attributes) => ({
+                    'data-chart-options': JSON.stringify(attributes.options),
+                }),
+            },
+        };
+    },
+    parseHTML() {
+        return [
+            {
+                tag: 'div[data-type="chart"]',
+            },
+        ];
+    },
+    renderHTML({ HTMLAttributes }) {
+        // return ['div', { 'data-type': 'chart', ...HTMLAttributes }, 0];
+        return ['div', { 'data-type': 'chart', ...HTMLAttributes }];
+    },
+    addNodeView() {
+        return ReactNodeViewRenderer(ChartNodeView);
+    },
+});
+
 // ---------------------- Default Extensions ----------------------
 const defaultExtensions = [
     StarterKit.configure({
@@ -87,7 +143,8 @@ const defaultExtensions = [
     TableHeader,
     TableCell.configure({ resizable: true }),
     CustomImage,
-    CharacterCount.configure({ limit: 100000 }),
+    Chart,
+    // CharacterCount.configure({ limit: 100000 }),
     Placeholder.configure({ placeholder: '내용을 입력하거나 AI 초안을 생성해 보세요…' }),
 ];
 
@@ -116,7 +173,10 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
         content: initialContent || undefined,
         editable: !readOnly,
         editorProps: {
-            attributes: { class: 'editor-page' },
+            attributes: {
+                class: 'editor-page',
+                style: 'overflow-y: auto; max-height: 1011px;',
+            },
             handleDOMEvents: {
                 contextmenu: (_view, event) => {
                     const target = event.target;
@@ -134,6 +194,7 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
         },
         onUpdate: ({ editor }) => {
             const json = editor.getJSON();
+            console.log('onUpdate json: ', json);
             onContentChange(json);
             emitHeadings(editor);
             emitActive(editor);
@@ -251,15 +312,16 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
     // ---------------------- 파일/JSON 변경 즉시 반영 ----------------------
     useEffect(() => {
         if (!editor) return;
+
         if (!initialContent) return;
 
         let contentToSet = initialContent;
 
         // if (hydrateKeyRef.current === contentKey) return;
-        
 
         // string이면 JSON인지 HTML인지 확인
         if (typeof initialContent === 'string') {
+            console.log('????');
             try {
                 contentToSet = JSON.parse(initialContent);
             } catch {
@@ -268,6 +330,7 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
         }
 
         editor.commands.setContent(contentToSet, false);
+
         editor.commands.updateAttributes('table', { class: 'paladoc-table' });
 
         // hydrateKeyRef 갱신
@@ -337,7 +400,6 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
                 className="editor-wrapper"
                 sx={{
                     flex: 1,
-                    overflowY: 'auto',
                     px: 3,
                     py: 3,
                     minHeight: 'calc(100vh - 200px)',
@@ -370,9 +432,6 @@ export default function TiptapEditor({ initialContent, contentKey, onContentChan
                             backgroundColor: '#f3f4f6',
                             fontWeight: 600,
                         },
-                    },
-                    '&:focus-within': {
-                        boxShadow: 'inset 0 0 0 2px #1976d2',
                     },
                 }}
             >
