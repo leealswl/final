@@ -1,6 +1,8 @@
 ﻿import os
 from dotenv import load_dotenv
+import httpx
 load_dotenv()
+
 
 import json
 import uuid
@@ -301,11 +303,17 @@ async def generate_content(request: ChatRequest):
         
         try:
             print(f"📖 백엔드에서 분석 결과 조회: projectIdx={request.projectIdx}")
-            response = requests.get(
-                f"{backend_url}/api/analysis/get-context",
-                params={"projectIdx": request.projectIdx},
-                timeout=10
-            )
+            # response = requests.get(
+            #     f"{backend_url}/api/analysis/get-context",
+            #     params={"projectIdx": request.projectIdx},
+            #     timeout=10
+            # )
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{backend_url}/api/analysis/get-context",
+                    params={"projectIdx": request.projectIdx},
+                    timeout=10.0
+                )
             
             if response.status_code == 200:
                 result = response.json()

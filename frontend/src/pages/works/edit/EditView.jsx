@@ -92,7 +92,7 @@ export default function EditView() {
             .then(async (res) => {
                 if (!res.ok) throw new Error(res.statusText || 'JSON 파일을 불러오지 못했습니다.');
                 const jsonData = await res.json(); // JSON 파싱
-                console.log('jsondata: ', jsonData);
+                // console.log('jsondata: ', jsonData);
                 // 이미 언마운트된 경우 무시
                 setInitialContent(jsonData);
                 setDocumentContent(jsonData, false);

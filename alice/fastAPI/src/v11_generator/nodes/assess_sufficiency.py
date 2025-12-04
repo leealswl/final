@@ -6,6 +6,7 @@ from ..state_types import ProposalGenerationState
 import re 
 import json # ⬅️ JSON 파싱을 위해 추가 
 
+
 def assess_info(state: ProposalGenerationState) -> Dict[str, Any]:
     """
     [판사 노드] (최종 버전)
@@ -67,6 +68,7 @@ def assess_info(state: ProposalGenerationState) -> Dict[str, Any]:
 
     # 2. 현재 목표 섹션 정보 설정 (history_checker의 결정 반영 로직)
     collected_data = state.get("collected_data", "")
+    print('collected_data 길이: ', len(collected_data))
     # print('collected_data: ', collected_data)
     # print(f"--- 📊 ASSESS_INFO 수신 데이터 길이: {len(collected_data)}자 ---")
     
