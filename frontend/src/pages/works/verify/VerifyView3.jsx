@@ -75,7 +75,7 @@ const FEATURE_EXCLUDE_KEYWORDS = [
   "제안요청서",
   "모집공고",
   "지원기간",
-  "최종평가"
+  "최종평가",
 ];
 
 // ✅ 비슷한 의미의 Feature를 하나로 묶기 위한 규칙
@@ -130,15 +130,9 @@ const buildNormalizedMissingFeatureList = (rawList = []) => {
 };
 
 // =======================================================
-// 🚀 공고문 비교 대시보드
+// 🚀 공고문 비교 대시보드 (초안 검증 결과)
 // =======================================================
-// =======================================================
-// 🚀 공고문 비교 대시보드 (수정본)
-//   - 목차 기준 작성률(toc_progress)
-//   - 공고 세부 요구사항 반영률(feature_progress)
-//   - 공고문 요구사항 충족률 = 둘의 평균
-// =======================================================
-function AnnouncementCompareDashboard({ result }) {
+function AnnouncementCompareDashboard({ result, noticeEval }) {
   if (!result) return null;
 
   const missingSections = result?.missing_sections || [];
@@ -272,12 +266,6 @@ function AnnouncementCompareDashboard({ result }) {
                   sx={{ color: "text.secondary", mt: 0.5 }}
                 >
                   공고문 요구사항 충족률
-                  {/* <Typography
-                    component="span"
-                    sx={{ display: "block", fontSize: 13, mt: 0.5 }}
-                  >
-                    (목차 기준 {tocPercent ?? 0}%)
-                  </Typography> */}
                 </Typography>
 
                 <LinearProgress
@@ -358,8 +346,11 @@ function AnnouncementCompareDashboard({ result }) {
         </CardContent>
       </Card>
 
-      {/* ✅ 부족/불일치 항목 리스트 카드 (아래는 기존 로직 그대로) */}
-      <Card>
+      {/* 🔵 공고문 평가기준 자가진단 (매칭 요약 바로 아래) */}
+      {noticeEval && <NoticeCriteriaSelfCheck data={noticeEval} />}
+
+      {/* ✅ 부족/불일치 항목 리스트 카드 */}
+      {/* <Card>
         <CardContent>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
             부족하거나 불일치한 항목
@@ -372,11 +363,12 @@ function AnnouncementCompareDashboard({ result }) {
             수정 시 우선적으로 확인하면 좋습니다.
           </Typography>
 
-          <Stack sx={{ mt: 2 }} spacing={2}>
+          <Stack sx={{ mt: 2 }} spacing={2}> */}
             {/* 완전히 누락된 섹션 */}
-            {missingSections.length > 0 && (
+            {/* {missingSections.length > 0 && (
               <Box>
                 <Typography
+                  component="div"
                   sx={{
                     fontWeight: 600,
                     mb: 0.5,
@@ -401,12 +393,13 @@ function AnnouncementCompareDashboard({ result }) {
                   ))}
                 </List>
               </Box>
-            )}
+            )} */}
 
             {/* 섹션은 있는데 보완이 필요한 경우 (partial) */}
-            {partialSectionDetails.length > 0 && (
+            {/* {partialSectionDetails.length > 0 && (
               <Box>
                 <Typography
+                  component="div"
                   sx={{
                     fontWeight: 600,
                     mb: 0.5,
@@ -431,12 +424,13 @@ function AnnouncementCompareDashboard({ result }) {
                   ))}
                 </List>
               </Box>
-            )}
+            )} */}
 
             {/* 공고문 세부 조건 (지원대상/기간/예산 등) */}
-            {missingFeatures.length > 0 && (
+            {/* {missingFeatures.length > 0 && (
               <Box>
                 <Typography
+                  component="div"
                   sx={{
                     fontWeight: 600,
                     mb: 0.5,
@@ -486,9 +480,9 @@ function AnnouncementCompareDashboard({ result }) {
               )}
           </Stack>
         </CardContent>
-      </Card>
+      </Card> */}
 
-      {/* 아래 섹션 상세 / 세부 조건 상세는 기존 코드 그대로 사용 */}
+      {/* 섹션별 상세 분석 */}
       {sectionDetails.length > 0 && (
         <Card>
           <CardContent>
@@ -541,6 +535,7 @@ function AnnouncementCompareDashboard({ result }) {
         </Card>
       )}
 
+      {/* 세부 조건별 분석 */}
       {featureDetails.length > 0 && (
         <Card>
           <CardContent>
@@ -584,6 +579,200 @@ function AnnouncementCompareDashboard({ result }) {
   );
 }
 
+// =======================================================
+// 🚀 공고 평가기준 자가진단 대시보드
+// =======================================================
+function NoticeCriteriaSelfCheck({ data }) {
+  if (!data) return null;
+
+  const {
+    block_name,
+    total_score,
+    total_max_score,
+    percent,
+    items = [],
+  } = data;
+
+  const percentValue =
+    typeof percent === "number"
+      ? Math.max(0, Math.min(percent, 100))
+      : total_max_score
+      ? Math.round((total_score / total_max_score) * 100)
+      : null;
+
+  const statusColor = (status) => {
+    if (!status) return "default";
+    if (status.includes("우수") || status.includes("적합")) return "success";
+    if (status.includes("보통") || status.includes("보완")) return "warning";
+    return "error";
+  };
+
+  return (
+    <Box sx={{ mt: 3, display: "flex", flexDirection: "column", gap: 3 }}>
+      {/* 상단 요약 카드 */}
+      <Card>
+        <CardContent>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={4}>
+            {/* 왼쪽: 설명 */}
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                {block_name || "공고문 평가기준 자가진단"}
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ mt: 1, color: "text.secondary" }}
+              >
+                실제 평가표에 들어갈 수 있는 기준(확산 가능성, 사업관리 적정성,
+                품질관리 우수성, 일자리 창출 등)을 바탕으로, 현재 초안이 어느
+                수준인지 진단한 결과입니다.
+              </Typography>
+
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  borderRadius: 1,
+                  bgcolor: "rgba(25, 118, 210, 0.03)",
+                  border: "1px solid rgba(25, 118, 210, 0.15)",
+                }}
+              >
+                <Typography variant="body2" sx={{ whiteSpace: "pre-line" }}>
+                  · 총점 기준으로 약{" "}
+                  <b>{percentValue !== null ? `${percentValue}%` : "-"}</b>
+                  수준의 경쟁력을 보이고 있습니다.
+                  <br />
+                  · 각 평가 항목별 강점과 보완 포인트를 참고해 초안을 수정하면,
+                  실제 평가 점수 향상에 도움이 됩니다.
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* 오른쪽: 점수 / 퍼센트 */}
+            <Box
+              sx={{
+                width: 260,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {percentValue !== null ? (
+                <>
+                  <Typography
+                    variant="h3"
+                    sx={{ fontWeight: 800, lineHeight: 1.1 }}
+                  >
+                    {percentValue}%
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: "text.secondary", mt: 0.5 }}
+                  >
+                    평가기준 달성도
+                  </Typography>
+
+                  <LinearProgress
+                    variant="determinate"
+                    value={percentValue}
+                    sx={{
+                      mt: 1.5,
+                      width: "100%",
+                      height: 8,
+                      borderRadius: 999,
+                    }}
+                  />
+
+                  <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={`총점 ${total_score} / ${total_max_score}`}
+                    />
+                  </Stack>
+                </>
+              ) : (
+                <Typography sx={{ color: "text.secondary" }}>
+                  점수 정보가 없습니다.
+                </Typography>
+              )}
+            </Box>
+          </Stack>
+        </CardContent>
+      </Card>
+
+      {/* 항목별 상세 카드 */}
+      {items.length > 0 && (
+        <Card>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              평가기준별 진단 결과
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ mt: 0.5, mb: 1.5, color: "text.secondary" }}
+            >
+              각 평가 항목에 대해 현재 초안이 어떤 점에서 강점이 있고, 어떤
+              부분을 보완하면 좋은지 정리한 내용입니다.
+            </Typography>
+
+            {items.map((item, idx) => (
+              <Accordion key={idx} sx={{ boxShadow: "none" }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Typography sx={{ fontWeight: 600 }}>
+                      {item.name}
+                    </Typography>
+
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={`${item.score} / ${item.max_score}점`}
+                    />
+
+                    {item.status && (
+                      <Chip
+                        size="small"
+                        color={statusColor(item.status)}
+                        label={item.status}
+                      />
+                    )}
+                  </Stack>
+                </AccordionSummary>
+
+                <AccordionDetails>
+                  {/* 이유 */}
+                  {item.reason && (
+                    <Box sx={{ mb: 1.5 }}>
+                      <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
+                        왜 이렇게 평가되었나요?
+                      </Typography>
+                      <Typography sx={{ whiteSpace: "pre-line" }}>
+                        {item.reason}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {/* 보완 제안 */}
+                  {item.suggestion && (
+                    <Box>
+                      <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
+                        어떤 점을 보완하면 좋을까요?
+                      </Typography>
+                      <Typography sx={{ whiteSpace: "pre-line" }}>
+                        {item.suggestion}
+                      </Typography>
+                    </Box>
+                  )}
+                </AccordionDetails>
+              </Accordion>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </Box>
+  );
+}
 
 // =======================================================
 // 🚀 법령 검증 대시보드
@@ -1083,6 +1272,8 @@ function VerifyView3() {
     loadDraft,
     verifyAll,
     compareAll,
+    runNoticeEvaluation,
+    noticeEvalResult,
   } = useVerifyStore();
 
   // 🔹 종합 리포트 이동 가능 여부 (검증 결과가 있어야 의미 있음)
@@ -1099,8 +1290,20 @@ function VerifyView3() {
     verifyAll();
   };
 
-  const handleCompareClick = () => {
-    compareAll(projectIdx);
+  // ✅ 초안 검증 버튼 클릭 시
+  //  1) 공고문 vs 초안 비교(compareAll)
+  //  2) 공고문 평가기준 자가진단(runNoticeEvaluation)
+  const handleCompareClick = async () => {
+    // projectIdx 없으면 둘 다 의미 없으니까 가드 한 번
+    if (!projectIdx) {
+      alert("프로젝트 정보(projectIdx)가 없습니다.");
+      console.error("[VerifyView3] projectIdx 없음:", projectIdx);
+      return;
+    }
+
+    // 순차 실행: compare → notice evaluation
+    await compareAll(projectIdx);
+    await runNoticeEvaluation(projectIdx);
   };
 
   const handleReportClick = () => {
@@ -1175,7 +1378,10 @@ function VerifyView3() {
       )}
 
       {activeTab === "compare" && compareResult && (
-        <AnnouncementCompareDashboard result={compareResult} />
+        <AnnouncementCompareDashboard
+          result={compareResult}
+          noticeEval={noticeEvalResult}
+        />
       )}
     </Box>
   );

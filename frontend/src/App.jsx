@@ -10,7 +10,7 @@ import CreateView from './pages/works/create/CreateView';
 import GenerateView from './pages/works/create/GenerateView';
 import EditView from './pages/works/edit/EditView';
 import VerifyView3 from './pages/works/verify/VerifyView3';
-import VerifyReport from "./pages/works/verify/VerifyReport";
+import VerifyReport2 from "./pages/works/verify/VerifyReport2";
 import Dashboard from './pages/main/Dashboard';
 import { useEffect } from 'react';
 import AOS from 'aos';
@@ -40,7 +40,7 @@ function App() {
                 <Route path="edit" element={<EditView />} />
                 <Route path="edit/:docId" element={<EditView />} />
                 <Route path="verify" element={<VerifyView3 />} />
-                <Route path="verify/report" element={<VerifyReport />} />
+                <Route path="verify/report" element={<VerifyReport2 />} />
             </Route>
         </Routes>
     );
