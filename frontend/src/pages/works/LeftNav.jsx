@@ -20,7 +20,8 @@ export default function LeftNav({ width = 64 }) {
     const nav = useNavigate();
     const { pathname } = useLocation();
     const { docId } = useParams(); // 편집 모드에서만 의미 있음
-    
+
+    const openSidebar = useLayoutStore((s) => s.openSidebar);
     const toggleSidebar = useLayoutStore((s) => s.toggleSidebar);
 
     // key -> 목적지 경로
@@ -30,14 +31,19 @@ export default function LeftNav({ width = 64 }) {
     };
     // key -> 선택 여부
     const isSelected = (key) => pathname.startsWith(`/works/${key}`);
-    
+
     // 버튼 클릭 핸들러
     const handleNavClick = (key) => {
-        nav(toPath(key));
-        // 편집 버튼 클릭 시 사이드바 토글
+        // 편집 버튼 클릭 시 처리
         if (key === 'edit') {
-            toggleSidebar();
+            // 이미 편집 탭에 있으면 토글, 다른 탭에서 진입하면 열기
+            if (pathname.startsWith('/works/edit')) {
+                toggleSidebar();
+            } else {
+                openSidebar();
+            }
         }
+        nav(toPath(key));
     };
 
     return (
