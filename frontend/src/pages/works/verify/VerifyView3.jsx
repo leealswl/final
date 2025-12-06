@@ -1,5 +1,22 @@
 import React, { useEffect, useMemo } from 'react';
-import { Box, Card, CardContent, Chip, Typography, Stack, Accordion, AccordionSummary, AccordionDetails, List, ListItem, ListItemText, Button, CircularProgress, LinearProgress } from '@mui/material';
+import {
+  Box,
+  Card,
+  CardContent,
+  Chip,
+  Typography,
+  Stack,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  List,
+  ListItem,
+  ListItemText,
+  Button,
+  CircularProgress,
+  LinearProgress,
+  Divider,
+} from '@mui/material';
 
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
@@ -10,550 +27,564 @@ import { useFileStore } from '../../../store/useFileStore';
 import { useProjectStore } from '../../../store/useProjectStore';
 import { useVerifyStore } from '../../../store/useVerifyStore';
 import { useNavigate } from 'react-router-dom';
-import { FEATURE_EXCLUDE_KEYWORDS, FEATURE_MERGE_RULES, normalizeFeatureLabel, buildNormalizedMissingFeatureList } from '../../../utils/verifyUtils';
+import {
+  FEATURE_EXCLUDE_KEYWORDS,
+  FEATURE_MERGE_RULES,
+  normalizeFeatureLabel,
+  buildNormalizedMissingFeatureList,
+} from '../../../utils/verifyUtils';
 
-// 🔹 공고문 feature 중 UI에서 숨길 메타 정보 키워드
 // =======================================================
 // 🚀 공고문 비교 대시보드 (초안 검증 결과)
 // =======================================================
 function AnnouncementCompareDashboard({ result, noticeEval }) {
-    if (!result) return null;
+  if (!result) return null;
 
-    const missingSections = result?.missing_sections || [];
+  const missingSections = result?.missing_sections || [];
 
-    // 원본 데이터
-    const rawMissingFeatures = result?.feature_mismatch || [];
-    const mapped = result?.mapped_sections || [];
-    const rawSectionDetails = result?.section_analysis?.details || [];
-    const rawFeatureDetails = result?.feature_analysis?.details || [];
+  // 원본 데이터
+  const rawMissingFeatures = result?.feature_mismatch || [];
+  const mapped = result?.mapped_sections || [];
+  const rawSectionDetails = result?.section_analysis?.details || [];
+  const rawFeatureDetails = result?.feature_analysis?.details || [];
 
-    // 🔹 백엔드에서 계산해 준 progress 정보
-    const tocProgress = result?.toc_progress || {};
-    const featureProgress = result?.feature_progress || {};
+  // 🔹 백엔드에서 계산해 준 progress 정보
+  const tocProgress = result?.toc_progress || {};
+  const featureProgress = result?.feature_progress || {};
 
-    const tocPercent = typeof tocProgress.progress_percent === 'number' ? tocProgress.progress_percent : null;
+  const tocPercent =
+    typeof tocProgress.progress_percent === 'number'
+      ? tocProgress.progress_percent
+      : null;
 
-    const featurePercent = typeof featureProgress.progress_percent === 'number' ? featureProgress.progress_percent : null;
+  const featurePercent =
+    typeof featureProgress.progress_percent === 'number'
+      ? featureProgress.progress_percent
+      : null;
 
-    // 🔹 공고문 요구사항 충족률 = (목차 기준 + 세부 요구사항 기준) 평균
-    let coverageRate = 0;
-    let metricCount = 0;
-    if (tocPercent !== null) {
-        coverageRate += tocPercent;
-        metricCount += 1;
+  // 🔹 공고문 요구사항 충족률 = (목차 기준 + 세부 요구사항 기준) 평균
+  let coverageRate = 0;
+  let metricCount = 0;
+  if (tocPercent !== null) {
+    coverageRate += tocPercent;
+    metricCount += 1;
+  }
+  if (featurePercent !== null) {
+    coverageRate += featurePercent;
+    metricCount += 1;
+  }
+  coverageRate = metricCount > 0 ? Math.round(coverageRate / metricCount) : 0;
+
+  // 🔹 부족/불일치 feature 이름 정리
+  const missingFeatures = buildNormalizedMissingFeatureList(rawMissingFeatures);
+
+  const sectionDetails = rawSectionDetails;
+
+  // 🔹 섹션 상세 상태 분리 (partial / missing)
+  const partialSectionDetails = sectionDetails.filter(
+    (item) => item.status === 'partial',
+  );
+  const missingSectionDetails = sectionDetails.filter(
+    (item) => item.status === 'missing',
+  );
+
+  // 🔹 세부 조건 상세에서도
+  //   - EXCLUDE 키워드 들어간 건 숨기고
+  //   - 사업기간 / 주요 추진일정 등은 하나의 feature로 합치기
+  const mergedFeatureMap = {};
+
+  rawFeatureDetails.forEach((item) => {
+    if (!item?.feature) return;
+
+    const rawLabel =
+      typeof item.feature === 'string'
+        ? item.feature
+        : String(item.feature ?? '');
+
+    // 숨길 키워드면 제외
+    if (FEATURE_EXCLUDE_KEYWORDS.some((kw) => rawLabel.includes(kw))) {
+      return;
     }
-    if (featurePercent !== null) {
-        coverageRate += featurePercent;
-        metricCount += 1;
+
+    const label = normalizeFeatureLabel(rawLabel);
+
+    if (!mergedFeatureMap[label]) {
+      mergedFeatureMap[label] = {
+        ...item,
+        feature: label,
+      };
     }
-    coverageRate = metricCount > 0 ? Math.round(coverageRate / metricCount) : 0;
+  });
 
-    // 🔹 부족/불일치 feature 이름 정리
-    const missingFeatures = buildNormalizedMissingFeatureList(rawMissingFeatures);
+  const featureDetails = Object.values(mergedFeatureMap);
 
-    const sectionDetails = rawSectionDetails;
+  // 🔹 개수 요약 (대략적인 "충족/보완 필요 항목 수" 표현용)
+  const tocTotal = tocProgress.total_sections ?? 0;
+  const tocWritten = tocProgress.written_sections ?? 0;
+  const tocMissingCount = Math.max(tocTotal - tocWritten, 0);
 
-    // 🔹 섹션 상세 상태 분리 (partial / missing)
-    const partialSectionDetails = sectionDetails.filter((item) => item.status === 'partial');
-    const missingSectionDetails = sectionDetails.filter((item) => item.status === 'missing');
+  const featOk = featureProgress.ok_features ?? 0;
+  const featPartial = featureProgress.partial_features ?? 0;
+  const featMissing = featureProgress.missing_features ?? 0;
 
-    // 🔹 세부 조건 상세에서도
-    //   - EXCLUDE 키워드 들어간 건 숨기고
-    //   - 사업기간 / 주요 추진일정 등은 하나의 feature로 합치기
-    const mergedFeatureMap = {};
+  const includedCount = tocWritten + featOk;
+  const missingCount = tocMissingCount + featPartial + featMissing;
 
-    rawFeatureDetails.forEach((item) => {
-        if (!item?.feature) return;
+  // 🔹 도넛 차트 데이터 (충족 vs 보완 필요)
+  const chartData = [
+    { name: '충족', value: coverageRate },
+    { name: '보완 필요', value: Math.max(100 - coverageRate, 0) },
+  ];
 
-        const rawLabel = typeof item.feature === 'string' ? item.feature : String(item.feature ?? '');
+  const COLORS = ['#4caf50', '#f44336'];
 
-        // 숨길 키워드면 제외
-        if (FEATURE_EXCLUDE_KEYWORDS.some((kw) => rawLabel.includes(kw))) {
-            return;
-        }
-
-        const label = normalizeFeatureLabel(rawLabel);
-
-        if (!mergedFeatureMap[label]) {
-            mergedFeatureMap[label] = {
-                ...item,
-                feature: label,
-            };
-        }
-    });
-
-    const featureDetails = Object.values(mergedFeatureMap);
-
-    // 🔹 개수 요약 (대략적인 "충족/보완 필요 항목 수" 표현용)
-    const tocTotal = tocProgress.total_sections ?? 0;
-    const tocWritten = tocProgress.written_sections ?? 0;
-    const tocMissingCount = Math.max(tocTotal - tocWritten, 0);
-
-    const featOk = featureProgress.ok_features ?? 0;
-    const featPartial = featureProgress.partial_features ?? 0;
-    const featMissing = featureProgress.missing_features ?? 0;
-
-    const includedCount = tocWritten + featOk;
-    const missingCount = tocMissingCount + featPartial + featMissing;
-
-    // 🔹 도넛 차트 데이터 (충족 vs 보완 필요)
-    const chartData = [
-        { name: '충족', value: coverageRate },
-        { name: '보완 필요', value: Math.max(100 - coverageRate, 0) },
-    ];
-
-    const COLORS = ['#4caf50', '#f44336'];
-
-    return (
-        <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {/* ✅ 상단 요약 카드 (퍼센트 + 그래프) */}
-            <Card>
-                <CardContent>
-                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={4} alignItems="center">
-                        {/* 왼쪽: 퍼센트 + 진행바 + 카운트 */}
-                        <Box sx={{ flex: 1 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                                초안 vs 공고문 매칭 요약
-                            </Typography>
-                            <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-                                공고문에서 요구하는 형식(목차)과 세부 조건이 초안에 얼마나 반영되어 있는지 한눈에 확인할 수 있습니다.
-                            </Typography>
-
-                            <Box sx={{ mt: 2 }}>
-                                <Typography variant="h3" sx={{ fontWeight: 800, lineHeight: 1.1 }}>
-                                    {coverageRate}%
-                                </Typography>
-                                <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-                                    공고문 요구사항 충족률
-                                </Typography>
-
-                                <LinearProgress
-                                    variant="determinate"
-                                    value={coverageRate}
-                                    sx={{
-                                        mt: 1.5,
-                                        height: 8,
-                                        borderRadius: 999,
-                                    }}
-                                />
-                            </Box>
-
-                            <Stack direction="row" spacing={1.5} sx={{ mt: 2 }} flexWrap="wrap">
-                                <Chip icon={<CheckCircleOutlineIcon />} color="success" label={`충족 항목 약 ${includedCount}개`} size="small" />
-                                <Chip icon={<ErrorOutlineIcon />} color="error" variant="outlined" label={`보완 필요 항목 약 ${missingCount}개`} size="small" />
-                            </Stack>
-
-                            {/* 세부 수치 한 줄 요약 */}
-                            <Typography variant="caption" sx={{ mt: 1, display: 'block', color: 'text.secondary' }}>
-                                · 목차: {tocWritten}개 섹션 작성 / 총 {tocTotal}개 섹션
-                                <br />
-                            </Typography>
-                        </Box>
-
-                        {/* 오른쪽: 도넛 차트 */}
-                        <Box
-                            sx={{
-                                width: 260,
-                                height: 230,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                            }}
-                        >
-                            {metricCount === 0 ? (
-                                <Typography sx={{ color: 'text.secondary' }}>비교 가능한 항목이 없습니다.</Typography>
-                            ) : (
-                                <PieChart width={260} height={230}>
-                                    <Pie data={chartData} dataKey="value" innerRadius={60} outerRadius={80} paddingAngle={4}>
-                                        {chartData.map((entry, idx) => (
-                                            <Cell key={idx} fill={COLORS[idx]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                    <Legend />
-                                </PieChart>
-                            )}
-                        </Box>
-                    </Stack>
-                </CardContent>
-            </Card>
-
-            {/* 🔵 공고문 평가기준 자가진단 (매칭 요약 바로 아래) */}
-            {noticeEval && <NoticeCriteriaSelfCheck data={noticeEval} />}
-
-            {/* ✅ 부족/불일치 항목 리스트 카드 */}
-            {/* <Card>
+  return (
+    <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {/* ✅ 상단 요약 카드 (퍼센트 + 그래프) */}
+      <Card>
         <CardContent>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            부족하거나 불일치한 항목
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ mt: 0.5, color: "text.secondary" }}
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={4}
+            alignItems="center"
           >
-            공고문 기준으로 초안에서 빠져 있거나 내용이 맞지 않는 부분입니다.
-            수정 시 우선적으로 확인하면 좋습니다.
-          </Typography>
+            {/* 왼쪽: 퍼센트 + 진행바 + 카운트 */}
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                초안 vs 공고문 매칭 요약
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ mt: 1, color: 'text.secondary' }}
+              >
+                공고문에서 요구하는 형식(목차)과 세부 조건이 초안에 얼마나
+                반영되어 있는지 한눈에 확인할 수 있습니다.
+              </Typography>
 
-          <Stack sx={{ mt: 2 }} spacing={2}> */}
-            {/* 완전히 누락된 섹션 */}
-            {/* {missingSections.length > 0 && (
-              <Box>
+              <Box sx={{ mt: 2 }}>
                 <Typography
-                  component="div"
-                  sx={{
-                    fontWeight: 600,
-                    mb: 0.5,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 0.5,
-                  }}
+                  variant="h3"
+                  sx={{ fontWeight: 800, lineHeight: 1.1 }}
                 >
-                  <ErrorOutlineIcon fontSize="small" color="error" />
-                  누락된 필수 섹션
-                  <Chip
-                    size="small"
-                    label={`${missingSections.length}개`}
-                    sx={{ ml: 0.5 }}
-                  />
+                  {coverageRate}%
                 </Typography>
-                <List dense>
-                  {missingSections.map((s, i) => (
-                    <ListItem key={i} sx={{ pl: 0 }}>
-                      <ListItemText primary={s} />
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            )} */}
-
-            {/* 섹션은 있는데 보완이 필요한 경우 (partial) */}
-            {/* {partialSectionDetails.length > 0 && (
-              <Box>
                 <Typography
-                  component="div"
-                  sx={{
-                    fontWeight: 600,
-                    mb: 0.5,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 0.5,
-                  }}
+                  variant="body2"
+                  sx={{ color: 'text.secondary', mt: 0.5 }}
                 >
-                  <ErrorOutlineIcon fontSize="small" color="warning" />
-                  보완이 필요한 섹션
-                  <Chip
-                    size="small"
-                    label={`${partialSectionDetails.length}개`}
-                    sx={{ ml: 0.5 }}
-                  />
+                  공고문 요구사항 충족률
                 </Typography>
-                <List dense>
-                  {partialSectionDetails.map((item, i) => (
-                    <ListItem key={i} sx={{ pl: 0 }}>
-                      <ListItemText primary={item.section} />
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            )} */}
 
-            {/* 공고문 세부 조건 (지원대상/기간/예산 등) */}
-            {/* {missingFeatures.length > 0 && (
-              <Box>
-                <Typography
-                  component="div"
+                <LinearProgress
+                  variant="determinate"
+                  value={coverageRate}
                   sx={{
-                    fontWeight: 600,
-                    mb: 0.5,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 0.5,
+                    mt: 1.5,
+                    height: 8,
+                    borderRadius: 999,
                   }}
-                >
-                  <ErrorOutlineIcon fontSize="small" color="error" />
-                  공고문 세부 조건 중 초안과 맞지 않는 항목
-                  <Chip
-                    size="small"
-                    label={`${missingFeatures.length}개`}
-                    sx={{ ml: 0.5 }}
-                  />
+                />
+              </Box>
+
+              <Stack
+                direction="row"
+                spacing={1.5}
+                sx={{ mt: 2 }}
+                flexWrap="wrap"
+              >
+                <Chip
+                  icon={<CheckCircleOutlineIcon />}
+                  color="success"
+                  label={`충족 항목 약 ${includedCount}개`}
+                  size="small"
+                />
+                <Chip
+                  icon={<ErrorOutlineIcon />}
+                  color="error"
+                  variant="outlined"
+                  label={`보완 필요 항목 약 ${missingCount}개`}
+                  size="small"
+                />
+              </Stack>
+
+              {/* 세부 수치 한 줄 요약 */}
+              <Typography
+                variant="caption"
+                sx={{ mt: 1, display: 'block', color: 'text.secondary' }}
+              >
+                · 목차: {tocWritten}개 섹션 작성 / 총 {tocTotal}개 섹션
+                <br />
+              </Typography>
+            </Box>
+
+            {/* 오른쪽: 도넛 차트 */}
+            <Box
+              sx={{
+                width: 260,
+                height: 230,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {metricCount === 0 ? (
+                <Typography sx={{ color: 'text.secondary' }}>
+                  비교 가능한 항목이 없습니다.
                 </Typography>
-                <List dense>
-                  {missingFeatures.map((f, i) => (
-                    <ListItem key={i} sx={{ pl: 0 }}>
-                      <ListItemText primary={f} />
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            )}
-
-            {missingSections.length === 0 &&
-              missingFeatures.length === 0 &&
-              partialSectionDetails.length === 0 && (
-                <Box
-                  sx={{
-                    mt: 1,
-                    p: 2,
-                    borderRadius: 1,
-                    bgcolor: "rgba(76, 175, 80, 0.04)",
-                    border: "1px solid rgba(76, 175, 80, 0.3)",
-                  }}
-                >
-                  <Typography sx={{ fontWeight: 600 }}>
-                    부족하거나 불일치한 항목이 없습니다.
-                  </Typography>
-                  <Typography variant="body2" sx={{ mt: 0.5 }}>
-                    공고문 기준으로 필수 섹션과 주요 세부 조건이 잘 반영된
-                    초안입니다.
-                  </Typography>
-                </Box>
+              ) : (
+                <PieChart width={260} height={230}>
+                  <Pie
+                    data={chartData}
+                    dataKey="value"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={4}
+                  >
+                    {chartData.map((entry, idx) => (
+                      <Cell key={idx} fill={COLORS[idx]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
               )}
+            </Box>
           </Stack>
         </CardContent>
-      </Card> */}
+      </Card>
 
-            {/* 섹션별 상세 분석 */}
-            {sectionDetails.length > 0 && (
-                <Card>
-                    <CardContent>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                            섹션별 상세 분석
-                        </Typography>
-                        <Typography variant="body2" sx={{ mt: 0.5, mb: 1.5, color: 'text.secondary' }}>
-                            공고문의 큰 목차 단위(섹션)를 기준으로, 왜 부족한지 / 어떻게 보완하면 좋은지에 대한 설명입니다.
-                        </Typography>
+      {/* 🔵 공고문 평가기준 자가진단 (매칭 요약 바로 아래) */}
+      {noticeEval && <NoticeCriteriaSelfCheck data={noticeEval} />}
 
-                        {sectionDetails.map((item, i) => (
-                            <Accordion key={i} sx={{ boxShadow: 'none' }}>
-                                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                    <Stack direction="row" spacing={1} alignItems="center">
-                                        <Typography sx={{ fontWeight: 600 }}>{item.section}</Typography>
-                                        {item.status && (
-                                            <Chip size="small" variant="outlined" label={item.status} color={item.status === 'missing' ? 'error' : item.status === 'partial' ? 'warning' : 'default'} />
-                                        )}
-                                    </Stack>
-                                </AccordionSummary>
+      {/* 섹션별 상세 분석 */}
+      {sectionDetails.length > 0 && (
+        <Card>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              섹션별 상세 분석
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ mt: 0.5, mb: 1.5, color: 'text.secondary' }}
+            >
+              공고문의 큰 목차 단위(섹션)를 기준으로, 왜 부족한지 / 어떻게
+              보완하면 좋은지에 대한 설명입니다.
+            </Typography>
 
-                                <AccordionDetails>
-                                    <Typography sx={{ mt: 1 }}>
-                                        <b>이유:</b> {item.reason}
-                                    </Typography>
-                                    <Typography sx={{ mt: 1 }}>
-                                        <b>보완 제안:</b> {item.suggestion}
-                                    </Typography>
-                                </AccordionDetails>
-                            </Accordion>
-                        ))}
-                    </CardContent>
-                </Card>
-            )}
+            {sectionDetails.map((item, i) => (
+              <Accordion key={i} sx={{ boxShadow: 'none' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Typography sx={{ fontWeight: 600 }}>
+                      {item.section}
+                    </Typography>
+                    {item.status && (
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={item.status}
+                        color={
+                          item.status === 'missing'
+                            ? 'error'
+                            : item.status === 'partial'
+                            ? 'warning'
+                            : 'default'
+                        }
+                      />
+                    )}
+                  </Stack>
+                </AccordionSummary>
 
-            {/* 세부 조건별 분석 */}
-            {featureDetails.length > 0 && (
-                <Card>
-                    <CardContent>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                            세부 조건별 분석
-                        </Typography>
-                        <Typography variant="body2" sx={{ mt: 0.5, mb: 1.5, color: 'text.secondary' }}>
-                            공고문에서 추출한 세부 조건(지원대상, 사업기간, 예산 조건 등)을 기준으로, 초안이 공고문 조건을 얼마나 정확하게 반영하고 있는지 분석한 결과입니다. (문의처·공고기관·접수기관
-                            등 안내성 정보는 리포트에서 제외됩니다.)
-                        </Typography>
+                <AccordionDetails>
+                  <Typography sx={{ mt: 1 }}>
+                    <b>이유:</b> {item.reason}
+                  </Typography>
+                  <Typography sx={{ mt: 1 }}>
+                    <b>보완 제안:</b> {item.suggestion}
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
-                        {featureDetails.map((item, i) => (
-                            <Accordion key={i} sx={{ boxShadow: 'none' }}>
-                                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                    <Stack direction="row" spacing={1}>
-                                        <Typography sx={{ fontWeight: 600 }}>{item.feature}</Typography>
-                                    </Stack>
-                                </AccordionSummary>
+      {/* 세부 조건별 분석 */}
+      {featureDetails.length > 0 && (
+        <Card>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              세부 조건별 분석
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ mt: 0.5, mb: 1.5, color: 'text.secondary' }}
+            >
+              공고문에서 추출한 세부 조건(지원대상, 사업기간, 예산 조건 등)을
+              기준으로, 초안이 공고문 조건을 얼마나 정확하게 반영하고 있는지
+              분석한 결과입니다. (문의처·공고기관·접수기관 등 안내성 정보는
+              리포트에서 제외됩니다.)
+            </Typography>
 
-                                <AccordionDetails>
-                                    <Typography sx={{ mt: 1 }}>
-                                        <b>이유:</b> {item.reason}
-                                    </Typography>
-                                    <Typography sx={{ mt: 1 }}>
-                                        <b>보완 제안:</b> {item.suggestion}
-                                    </Typography>
-                                </AccordionDetails>
-                            </Accordion>
-                        ))}
-                    </CardContent>
-                </Card>
-            )}
-        </Box>
-    );
+            {featureDetails.map((item, i) => (
+              <Accordion key={i} sx={{ boxShadow: 'none' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Stack direction="row" spacing={1}>
+                    <Typography sx={{ fontWeight: 600 }}>
+                      {item.feature}
+                    </Typography>
+                  </Stack>
+                </AccordionSummary>
+
+                <AccordionDetails>
+                  <Typography sx={{ mt: 1 }}>
+                    <b>이유:</b> {item.reason}
+                  </Typography>
+                  <Typography sx={{ mt: 1 }}>
+                    <b>보완 제안:</b> {item.suggestion}
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </Box>
+  );
 }
 
 // =======================================================
 // 🚀 공고 평가기준 자가진단 대시보드
 // =======================================================
 function NoticeCriteriaSelfCheck({ data }) {
-    if (!data) return null;
+  if (!data) return null;
 
-    const { block_name, total_score, total_max_score, percent, items = [] } = data;
+  const { block_name, total_score, total_max_score, percent, items = [] } = data;
 
-    const percentValue = typeof percent === 'number' ? Math.max(0, Math.min(percent, 100)) : total_max_score ? Math.round((total_score / total_max_score) * 100) : null;
+  const percentValue =
+    typeof percent === 'number'
+      ? Math.max(0, Math.min(percent, 100))
+      : total_max_score
+      ? Math.round((total_score / total_max_score) * 100)
+      : null;
 
-    const statusColor = (status) => {
-        if (!status) return 'default';
-        if (status.includes('우수') || status.includes('적합')) return 'success';
-        if (status.includes('보통') || status.includes('보완')) return 'warning';
-        return 'error';
-    };
+  const statusColor = (status) => {
+    if (!status) return 'default';
+    if (status.includes('우수') || status.includes('적합')) return 'success';
+    if (status.includes('보통') || status.includes('보완')) return 'warning';
+    return 'error';
+  };
 
-    return (
-        <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {/* 상단 요약 카드 */}
-            <Card>
-                <CardContent>
-                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={4}>
-                        {/* 왼쪽: 설명 */}
-                        <Box sx={{ flex: 1 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                                {block_name || '공고문 평가기준 자가진단'}
-                            </Typography>
-                            <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-                                실제 평가표에 들어갈 수 있는 기준(확산 가능성, 사업관리 적정성, 품질관리 우수성, 일자리 창출 등)을 바탕으로, 현재 초안이 어느 수준인지 진단한 결과입니다.
-                            </Typography>
+  return (
+    <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {/* 상단 요약 카드 */}
+      <Card>
+        <CardContent>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={4}>
+            {/* 왼쪽: 설명 */}
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                {block_name || '공고문 평가기준 자가진단'}
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ mt: 1, color: 'text.secondary' }}
+              >
+                실제 평가표에 들어갈 수 있는 기준(확산 가능성, 사업관리 적정성,
+                품질관리 우수성, 일자리 창출 등)을 바탕으로, 현재 초안이 어느
+                수준인지 진단한 결과입니다.
+              </Typography>
 
-                            <Box
-                                sx={{
-                                    mt: 2,
-                                    p: 2,
-                                    borderRadius: 1,
-                                    bgcolor: 'rgba(25, 118, 210, 0.03)',
-                                    border: '1px solid rgba(25, 118, 210, 0.15)',
-                                }}
-                            >
-                                <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
-                                    · 총점 기준으로 약 <b>{percentValue !== null ? `${percentValue}%` : '-'}</b>
-                                    수준의 경쟁력을 보이고 있습니다.
-                                    <br />· 각 평가 항목별 강점과 보완 포인트를 참고해 초안을 수정하면, 실제 평가 점수 향상에 도움이 됩니다.
-                                </Typography>
-                            </Box>
-                        </Box>
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  borderRadius: 1,
+                  bgcolor: 'rgba(25, 118, 210, 0.03)',
+                  border: '1px solid rgba(25, 118, 210, 0.15)',
+                }}
+              >
+                <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+                  · 총점 기준으로 약{' '}
+                  <b>
+                    {percentValue !== null ? `${percentValue}%` : '-'}
+                  </b>
+                  수준의 경쟁력을 보이고 있습니다.
+                  <br />· 각 평가 항목별 강점과 보완 포인트를 참고해 초안을
+                  수정하면, 실제 평가 점수 향상에 도움이 됩니다.
+                </Typography>
+              </Box>
+            </Box>
 
-                        {/* 오른쪽: 점수 / 퍼센트 */}
-                        <Box
-                            sx={{
-                                width: 260,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                            }}
-                        >
-                            {percentValue !== null ? (
-                                <>
-                                    <Typography variant="h3" sx={{ fontWeight: 800, lineHeight: 1.1 }}>
-                                        {percentValue}%
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-                                        평가기준 달성도
-                                    </Typography>
+            {/* 오른쪽: 점수 / 퍼센트 */}
+            <Box
+              sx={{
+                width: 260,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {percentValue !== null ? (
+                <>
+                  <Typography
+                    variant="h3"
+                    sx={{ fontWeight: 800, lineHeight: 1.1 }}
+                  >
+                    {percentValue}%
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: 'text.secondary', mt: 0.5 }}
+                  >
+                    평가기준 달성도
+                  </Typography>
 
-                                    <LinearProgress
-                                        variant="determinate"
-                                        value={percentValue}
-                                        sx={{
-                                            mt: 1.5,
-                                            width: '100%',
-                                            height: 8,
-                                            borderRadius: 999,
-                                        }}
-                                    />
+                  <LinearProgress
+                    variant="determinate"
+                    value={percentValue}
+                    sx={{
+                      mt: 1.5,
+                      width: '100%',
+                      height: 8,
+                      borderRadius: 999,
+                    }}
+                  />
 
-                                    <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
-                                        <Chip size="small" variant="outlined" label={`총점 ${total_score} / ${total_max_score}`} />
-                                    </Stack>
-                                </>
-                            ) : (
-                                <Typography sx={{ color: 'text.secondary' }}>점수 정보가 없습니다.</Typography>
-                            )}
-                        </Box>
-                    </Stack>
-                </CardContent>
-            </Card>
+                  <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={`총점 ${total_score} / ${total_max_score}`}
+                    />
+                  </Stack>
+                </>
+              ) : (
+                <Typography sx={{ color: 'text.secondary' }}>
+                  점수 정보가 없습니다.
+                </Typography>
+              )}
+            </Box>
+          </Stack>
+        </CardContent>
+      </Card>
 
-            {/* 항목별 상세 카드 */}
-            {items.length > 0 && (
-                <Card>
-                    <CardContent>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                            평가기준별 진단 결과
-                        </Typography>
-                        <Typography variant="body2" sx={{ mt: 0.5, mb: 1.5, color: 'text.secondary' }}>
-                            각 평가 항목에 대해 현재 초안이 어떤 점에서 강점이 있고, 어떤 부분을 보완하면 좋은지 정리한 내용입니다.
-                        </Typography>
+      {/* 항목별 상세 카드 */}
+      {items.length > 0 && (
+        <Card>
+          <CardContent>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              평가기준별 진단 결과
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ mt: 0.5, mb: 1.5, color: 'text.secondary' }}
+            >
+              각 평가 항목에 대해 현재 초안이 어떤 점에서 강점이 있고, 어떤
+              부분을 보완하면 좋은지 정리한 내용입니다.
+            </Typography>
 
-                        {items.map((item, idx) => (
-                            <Accordion key={idx} sx={{ boxShadow: 'none' }}>
-                                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                    <Stack direction="row" spacing={1} alignItems="center">
-                                        <Typography sx={{ fontWeight: 600 }}>{item.name}</Typography>
+            {items.map((item, idx) => (
+              <Accordion key={idx} sx={{ boxShadow: 'none' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Typography sx={{ fontWeight: 600 }}>
+                      {item.name}
+                    </Typography>
 
-                                        <Chip size="small" variant="outlined" label={`${item.score} / ${item.max_score}점`} />
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={`${item.score} / ${item.max_score}점`}
+                    />
 
-                                        {item.status && <Chip size="small" color={statusColor(item.status)} label={item.status} />}
-                                    </Stack>
-                                </AccordionSummary>
+                    {item.status && (
+                      <Chip
+                        size="small"
+                        color={statusColor(item.status)}
+                        label={item.status}
+                      />
+                    )}
+                  </Stack>
+                </AccordionSummary>
 
-                                <AccordionDetails>
-                                    {/* 이유 */}
-                                    {item.reason && (
-                                        <Box sx={{ mb: 1.5 }}>
-                                            <Typography sx={{ fontWeight: 600, mb: 0.5 }}>왜 이렇게 평가되었나요?</Typography>
-                                            <Typography sx={{ whiteSpace: 'pre-line' }}>{item.reason}</Typography>
-                                        </Box>
-                                    )}
+                <AccordionDetails>
+                  {/* 이유 */}
+                  {item.reason && (
+                    <Box sx={{ mb: 1.5 }}>
+                      <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
+                        왜 이렇게 평가되었나요?
+                      </Typography>
+                      <Typography sx={{ whiteSpace: 'pre-line' }}>
+                        {item.reason}
+                      </Typography>
+                    </Box>
+                  )}
 
-                                    {/* 보완 제안 */}
-                                    {item.suggestion && (
-                                        <Box>
-                                            <Typography sx={{ fontWeight: 600, mb: 0.5 }}>어떤 점을 보완하면 좋을까요?</Typography>
-                                            <Typography sx={{ whiteSpace: 'pre-line' }}>{item.suggestion}</Typography>
-                                        </Box>
-                                    )}
-                                </AccordionDetails>
-                            </Accordion>
-                        ))}
-                    </CardContent>
-                </Card>
-            )}
-        </Box>
-    );
+                  {/* 보완 제안 */}
+                  {item.suggestion && (
+                    <Box>
+                      <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
+                        어떤 점을 보완하면 좋을까요?
+                      </Typography>
+                      <Typography sx={{ whiteSpace: 'pre-line' }}>
+                        {item.suggestion}
+                      </Typography>
+                    </Box>
+                  )}
+                </AccordionDetails>
+              </Accordion>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </Box>
+  );
 }
 
 // =======================================================
 // 🚀 법령 검증 대시보드
 // =======================================================
 function LawVerifyDashboard({ results }) {
-  const hasResults = results && Object.keys(results).length > 0;
+    const hasResults = results && Object.keys(results).length > 0;
 
+    const {
+        statusCounts,
+        overallStatus,
+        overallRisk,
+        actionItems,
+        sortedEntries,
+        violationItems,
+        overallViolationSeverity,
+    } = useMemo(() => {
+        if (!hasResults) {
+            return {
+                statusCounts: {},
+                overallStatus: null,
+                overallRisk: null,
+                actionItems: [],
+                sortedEntries: [],
+                violationItems: [],
+                overallViolationSeverity: null,
+            };
+        }
 
-  const {
-    statusCounts,
-    overallStatus,
-    overallRisk,
-    actionItems,
-    sortedEntries,
-    violationItems,
-    overallViolationSeverity,
-  } = useMemo(() => {
-    if (!hasResults) {
-      return {
-        statusCounts: {},
-        overallStatus: null,
-        overallRisk: null,
-        actionItems: [],
-        sortedEntries: [],
-        violationItems: [],
-        overallViolationSeverity: null,
-      };
-    }
+        const statusCounts = { 적합: 0, 보완: 0, 부적합: 0 };
+        const actionItems = [];
+        const violationItems = [];
+        const entries = Object.entries(results);
+
+        const SEVERITY_ORDER = { LOW: 1, MEDIUM: 2, HIGH: 3 };
+
+        let overallViolationSeverity = null;
+
+        entries.forEach(([key, r]) => {
+            if (!r) return;
+
+            if (r.status && statusCounts[r.status] !== undefined) {
+                statusCounts[r.status] += 1;
+            }
 
             // 부족한 요소 → 보완 항목
             if (Array.isArray(r.missing)) {
@@ -647,128 +678,6 @@ function LawVerifyDashboard({ results }) {
         MEDIUM: '위험도 보통',
         HIGH: '위험도 높음',
     };
-  }, [results, hasResults]);
-
-  const STATUS_COLORS = { 적합: "#4caf50", 보완: "#ffb300", 부적합: "#f44336" };
-  const statusChartData = Object.entries(statusCounts)
-    .filter(([, count]) => count > 0)
-    .map(([name, value]) => ({ name, value }));
-
-  const JUDGMENT_LABELS = {
-    NO_ISSUE: "법령 위반 징후 없음",
-    POTENTIAL_VIOLATION: "법령 위반 가능성 있음",
-    POSSIBLE_ISSUE: "법령 리스크 가능성 있음",
-    UNCLEAR: "법령 위반 판단 어려움",
-  };
-
-  const JUDGMENT_COLORS = {
-    NO_ISSUE: "success",
-    POTENTIAL_VIOLATION: "error",
-    POSSIBLE_ISSUE: "warning",
-    UNCLEAR: "default",
-  };
-
-  const SEVERITY_LABELS = {
-    LOW: "위험도 낮음",
-    MEDIUM: "위험도 보통",
-    HIGH: "위험도 높음",
-  };
-
-  const SEVERITY_CHIP_COLORS = {
-    LOW: "success",
-    MEDIUM: "warning",
-    HIGH: "error",
-  };
-
-  const totalFocusCount = sortedEntries.length;
-
-  const highRiskFocuses = sortedEntries
-  .filter(([, r]) =>
-    r?.status === "부적합" ||
-    r?.risk_level === "HIGH" ||
-    (r?.violations && r.violations.length > 0)
-  )
-  .slice(0, 3) // 상위 3개까지만
-  .map(([, r]) => r.label);
-
-  return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: 3 }}>
-      {/* 요약 카드 */}
-      <Card>
-        <CardContent>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                법령 검증 종합 의견
-              </Typography>
-
-              <Stack spacing={1.2} sx={{ mt: 1.5, mb: 3 }}>
-                {sortedEntries.map(([key, r]) => (
-                  <Box key={key}>
-                    <Typography sx={{ fontWeight: 600 }}>{r.label}</Typography>
-                    {r.reason && (
-                      <Typography
-                        sx={{
-                          ml: 1,
-                          color: "text.secondary",
-                          whiteSpace: "pre-line",
-                        }}
-                      >
-                        {r.reason}
-                      </Typography>
-                    )}
-                  </Box>
-                ))}
-              </Stack>
-            </Box>
-
-            {/* 🔵 고정 크기 PieChart + Chip */}
-            <Box sx={{ width: 260 }}>
-              {statusChartData.length === 0 ? (
-                <Box
-                  sx={{
-                    height: 230,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Typography
-                    sx={{ textAlign: "center", color: "text.secondary" }}
-                  >
-                    검증 결과 없음
-                  </Typography>
-                </Box>
-              ) : (
-                <Box
-                  sx={{
-                    width: 260,
-                    height: 230,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <PieChart width={260} height={230}>
-                    <Pie
-                      data={statusChartData}
-                      dataKey="value"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={3}
-                    >
-                      {statusChartData.map((entry, idx) => (
-                        <Cell
-                          key={idx}
-                          fill={STATUS_COLORS[entry.name] || "#999"}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </Box>
-              )}
 
     const SEVERITY_CHIP_COLORS = {
         LOW: 'success',
@@ -777,10 +686,16 @@ function LawVerifyDashboard({ results }) {
     };
 
     const totalFocusCount = sortedEntries.length;
+    const violationCount = violationItems.length;
 
     const highRiskFocuses = sortedEntries
-        .filter(([, r]) => r?.status === '부적합' || r?.risk_level === 'HIGH' || (r?.violations && r.violations.length > 0))
-        .slice(0, 3) // 상위 3개까지만
+        .filter(
+            ([, r]) =>
+                r?.status === '부적합' ||
+                r?.risk_level === 'HIGH' ||
+                (r?.violations && r.violations.length > 0),
+        )
+        .slice(0, 3)
         .map(([, r]) => r.label);
 
     return (
@@ -789,32 +704,85 @@ function LawVerifyDashboard({ results }) {
             <Card>
                 <CardContent>
                     <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+                        {/* 🔹 왼쪽: 종합 요약 + 항목별 한줄 요약 */}
                         <Box sx={{ flex: 1 }}>
                             <Typography variant="h6" sx={{ fontWeight: 700 }}>
                                 법령 검증 종합 의견
                             </Typography>
 
-                            <Stack spacing={1.2} sx={{ mt: 1.5, mb: 3 }}>
-                                {sortedEntries.map(([key, r]) => (
-                                    <Box key={key}>
-                                        <Typography sx={{ fontWeight: 600 }}>{r.label}</Typography>
-                                        {r.reason && (
-                                            <Typography
-                                                sx={{
-                                                    ml: 1,
-                                                    color: 'text.secondary',
-                                                    whiteSpace: 'pre-line',
-                                                }}
-                                            >
-                                                {r.reason}
-                                            </Typography>
+                            {/* 1) 숫자 기반 간단 총평 */}
+                            <Stack spacing={1} sx={{ mt: 1.5, mb: 2 }}>
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                    총 {totalFocusCount}개 관점 중{' '}
+                                    <b>적합 {statusCounts.적합 || 0}개</b>,{' '}
+                                    <b>보완 {statusCounts.보완 || 0}개</b>,{' '}
+                                    <b>부적합 {statusCounts.부적합 || 0}개</b>로 평가되었습니다.
+                                </Typography>
+
+                                {(overallStatus || overallViolationSeverity) && (
+                                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                        {overallStatus === '적합' && '전반적으로 법령 및 지침에 잘 부합하는 초안으로 판단되며, 일부 항목만 보완하면 제출에 무리가 없는 수준입니다.'}
+                                        {overallStatus === '보완' && '전반적으로는 큰 위반 소지는 없으나, 일부 항목에서 법령·지침과의 정합성을 높이기 위한 내용 보완이 필요한 상태입니다.'}
+                                        {overallStatus === '부적합' && '여러 관점에서 법령 및 지침과 충돌 가능성이 있어, 제출 전 구조적인 수정이 요구되는 수준으로 판단됩니다.'}
+
+                                        {overallViolationSeverity && (
+                                            <>
+                                                {' '}전반적인 법령 위반 가능성은 <b>{SEVERITY_LABELS[overallViolationSeverity]}</b> 수준입니다.
+                                            </>
                                         )}
-                                    </Box>
-                                ))}
+                                        {violationCount > 0 && (
+                                            <> (위반 가능성 의심 항목 {violationCount}건 탐지)</>
+                                        )}
+                                    </Typography>
+                                )}
+                            </Stack>
+
+                            {/* 구분선 */}
+                            <Divider sx={{ my: 1.5 }} />
+
+                            {/* 2) 처음처럼: 관점별 제목 + 간단 한 줄 설명 */}
+                            <Stack spacing={1.2}>
+                                {sortedEntries.map(([key, r]) => {
+                                    // 한 줄 요약용 텍스트 선택: brief → violation_summary → reason
+                                    const baseText =
+                                        (r.brief && String(r.brief)) ||
+                                        (r.violation_summary && String(r.violation_summary)) ||
+                                        (r.reason && String(r.reason)) ||
+                                        '';
+
+                                    // 첫 번째 유의미한 줄만 추출
+                                    const firstLine =
+                                        baseText
+                                            .split('\n')
+                                            .map((line) => line.trim())
+                                            .filter((line) => line.length > 0)[0] || '';
+
+                                    // 너무 길면 살짝 잘라주기 (80자 기준)
+                                    const shortText =
+                                        firstLine.length > 80
+                                            ? firstLine.slice(0, 80) + '…'
+                                            : firstLine;
+
+                                    return (
+                                        <Box key={key}>
+                                            <Typography sx={{ fontWeight: 600 }}>
+                                                {r.label}
+                                            </Typography>
+                                            {shortText && (
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{ ml: 1, color: 'text.secondary' }}
+                                                >
+                                                    {shortText}
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                    );
+                                })}
                             </Stack>
                         </Box>
 
-                        {/* 🔵 고정 크기 PieChart + Chip */}
+                        {/* 🔵 오른쪽: 도넛 차트 + 리스크 Chip */}
                         <Box sx={{ width: 260 }}>
                             {statusChartData.length === 0 ? (
                                 <Box
@@ -825,7 +793,9 @@ function LawVerifyDashboard({ results }) {
                                         justifyContent: 'center',
                                     }}
                                 >
-                                    <Typography sx={{ textAlign: 'center', color: 'text.secondary' }}>검증 결과 없음</Typography>
+                                    <Typography sx={{ textAlign: 'center', color: 'text.secondary' }}>
+                                        검증 결과 없음
+                                    </Typography>
                                 </Box>
                             ) : (
                                 <Box
@@ -838,9 +808,18 @@ function LawVerifyDashboard({ results }) {
                                     }}
                                 >
                                     <PieChart width={260} height={230}>
-                                        <Pie data={statusChartData} dataKey="value" innerRadius={60} outerRadius={80} paddingAngle={3}>
+                                        <Pie
+                                            data={statusChartData}
+                                            dataKey="value"
+                                            innerRadius={60}
+                                            outerRadius={80}
+                                            paddingAngle={3}
+                                        >
                                             {statusChartData.map((entry, idx) => (
-                                                <Cell key={idx} fill={STATUS_COLORS[entry.name] || '#999'} />
+                                                <Cell
+                                                    key={idx}
+                                                    fill={STATUS_COLORS[entry.name] || '#999'}
+                                                />
                                             ))}
                                         </Pie>
                                         <Tooltip />
@@ -850,7 +829,13 @@ function LawVerifyDashboard({ results }) {
                             )}
 
                             <Stack spacing={0.5} sx={{ mt: 1 }}>
-                                {overallRisk && <Chip size="small" variant="outlined" label={`전체 리스크: ${overallRisk}`} />}
+                                {overallRisk && (
+                                    <Chip
+                                        size="small"
+                                        variant="outlined"
+                                        label={`전체 리스크: ${overallRisk}`}
+                                    />
+                                )}
 
                                 {overallViolationSeverity && (
                                     <Chip
@@ -880,7 +865,10 @@ function LawVerifyDashboard({ results }) {
                                     <ListItemText
                                         primary={
                                             <>
-                                                <Typography variant="caption" sx={{ fontWeight: 600, mr: 1 }}>
+                                                <Typography
+                                                    variant="caption"
+                                                    sx={{ fontWeight: 600, mr: 1 }}
+                                                >
                                                     [{item.focusLabel}]
                                                 </Typography>
                                                 {item.text}
@@ -894,162 +882,131 @@ function LawVerifyDashboard({ results }) {
                 </Card>
             )}
 
-            {/* 관점별 상세 분석 */}
+            {/* 관점별 상세 분석 (아래는 그대로 유지) */}
             <Card>
                 <CardContent>
                     <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
                         관점별 상세 분석
                     </Typography>
-                    {/* <Stack spacing={1.2} sx={{ mt: 1.5, mb: 3 }}> */}
-                      {/* 전체 분포 한 줄 요약 */}
-                      {/* <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                        총 {totalFocusCount}개 관점 중{" "}
-                        <b>적합 {statusCounts.적합}개</b>,{" "}
-                        <b>보완 {statusCounts.보완}개</b>,{" "}
-                        <b>부적합 {statusCounts.부적합}개</b>로 평가되었습니다.
-                      </Typography> */}
 
-                      {/* 법령 위반 리스크 한 줄 요약 */}
-                      {/* {overallViolationSeverity && (
-                        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                          전반적인 법령 위반 가능성은{" "}
-                          <b>{SEVERITY_LABELS[overallViolationSeverity]}</b> 수준이며
-                          {highRiskFocuses.length > 0 && (
-                            <>,&nbsp;특히 {highRiskFocuses.join(", ")} 관점에서 리스크가 큽니다.</>
-                          )}
-                          .
-                        </Typography> */}
-                      {/* )} */}
+                    {sortedEntries.map(([key, r]) => (
+                        <Accordion key={key} sx={{ boxShadow: 'none' }}>
+                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography sx={{ fontWeight: 600 }}>{r.label}</Typography>
 
-                      {/* 보완해야 할 항목 개수 안내 */}
-                      {/* {actionItems.length > 0 && (
-                        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                          세부적으로 보완이 권장된 항목은 총{" "}
-                          <b>{actionItems.length}개</b>이며, 아래{" "}
-                          <b>관점별 상세 분석</b>에서 구체적인 수정 제안을 확인할 수 있습니다.
-                        </Typography>
-                      )}
-                    </Stack> */}
+                                    {r.status && (
+                                        <Chip
+                                            size="small"
+                                            label={r.status}
+                                            color={
+                                                r.status === '적합'
+                                                    ? 'success'
+                                                    : r.status === '보완'
+                                                    ? 'warning'
+                                                    : 'error'
+                                            }
+                                        />
+                                    )}
 
-                    <List dense>
-                      {r.violations.map((v, idx) => (
-                        <ListItem key={idx} alignItems="flex-start">
-                          <ListItemText
-                            primary={
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  flexWrap: "wrap",
-                                  alignItems: "center",
-                                  gap: 1,
-                                }}
-                              >
-                                <Typography variant="body2">
-                                  {v.law_name}{" "}
-                                  {v.article_no ? `${v.article_no} ` : ""}
-                                  {v.article_title}
-                                </Typography>
-                                {v.violation_type && (
-                                  <Chip
-                                    size="small"
-                                    variant="outlined"
-                                    label={v.violation_type}
-                                  />
+                                    {r.risk_level && (
+                                        <Chip
+                                            size="small"
+                                            variant="outlined"
+                                            label={r.risk_level}
+                                        />
+                                    )}
+
+                                    {r.violation_judgment && (
+                                        <Chip
+                                            size="small"
+                                            variant="outlined"
+                                            label={
+                                                JUDGMENT_LABELS[r.violation_judgment] ||
+                                                r.violation_judgment
+                                            }
+                                            color={
+                                                JUDGMENT_COLORS[r.violation_judgment] || 'default'
+                                            }
+                                        />
+                                    )}
+                                </Stack>
+                            </AccordionSummary>
+
+                            <AccordionDetails>
+                                {/* 법령 위반 가능성 요약 */}
+                                {r.violation_summary &&
+                                    r.violation_summary.trim().length > 0 && (
+                                        <Box
+                                            sx={{
+                                                mb: 2,
+                                                p: 1.5,
+                                                borderRadius: 1,
+                                                bgcolor: 'rgba(244, 67, 54, 0.04)',
+                                                border: '1px solid rgba(244, 67, 54, 0.3)',
+                                            }}
+                                        >
+                                            <Typography sx={{ fontWeight: 600, mb: 0.5 }}>
+                                                법령 위반 가능성 요약
+                                            </Typography>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{ whiteSpace: 'pre-line' }}
+                                            >
+                                                {r.violation_summary}
+                                            </Typography>
+                                        </Box>
+                                    )}
+
+                                {/* 부족한 요소 */}
+                                {r.missing?.length > 0 && (
+                                    <Box sx={{ mb: 2 }}>
+                                        <Typography sx={{ fontWeight: 600 }}>부족한 요소</Typography>
+                                        <List dense>
+                                            {r.missing.map((m, i) => (
+                                                <ListItem key={i}>
+                                                    <ListItemText primary={m} />
+                                                </ListItem>
+                                            ))}
+                                        </List>
+                                    </Box>
                                 )}
-                                {v.severity && (
-                                  <Chip
-                                    size="small"
-                                    label={
-                                      SEVERITY_LABELS[v.severity] || v.severity
-                                    }
-                                    color={
-                                      SEVERITY_CHIP_COLORS[v.severity] ||
-                                      "default"
-                                    }
-                                  />
-                                )}
-                              </Box>
-                            }
-                            secondary={
-                              <Box sx={{ mt: 0.5 }}>
-                                {v.reason && (
-                                  <Typography
-                                    variant="body2"
-                                    sx={{ whiteSpace: "pre-line" }}
-                                  >
-                                    {v.reason}
-                                  </Typography>
-                                )}
-                                {v.recommendation && (
-                                  <Typography
-                                    variant="body2"
-                                    sx={{
-                                      mt: 0.5,
-                                      whiteSpace: "pre-line",
-                                    }}
-                                  >
-                                    <b>보완 제안:</b> {v.recommendation}
-                                  </Typography>
-                                )}
-                              </Box>
-                            }
-                            // 🔴 <p> 안에 <div> 들어가는 문제 해결
-                            secondaryTypographyProps={{ component: "div" }}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Box>
-                )}
 
-                {/* 부족한 요소 */}
-                {r.missing?.length > 0 && (
-                  <Box sx={{ mb: 2 }}>
-                    <Typography sx={{ fontWeight: 600 }}>부족한 요소</Typography>
-                    <List dense>
-                      {r.missing.map((m, i) => (
-                        <ListItem key={i}>
-                          <ListItemText primary={m} />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Box>
-                )}
+                                {/* 보완 제안 */}
+                                {r.suggestion && (
+                                    <Box sx={{ mb: 2 }}>
+                                        <Typography sx={{ fontWeight: 600 }}>보완 제안</Typography>
+                                        <Typography sx={{ whiteSpace: 'pre-line' }}>
+                                            {r.suggestion}
+                                        </Typography>
+                                    </Box>
+                                )}
 
-                {/* 보완 제안 */}
-                {r.suggestion && (
-                  <Box sx={{ mb: 2 }}>
-                    <Typography sx={{ fontWeight: 600 }}>보완 제안</Typography>
-                    <Typography sx={{ whiteSpace: "pre-line" }}>
-                      {r.suggestion}
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* 관련 법령 */}
-                {r.related_laws?.length > 0 && (
-                  <Box>
-                    <Typography sx={{ fontWeight: 600 }}>관련 법령</Typography>
-                    <Stack direction="row" gap={1} flexWrap="wrap">
-                      {r.related_laws.map((law, i) => (
-                        <Chip
-                          key={i}
-                          size="small"
-                          variant="outlined"
-                          label={`${law.law_name} ${law.article_title}`}
-                        />
-                      ))}
-                    </Stack>
-                  </Box>
-                )}
-              </AccordionDetails>
-            </Accordion>
-          ))}
-        </CardContent>
-      </Card>
-    </Box>
-  );
+                                {/* 관련 법령 */}
+                                {r.related_laws?.length > 0 && (
+                                    <Box>
+                                        <Typography sx={{ fontWeight: 600 }}>관련 법령</Typography>
+                                        <Stack direction="row" gap={1} flexWrap="wrap">
+                                            {r.related_laws.map((law, i) => (
+                                                <Chip
+                                                    key={i}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    label={`${law.law_name} ${law.article_title}`}
+                                                />
+                                            ))}
+                                        </Stack>
+                                    </Box>
+                                )}
+                            </AccordionDetails>
+                        </Accordion>
+                    ))}
+                </CardContent>
+            </Card>
+        </Box>
+    );
 }
+
 
 // =======================================================
 // 🚀 VerifyView Main
@@ -1071,6 +1028,7 @@ function VerifyView3() {
     verifyAll,
     compareAll,
     noticeEvalResult,
+    runFullVerify,
   } = useVerifyStore();
 
   // 🔹 종합 리포트 이동 가능 여부 (검증 결과가 있어야 의미 있음)
@@ -1085,26 +1043,36 @@ function VerifyView3() {
 
   const handleVerifyAllClick = () => {
     if (!projectIdx) {
-      alert("프로젝트 정보(projectIdx)가 없습니다.");
-      console.error("[VerifyView3] projectIdx 없음:", projectIdx);
+      alert('프로젝트 정보(projectIdx)가 없습니다.');
+      console.error('[VerifyView3] projectIdx 없음:', projectIdx);
       return;
     }
     verifyAll(projectIdx);
   };
 
-  // ✅ 초안 검증 버튼 클릭 시 (LangGraph 통합 실행)
+  // ✅ 초안 검증 버튼 클릭 시 (통합 그래프 실행)
   const handleCompareClick = async () => {
+    // projectIdx 없으면 둘 다 의미 없으니까 가드 한 번
     if (!projectIdx) {
-      alert("프로젝트 정보(projectIdx)가 없습니다.");
-      console.error("[VerifyView3] projectIdx 없음:", projectIdx);
+      alert('프로젝트 정보(projectIdx)가 없습니다.');
+      console.error('[VerifyView3] projectIdx 없음:', projectIdx);
       return;
     }
 
     await compareAll(projectIdx);
   };
 
+  const handleFullVerifyClick = async () => {
+    if (!projectIdx) {
+      alert('프로젝트 정보(projectIdx)가 없습니다.');
+      console.error('[VerifyView3] projectIdx 없음:', projectIdx);
+      return;
+    }
+    await runFullVerify(projectIdx);
+  };
+
   const handleReportClick = () => {
-    navigate("/works/verify/report");
+    navigate('/works/verify/report');
   };
 
   return (
@@ -1113,16 +1081,16 @@ function VerifyView3() {
       {loading && (
         <Box
           sx={{
-            position: "fixed",
+            position: 'fixed',
             top: 0,
             left: 0,
-            width: "100vw",
-            height: "100vh",
-            bgcolor: "rgba(255,255,255,0.7)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
+            width: '100vw',
+            height: '100vh',
+            bgcolor: 'rgba(255,255,255,0.7)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
             zIndex: 2000,
           }}
         >
@@ -1133,31 +1101,30 @@ function VerifyView3() {
         </Box>
       )}
 
-    // 🔹 초안 로딩 (filePath 변경 시마다)
-    useEffect(() => {
-        if (!filePath) return;
-        loadDraft(filePath);
-    }, [filePath, loadDraft]);
+      {/* Header */}
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>
+            검증
+          </Typography>
+          <Typography sx={{ color: 'text.secondary' }}>
+            기획서 초안을 기반으로 법령 준수 및 공고문 요구사항 충족 여부를
+            자동 점검합니다.
+          </Typography>
+        </Box>
 
-    const handleVerifyAllClick = () => {
-        verifyAll();
-    };
+        <Stack direction="row" spacing={2}>
+          <Button variant="contained" onClick={handleVerifyAllClick}>
+            법령 검증
+          </Button>
 
-    // ✅ 초안 검증 버튼 클릭 시
-    //  1) 공고문 vs 초안 비교(compareAll)
-    //  2) 공고문 평가기준 자가진단(runNoticeEvaluation)
-    const handleCompareClick = async () => {
-        // projectIdx 없으면 둘 다 의미 없으니까 가드 한 번
-        if (!projectIdx) {
-            alert('프로젝트 정보(projectIdx)가 없습니다.');
-            console.error('[VerifyView3] projectIdx 없음:', projectIdx);
-            return;
-        }
+          <Button variant="outlined" onClick={handleCompareClick}>
+            초안 검증
+          </Button>
 
-        // 순차 실행: compare → notice evaluation
-        await compareAll(projectIdx);
-        await runNoticeEvaluation(projectIdx);
-    };
+          {/* <Button variant="contained" color="secondary" onClick={handleFullVerifyClick}>
+            통합 검증
+          </Button> */}
 
           <Button
             variant="outlined"
@@ -1170,16 +1137,18 @@ function VerifyView3() {
       </Stack>
 
       {!text && (
-        <Typography sx={{ mt: 2, color: "text.secondary" }}>
+        <Typography sx={{ mt: 2, color: 'text.secondary' }}>
           초안을 불러오는 중입니다…
         </Typography>
       )}
 
-      {activeTab === "law" && results && Object.keys(results).length > 0 && (
-        <LawVerifyDashboard results={results} />
-      )}
+      {activeTab === 'law' &&
+        results &&
+        Object.keys(results).length > 0 && (
+          <LawVerifyDashboard results={results} />
+        )}
 
-      {activeTab === "compare" && compareResult && (
+      {activeTab === 'compare' && compareResult && (
         <AnnouncementCompareDashboard
           result={compareResult}
           noticeEval={noticeEvalResult}
