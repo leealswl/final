@@ -178,7 +178,7 @@ const AnalyzeView = () => {
 
             // 필수 파일 검증 (공고문이 없으면 분석 불가)
             if (공고문파일들.length === 0) {
-                setError('공고문/RFP 파일을 먼저 업로드해주세요.');
+                setError('공고문 파일을 먼저 업로드해주세요.');
                 setLoading(false);
                 return;
             }
@@ -269,7 +269,7 @@ const AnalyzeView = () => {
                     onClick={() => triggerUpload(rfpUploadRef)}
                 >
                     <Box component={'img'} src={문서아이콘} alt="문서" sx={{ width: '42px', mb: '12px' }} />
-                    <Typography sx={{ fontSize: '20px', fontWeight: 'bold', mb: '12px' }}>1. 필수: 공고문/RFP 문서 업로드</Typography>
+                    <Typography sx={{ fontSize: '20px', fontWeight: 'bold', mb: '12px' }}>1. 필수: 공고문 문서 업로드</Typography>
                     <Typography sx={{ color: '#1890FF', fontWeight: 'bold', mb: '8px' }}>(PDF, DOCX, HWP 등)</Typography>
                     <Typography sx={{ color: '#8C8C8C' }} fontFamily={'Pretendard4'}>
                         가장 핵심이 되는 제안 요청서를 먼저 업로드해주세요.
@@ -328,7 +328,7 @@ const AnalyzeView = () => {
                         }}
                     >
                         {loading ? <CircularProgress size={24} sx={{ color: 'white', mr: 1 }} /> : null}
-                        {loading ? '분석 중...' : '분석 시작 (RFP 필수)'}
+                        {loading ? '분석 중...' : '분석 시작 (공고문 필수)'}
                     </Button>
                 </Box>
                 <Box>
@@ -339,7 +339,7 @@ const AnalyzeView = () => {
                         </Typography>
                     ) : (
                         <Typography sx={{ color: '#8C8C8C' }} fontFamily={'Pretendard4'}>
-                            RFP 파일을 업로드해야 분석을 시작할 수 있습니다.
+                            공고문 파일을 업로드해야 분석을 시작할 수 있습니다.
                         </Typography>
                     )}
                 </Box>
