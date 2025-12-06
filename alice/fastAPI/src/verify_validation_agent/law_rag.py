@@ -15,7 +15,8 @@ load_dotenv()
 # 1. VectorDB / LLM 세팅
 # ============================
 
-BASE_DIR = Path(__file__).resolve().parent
+# 데이터 디렉터리를 law_pipeline.py와 동일한 위치(src/law_pipeline_data)로 통일
+BASE_DIR = Path(__file__).resolve().parent.parent
 VECTORDB_DIR = BASE_DIR / "law_pipeline_data" / "vectordb"
 LAW_COLLECTION_NAME = "law_articles"
 

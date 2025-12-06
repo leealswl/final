@@ -52,3 +52,15 @@ export async function evaluateNoticeCriteria({ projectIdx, text }) {
 
   return data; // { status, message, data } 형태라고 가정
 }
+
+// 통합 검증 (공고문 비교 + 법령(복수 포커스) + 평가기준)
+export async function runFullVerify({ projectIdx, draftJson, lawFocuses }) {
+  const payload = {
+    projectIdx,
+    draftJson,
+    lawFocuses,
+  };
+
+  const res = await axios.post(`${FASTAPI_DIRECT_BASE_URL}/verify/full`, payload);
+  return res.data; // { status, data }
+}

@@ -28,6 +28,12 @@ import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 import { useProjectStore } from "../../../store/useProjectStore";
 import { useVerifyStore } from "../../../store/useVerifyStore";
 import { useNavigate } from "react-router-dom";
+import {
+  FEATURE_EXCLUDE_KEYWORDS,
+  FEATURE_MERGE_RULES,
+  normalizeFeatureLabel,
+  buildNormalizedMissingFeatureList,
+} from "../../../utils/verifyUtils";
 
 // 색상 상수
 const STATUS_COLORS = { 적합: "#4caf50", 보완: "#ffb300", 부적합: "#f44336" };
@@ -39,85 +45,6 @@ const SEVERITY_LABELS = {
   LOW: "위험도 낮음",
   MEDIUM: "위험도 보통",
   HIGH: "위험도 높음",
-};
-
-const FEATURE_EXCLUDE_KEYWORDS = [
-  // 문의/연락/담당자 정보
-  "문의처",
-  "담당자",
-  "전화번호",
-  "이메일",
-  "홈페이지",
-
-  // 공고/기관/접수 장소 정보
-  "공고기관",
-  "공고일",
-  "접수기관",
-
-  // 접수/신청 관련 (기간/방법)
-  "접수시간",
-  "접수기간",
-  "신청기간",
-  "신청방법",
-  "신청방법 및 신청기간",
-  "지원방법",
-
-  // 안내용 정보 (규모/절차/기준/법령)
-  "지원규모",
-  "선정절차",
-  "평가기준",
-  "관련법령",
-
-  // "추출된 공고기관" 같은 거 제거
-  "추출된",
-
-  // 🔥 초안/작성요령/목차 같은 메타 정보
-  "초안",
-  "사업계획서",
-  "사업계획서목차",
-  "사업계획서 작성요령",
-  "사업계획서작성요령",
-  "작성요령",
-  "제출서류",
-  "제출 양식",
-  "제출양식",
-  "작성 서식",
-  "작성 예시",
-  "작성 방법",
-  "기술제안서",
-  "제안요청서",
-];
-
-// ✅ 비슷한 의미의 Feature를 하나로 묶기 위한 규칙
-const FEATURE_MERGE_RULES = [
-  {
-    canonical: "사업기간",
-    keywords: ["사업기간", "주요 추진일정", "공공AX 프로젝트 사업기간"],
-  },
-];
-
-const normalizeFeatureLabel = (rawLabel) => {
-  for (const rule of FEATURE_MERGE_RULES) {
-    if (rule.keywords.some((kw) => rawLabel.includes(kw))) {
-      return rule.canonical;
-    }
-  }
-  return rawLabel;
-};
-
-const buildNormalizedMissingFeatureList = (rawList = []) => {
-  const result = [];
-  rawList.forEach((item) => {
-    const rawLabel = typeof item === "string" ? item : String(item ?? "");
-    if (FEATURE_EXCLUDE_KEYWORDS.some((kw) => rawLabel.includes(kw))) {
-      return;
-    }
-    const label = normalizeFeatureLabel(rawLabel);
-    if (!result.includes(label)) {
-      result.push(label);
-    }
-  });
-  return result;
 };
 
 // =======================================================
