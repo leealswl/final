@@ -191,16 +191,6 @@ export default function Toolbar({ editor }) {
     const handleExportDocx = async () => {
         if (!editor) return;
 
-        // 1. 서버 저장
-        // try {
-        //     const saveResult = await saveDocument({ force: true });
-        //     if (!saveResult.ok) {
-        //         console.warn('서버 저장 실패:', saveResult.error);
-        //     }
-        // } catch (e) {
-        //     console.error(e);
-        // }
-
         try {
             // [수정 핵심] 화면에 보이는 차트(Canvas)를 클래스 이름으로 정확히 찾습니다.
             // ChartNodeView.jsx에서 정의한 className="paladoc-chart-wrapper"를 사용해야 합니다.
@@ -281,7 +271,36 @@ export default function Toolbar({ editor }) {
 
             // 5. DOCX 생성 및 다운로드
             const blob = await asBlob(fullHtml);
-            saveAs(blob, '제안서초안123.docx');
+
+            // File System Access API 지원 여부 확인
+            if ('showSaveFilePicker' in window) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: '제안서초안.docx',
+                        types: [
+                            {
+                                description: 'Word 문서',
+                                accept: { 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] },
+                            },
+                        ],
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    console.log('파일이 성공적으로 저장되었습니다.');
+                } catch (err) {
+                    if (err.name === 'AbortError') {
+                        console.log('사용자가 저장을 취소했습니다.');
+                    } else {
+                        console.error('파일 저장 실패:', err);
+                        // Fallback: 기존 방식으로 다운로드
+                        saveAs(blob, '제안서초안.docx');
+                    }
+                }
+            } else {
+                // File System Access API 미지원 브라우저: 기존 방식 사용
+                saveAs(blob, '제안서초안.docx');
+            }
         } catch (err) {
             console.error('DOCX 내보내기 오류:', err);
             alert('DOCX 파일을 생성하는 중 오류가 발생했습니다.');

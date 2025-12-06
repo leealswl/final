@@ -37,11 +37,6 @@ const Banner01 = () => {
                                 <br />
                                 documents
                             </Typography>
-                            <Typography data-aos="fade-up" data-aos-once="false" data-aos-delay="200" textAlign={'center'} fontFamily={'Pretendard5'}>
-                                Out-of-the-box, Markdown-Friendly
-                                <br />
-                                Full framework support (React, Vue Angular, Svelte)
-                            </Typography>
                         </Box>
                         <Button
                             data-aos="fade-up"
