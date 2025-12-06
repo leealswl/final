@@ -26,109 +26,14 @@ import { useFileStore } from "../../../store/useFileStore";
 import { useProjectStore } from "../../../store/useProjectStore";
 import { useVerifyStore } from "../../../store/useVerifyStore";
 import { useNavigate } from "react-router-dom";
+import {
+  FEATURE_EXCLUDE_KEYWORDS,
+  FEATURE_MERGE_RULES,
+  normalizeFeatureLabel,
+  buildNormalizedMissingFeatureList,
+} from "../../../utils/verifyUtils";
 
 // 🔹 공고문 feature 중 UI에서 숨길 메타 정보 키워드
-const FEATURE_EXCLUDE_KEYWORDS = [
-  // 문의/연락/담당자 정보
-  "문의처",
-  "담당자",
-  "전화번호",
-  "이메일",
-  "홈페이지",
-
-  // 공고/기관/접수 장소 정보
-  "공고기관",
-  "공고일",
-  "접수기관",
-
-  // 접수/신청 관련 (기간/방법)
-  "접수시간",
-  "접수기간",
-  "신청기간",
-  "신청방법",
-  "신청방법 및 신청기간",
-  "지원방법",
-
-  // 안내용 정보 (규모/절차/기준/법령)
-  "지원규모",
-  "선정절차",
-  "평가기준",
-  "관련법령",
-
-  // "추출된 공고기관" 같은 거 제거
-  "추출된",
-
-  // 🔥 초안/작성요령/목차 같은 메타 정보
-  "초안",
-  "사업계획서",
-  "사업계획서목차",
-  "사업계획서 작성요령",
-  "사업계획서작성요령",
-  "작성요령",
-  "제출서류",
-  "제출 양식",
-  "제출양식",
-  "작성 서식",
-  "작성 예시",
-  "작성 방법",
-  "기술제안서",
-  "제안요청서",
-  "모집공고",
-  "지원기간",
-  "최종평가",
-];
-
-// ✅ 비슷한 의미의 Feature를 하나로 묶기 위한 규칙
-//   - 예: 사업기간 / 2025년 공공AX 프로젝트 사업기간 / 주요 추진일정 → "사업기간"
-const FEATURE_MERGE_RULES = [
-  {
-    canonical: "사업기간",
-    keywords: [
-      "사업기간",
-      "프로젝트 사업기간",
-      "공공AX 프로젝트 사업기간",
-      "주요 추진일정",
-    ],
-  },
-];
-
-// 라벨 정규화 (예: "2025년 공공AX 프로젝트 사업기간" → "사업기간")
-const normalizeFeatureLabel = (rawLabel) => {
-  for (const rule of FEATURE_MERGE_RULES) {
-    if (rule.keywords.some((kw) => rawLabel.includes(kw))) {
-      return rule.canonical;
-    }
-  }
-  return rawLabel;
-};
-
-// feature_mismatch 배열을
-// 1) EXCLUDE 키워드 제거
-// 2) normalize 해서
-// 3) 중복 제거한 문자열 배열로 만드는 헬퍼
-const buildNormalizedMissingFeatureList = (rawList = []) => {
-  const result = [];
-
-  rawList.forEach((item) => {
-    const rawLabel = typeof item === "string" ? item : String(item ?? "");
-
-    // 숨길 키워드면 스킵
-    if (FEATURE_EXCLUDE_KEYWORDS.some((kw) => rawLabel.includes(kw))) {
-      return;
-    }
-
-    // 사업기간/주요 추진일정 같은 걸 하나의 라벨로 통일
-    const label = normalizeFeatureLabel(rawLabel);
-
-    // 중복 제거
-    if (!result.includes(label)) {
-      result.push(label);
-    }
-  });
-
-  return result;
-};
-
 // =======================================================
 // 🚀 공고문 비교 대시보드 (초안 검증 결과)
 // =======================================================
@@ -779,6 +684,16 @@ function NoticeCriteriaSelfCheck({ data }) {
 // =======================================================
 function LawVerifyDashboard({ results }) {
   const hasResults = results && Object.keys(results).length > 0;
+  // const totalFocusCount = sortedEntries.length;
+
+  // const highRiskFocuses = sortedEntries
+  // .filter(([, r]) =>
+  //   r?.status === "부적합" ||
+  //   r?.risk_level === "HIGH" ||
+  //   (r?.violations && r.violations.length > 0)
+  // )
+  // .slice(0, 3) // 상위 3개까지만
+  // .map(([, r]) => r.label);
 
   const {
     statusCounts,
@@ -926,7 +841,7 @@ function LawVerifyDashboard({ results }) {
           <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
             <Box sx={{ flex: 1 }}>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                summary
+                법령 검증 종합 의견
               </Typography>
 
               <Stack spacing={1.2} sx={{ mt: 1.5, mb: 3 }}>
@@ -1133,7 +1048,38 @@ function LawVerifyDashboard({ results }) {
                     <Typography sx={{ fontWeight: 600, mb: 1 }}>
                       법령 위반 가능성이 있는 조항
                     </Typography>
-                    <List dense>
+                    <Stack spacing={1.2} sx={{ mt: 1.5, mb: 3 }}>
+                      {/* 전체 분포 한 줄 요약 */}
+                      <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                        총 {totalFocusCount}개 관점 중{" "}
+                        <b>적합 {statusCounts.적합}개</b>,{" "}
+                        <b>보완 {statusCounts.보완}개</b>,{" "}
+                        <b>부적합 {statusCounts.부적합}개</b>로 평가되었습니다.
+                      </Typography>
+
+                      {/* 법령 위반 리스크 한 줄 요약 */}
+                      {overallViolationSeverity && (
+                        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                          전반적인 법령 위반 가능성은{" "}
+                          <b>{SEVERITY_LABELS[overallViolationSeverity]}</b> 수준이며
+                          {highRiskFocuses.length > 0 && (
+                            <>,&nbsp;특히 {highRiskFocuses.join(", ")} 관점에서 리스크가 큽니다.</>
+                          )}
+                          .
+                        </Typography>
+                      )}
+
+                      {/* 보완해야 할 항목 개수 안내 */}
+                      {actionItems.length > 0 && (
+                        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                          세부적으로 보완이 권장된 항목은 총{" "}
+                          <b>{actionItems.length}개</b>이며, 아래{" "}
+                          <b>관점별 상세 분석</b>에서 구체적인 수정 제안을 확인할 수 있습니다.
+                        </Typography>
+                      )}
+                    </Stack>
+
+                    {/* <List dense>
                       {r.violations.map((v, idx) => (
                         <ListItem key={idx} alignItems="flex-start">
                           <ListItemText
@@ -1200,7 +1146,7 @@ function LawVerifyDashboard({ results }) {
                           />
                         </ListItem>
                       ))}
-                    </List>
+                    </List> */}
                   </Box>
                 )}
 
@@ -1274,6 +1220,7 @@ function VerifyView3() {
     compareAll,
     runNoticeEvaluation,
     noticeEvalResult,
+    runFullVerify,
   } = useVerifyStore();
 
   // 🔹 종합 리포트 이동 가능 여부 (검증 결과가 있어야 의미 있음)
@@ -1304,6 +1251,15 @@ function VerifyView3() {
     // 순차 실행: compare → notice evaluation
     await compareAll(projectIdx);
     await runNoticeEvaluation(projectIdx);
+  };
+
+  const handleFullVerifyClick = async () => {
+    if (!projectIdx) {
+      alert("프로젝트 정보(projectIdx)가 없습니다.");
+      console.error("[VerifyView3] projectIdx 없음:", projectIdx);
+      return;
+    }
+    await runFullVerify(projectIdx);
   };
 
   const handleReportClick = () => {
@@ -1355,6 +1311,10 @@ function VerifyView3() {
 
           <Button variant="outlined" onClick={handleCompareClick}>
             초안 검증
+          </Button>
+
+          <Button variant="contained" color="secondary" onClick={handleFullVerifyClick}>
+            통합 검증
           </Button>
 
           <Button

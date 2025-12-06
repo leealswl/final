@@ -8,7 +8,15 @@ import {
   Chip,
 } from "@mui/material";
 
-import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  Label,
+} from "recharts";
+import { NoticeCriteriaChart } from "./NoticeCriteriaSelfCheck";
 
 // 색상 상수
 const STATUS_COLORS = { 적합: "#4caf50", 보완: "#ffb300", 부적합: "#f44336" };
@@ -25,6 +33,12 @@ const SEVERITY_LABELS = {
 export default function SummaryHeader({ results, compareResult, noticeEval }) {
   const hasLaw = results && Object.keys(results).length > 0;
   const hasCompare = !!compareResult;
+  const noticeData = useMemo(() => {
+    if (!noticeEval) return null;
+    const root = noticeEval.data ? noticeEval.data : noticeEval;
+    const items = Array.isArray(root.items) ? root.items : [];
+    return { ...root, items };
+  }, [noticeEval]);
 
   // ⚖️ 법령 요약 계산
   const lawSummary = useMemo(() => {
@@ -139,24 +153,24 @@ export default function SummaryHeader({ results, compareResult, noticeEval }) {
 
   // 🟦 자가진단 퍼센트
   const selfPercent = useMemo(() => {
-    if (!noticeEval) return null;
+    if (!noticeData) return null;
 
-    if (typeof noticeEval.percent === "number") {
-      return Math.max(0, Math.min(noticeEval.percent, 100));
+    if (typeof noticeData.percent === "number") {
+      return Math.max(0, Math.min(noticeData.percent, 100));
     }
 
     if (
-      typeof noticeEval.total_score === "number" &&
-      typeof noticeEval.total_max_score === "number" &&
-      noticeEval.total_max_score > 0
+      typeof noticeData.total_score === "number" &&
+      typeof noticeData.total_max_score === "number" &&
+      noticeData.total_max_score > 0
     ) {
       return Math.round(
-        (noticeEval.total_score / noticeEval.total_max_score) * 100
+        (noticeData.total_score / noticeData.total_max_score) * 100
       );
     }
 
     return null;
-  }, [noticeEval]);
+  }, [noticeData]);
 
   // 🔴 도넛용 데이터 생성
   const statusChartData =
@@ -190,15 +204,25 @@ export default function SummaryHeader({ results, compareResult, noticeEval }) {
       {/* 카드 1: 전체 요약 */}
       <Card sx={{ flex: 1.1 }}>
         <CardContent>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            전체 평가 요약
-          </Typography>
+          {/* <Typography >
+            평가기준별 진단 점수
+          </Typography> */}
+
+          {/* 자가진단 점수 */}
+            {noticeData && selfPercent !== null && (
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  공고문 평가기준 자가진단 충족률 : 
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>{selfPercent}%</Typography>
+              </Stack>
+            )}
 
           <Stack spacing={1.5} sx={{ mt: 1.5 }}>
             {lawSummary && (
               <>
                 {/* 법령 판단 */}
-                <Stack direction="row" spacing={1.5} alignItems="center">
+                {/* <Stack direction="row" spacing={1.5} alignItems="center">
                   <Typography sx={{ minWidth: 80, color: "text.secondary" }}>
                     법령 판단
                   </Typography>
@@ -217,10 +241,10 @@ export default function SummaryHeader({ results, compareResult, noticeEval }) {
                   ) : (
                     "-"
                   )}
-                </Stack>
+                </Stack> */}
 
                 {/* 리스크 */}
-                <Stack direction="row" spacing={1.5} alignItems="center">
+                {/* <Stack direction="row" spacing={1.5} alignItems="center">
                   <Typography sx={{ minWidth: 80, color: "text.secondary" }}>
                     리스크
                   </Typography>
@@ -229,10 +253,10 @@ export default function SummaryHeader({ results, compareResult, noticeEval }) {
                   ) : (
                     "-"
                   )}
-                </Stack>
+                </Stack> */}
 
                 {/* 위반 가능성 */}
-                <Stack direction="row" spacing={1.5} alignItems="center">
+                {/* <Stack direction="row" spacing={1.5} alignItems="center">
                   <Typography sx={{ minWidth: 80, color: "text.secondary" }}>
                     법령 위반 가능성
                   </Typography>
@@ -254,12 +278,12 @@ export default function SummaryHeader({ results, compareResult, noticeEval }) {
                   ) : (
                     "-"
                   )}
-                </Stack>
+                </Stack> */}
               </>
             )}
 
             {/* 공고문 충족률 */}
-            {compareSummary && (
+            {/* {compareSummary && (
               <Stack direction="row" spacing={1.5} alignItems="center">
                 <Typography sx={{ minWidth: 80, color: "text.secondary" }}>
                   공고문 충족률
@@ -269,18 +293,19 @@ export default function SummaryHeader({ results, compareResult, noticeEval }) {
                   {compareSummary.combinedPercent !== null && "%"}
                 </Typography>
               </Stack>
-            )}
+            )} */}
 
-            {/* 자가진단 점수 */}
-            {noticeEval && selfPercent !== null && (
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Typography sx={{ minWidth: 80, color: "text.secondary" }}>
-                  자가진단 점수
-                </Typography>
-                <Typography sx={{ fontWeight: 700 }}>{selfPercent}%</Typography>
-              </Stack>
-            )}
+            
           </Stack>
+
+          {noticeData?.items?.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              {/* <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                평가기준별 진단 점수
+              </Typography> */}
+              <NoticeCriteriaChart items={noticeData.items} height={220} yWidth={150} />
+            </Box>
+          )}
         </CardContent>
       </Card>
 
@@ -292,7 +317,7 @@ export default function SummaryHeader({ results, compareResult, noticeEval }) {
               법령 검증 분포
             </Typography>
 
-            <Box sx={{ display: "flex", justifyContent: "center" }}>
+            <Box sx={{ display: "flex", justifyContent: "center", width: 220, height: 200, mx: "auto" }}>
               <PieChart width={220} height={200}>
                 <Pie
                   data={statusChartData}
@@ -307,6 +332,14 @@ export default function SummaryHeader({ results, compareResult, noticeEval }) {
                       fill={STATUS_COLORS[entry.name] || "#999"}
                     />
                   ))}
+                  {lawFitPercent !== null && (
+                    <Label
+                      value={`${lawFitPercent}%`}
+                      position="center"
+                      fill="#000"
+                      style={{ fontSize: 20, fontWeight: 800 }}
+                    />
+                  )}
                 </Pie>
                 <Tooltip />
                 <Legend />
@@ -349,6 +382,14 @@ export default function SummaryHeader({ results, compareResult, noticeEval }) {
                         fill={COVERAGE_COLORS[idx] || "#999"}
                       />
                     ))}
+                    {coverageRate !== null && (
+                      <Label
+                        value={`${coverageRate}%`}
+                        position="center"
+                        fill="#000"
+                        style={{ fontSize: 20, fontWeight: 800 }}
+                      />
+                    )}
                   </Pie>
                   <Tooltip />
                   <Legend />

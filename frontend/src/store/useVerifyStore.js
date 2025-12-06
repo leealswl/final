@@ -1,7 +1,8 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { draftApi } from "../utils/draftApi";
 import { tiptapDocToPlainText } from "../utils/tiptapText";
-import { verifyLawSection,evaluateNoticeCriteria  } from "../utils/fastapi";
+import { verifyLawSection, evaluateNoticeCriteria, runFullVerify as runFullVerifyApi } from "../utils/fastapi";
 import { compareDraft } from "../utils/compareDraft";
 
 /**
@@ -34,7 +35,9 @@ export const FOCUSES = [
   },
 ];
 
-export const useVerifyStore = create((set, get) => ({
+export const useVerifyStore = create(
+  persist(
+    (set, get) => ({
   loading: false,
   progress: 0,
 
@@ -230,4 +233,76 @@ export const useVerifyStore = create((set, get) => ({
       set({ loading: false });
     }
   },
-}));
+
+  // 통합 검증 (공고문 비교 + 법령 다중 포커스 + 평가기준)
+  runFullVerify: async (projectIdx) => {
+    const { draftJson } = get();
+
+    if (!draftJson) {
+      alert("초안 JSON이 없습니다.");
+      console.error("[runFullVerify] draftJson 없음");
+      return;
+    }
+
+    if (!projectIdx) {
+      alert("프로젝트 정보(projectIdx)가 없습니다.");
+      console.error("[runFullVerify] projectIdx 없음:", projectIdx);
+      return;
+    }
+
+    const focusKeys = FOCUSES.map((f) => f.key);
+
+    try {
+      set({ loading: true, progress: 10, activeTab: "law" });
+
+      const res = await runFullVerifyApi({
+        projectIdx,
+        draftJson,
+        lawFocuses: focusKeys,
+      });
+
+      if (res.status !== "success") {
+        alert(res.message || "통합 검증 중 오류가 발생했습니다.");
+        console.error("[runFullVerify] server error:", res);
+        return;
+      }
+
+      const data = res.data || {};
+      const lawResults = data.law_results || {};
+
+      const mappedResults = {};
+      FOCUSES.forEach((f) => {
+        mappedResults[f.key] = {
+          label: f.label,
+          ...(lawResults[f.key] || {}),
+        };
+      });
+
+      set({
+        results: mappedResults,
+        compareResult: data.compare_result || null,
+        noticeEvalResult: data.notice_result || null,
+        progress: 100,
+      });
+    } catch (e) {
+      console.error("[runFullVerify] error:", e.response?.data || e.message || e);
+      alert("통합 검증 중 서버 오류가 발생했습니다. 콘솔을 확인해 주세요.");
+    } finally {
+      set({ loading: false });
+    }
+  },
+    }),
+    {
+      name: "verify-cache",
+      storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({
+        text: state.text,
+        draftJson: state.draftJson,
+        results: state.results,
+        compareResult: state.compareResult,
+        noticeEvalResult: state.noticeEvalResult,
+        activeTab: state.activeTab,
+      }),
+    }
+  )
+);
