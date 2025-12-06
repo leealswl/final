@@ -135,16 +135,15 @@ export default function VerifyReport2() {
           {/* {noticeEvalResult && (
             <NoticeCriteriaSelfCheck data={noticeEvalResult} />
           )} */}
-
-          {/* 상세 분석 */}
-          {/* {hasLaw && <LawDetailSection results={results} />}
-          {hasCompare && <NoticeDetailSection compareResult={compareResult} />} */}
           <VerifySummaryCard
             results={results}
             compareResult={compareResult}
             noticeEval={noticeEvalResult}
           />
 
+          {/* 상세 분석 */}
+          {/* {hasLaw && <LawDetailSection results={results} />}
+          {hasCompare && <NoticeDetailSection compareResult={compareResult} />} */}
           <OverallAssessment
             results={results}
             compareResult={compareResult}
