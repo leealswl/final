@@ -6,7 +6,7 @@ load_dotenv()
 
 import json
 import uuid
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from pydantic import BaseModel # ChatRequest, ResumeRequest 정의를 위해 필요
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
@@ -25,7 +25,12 @@ from fastapi.concurrency import run_in_threadpool
 from typing import List
 from fastapi.middleware.cors import CORSMiddleware
 
-from law_rag import verify_law_compliance
+from verify_validation_agent.law_rag import verify_law_compliance
+from verify_validation_agent.evaluation_criteria import evaluate_using_notice_criteria, find_eval_section
+
+# LangGraph 기반 검증 파이프라인
+from verify_validation_agent.verify_graph import create_verify_graph
+verify_app = create_verify_graph()
 
 
 
@@ -76,6 +81,16 @@ class ChatRequest(BaseModel):
 class VerifyRequest(BaseModel):
     text: str              # 검증할 초안 텍스트 (섹션 하나)
     focus: str | None = None   # 예: "연구개발비", "수행계획", "기관요건" 등
+
+class NoticeEvalRequest(BaseModel):
+    projectIdx: int      # 어떤 공고(project)를 기준으로 할지
+    draftText: str       # 초안 텍스트 (전체 또는 평가 관련 부분)
+
+class FullVerifyRequest(BaseModel):
+    projectIdx: int
+    draftJson: Dict[str, Any]
+    lawFocus: Optional[str] = None  # 단일 포커스 (호환용)
+    lawFocuses: Optional[List[str]] = None  # 여러 포커스
 
 
 app = FastAPI(
@@ -524,8 +539,207 @@ async def verify_law(req: VerifyRequest):
             }
         )
     
-from comparison import router as compare_router
+from verify_validation_agent.comparison import router as compare_router
 app.include_router(compare_router, prefix="/compare")
+
+@app.post("/evaluate/notice-criteria")
+async def evaluate_notice_criteria(req: NoticeEvalRequest):
+    """
+    1) Spring 백엔드의 /api/analysis/get-context 에서 공고 분석 컨텍스트 가져오고
+    2) 그 중 '평가기준' feature의 full_content를 뽑아서
+    3) 공고 평가기준 기준 자가진단 점수를 계산해서 반환
+    """
+    try:
+        backend_url = os.getenv("BACKEND_URL", "http://localhost:8081")
+        print(f"?? 공고 평가기준 자가진단 요청: projectIdx={req.projectIdx}")
+
+        # 1. 백엔드에서 분석 컨텍스트 가져오기
+        async with httpx.AsyncClient() as client:
+            res = await client.get(
+                f"{backend_url}/api/analysis/get-context",
+                params={"projectIdx": req.projectIdx},
+                timeout=10.0,
+            )
+
+        if res.status_code != 200:
+            print("?? get-context HTTP 실패:", res.status_code)
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "status": "error",
+                    "message": f"공고 컨텍스트 조회 실패 (HTTP {res.status_code})",
+                },
+            )
+
+        body = res.json()
+        if body.get("status") != "success":
+            print("?? get-context 응답 status != success:", body)
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "status": "error",
+                    "message": body.get("message", "공고 컨텍스트 조회 중 오류"),
+                },
+            )
+
+        ctx = body.get("data") or {}
+        extracted_features = ctx.get("extracted_features") or []
+        print(f"  ? extracted_features: {len(extracted_features)}개")
+
+        # 2. 평가기준 섹션 추출
+        criteria_raw_text = find_eval_section(extracted_features)
+        if not criteria_raw_text:
+            print("?? '평가기준' 섹션을 찾지 못했습니다.")
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "status": "error",
+                    "message": "공고문에서 '평가기준' 섹션을 찾지 못했습니다.",
+                },
+            )
+
+        # 3. 공고 평가기준 기준으로 초안 자가진단 수행
+        result = evaluate_using_notice_criteria(
+            draft_text=req.draftText,
+            criteria_raw_text=criteria_raw_text,
+        )
+
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "data": result,
+            },
+        )
+
+    except Exception as e:
+        print("? /evaluate/notice-criteria 처리 중 오류:", e)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "message": "공고 평가기준 자가진단 중 서버 오류 발생",
+                "detail": str(e),
+            },
+        )
+
+# @app.post("/evaluate/notice-criteria")
+# async def evaluate_notice_criteria(req: NoticeEvalRequest):
+#     """
+#     1) Spring 백엔드의 /api/analysis/get-context 에서 공고 분석 컨텍스트 가져오고
+#     2) 그 중 '평가기준' feature의 full_content를 뽑아서
+#     3) 공고 평가기준 기준 자가진단 점수를 계산해서 반환
+#     """
+#     try:
+#         backend_url = os.getenv("BACKEND_URL", "http://localhost:8081")
+#         print(f"🔎 공고 평가기준 자가진단 요청: projectIdx={req.projectIdx}")
+
+#         # 1. 백엔드에서 분석 컨텍스트 가져오기
+#         async with httpx.AsyncClient() as client:
+#             res = await client.get(
+#                 f"{backend_url}/api/analysis/get-context",
+#                 params={"projectIdx": req.projectIdx},
+#                 timeout=10.0,
+#             )
+
+#         if res.status_code != 200:
+#             print("⚠️ get-context HTTP 실패:", res.status_code)
+#             return JSONResponse(
+#                 status_code=500,
+#                 content={
+#                     "status": "error",
+#                     "message": f"공고 컨텍스트 조회 실패 (HTTP {res.status_code})",
+#                 },
+#             )
+
+#         body = res.json()
+#         if body.get("status") != "success":
+#             print("⚠️ get-context 응답 status != success:", body)
+#             return JSONResponse(
+#                 status_code=500,
+#                 content={
+#                     "status": "error",
+#                     "message": body.get("message", "공고 컨텍스트 조회 중 오류"),
+#                 },
+#             )
+
+#         ctx = body.get("data") or {}
+#         extracted_features = ctx.get("extracted_features") or []
+#         print(f"  ✅ extracted_features: {len(extracted_features)}개")
+
+#         # 2. 평가기준 섹션 추출
+#         criteria_raw_text = find_eval_section(extracted_features)
+#         if not criteria_raw_text:
+#             print("⚠️ '평가기준' 섹션을 찾지 못했습니다.")
+#             return JSONResponse(
+#                 status_code=400,
+#                 content={
+#                     "status": "error",
+#                     "message": "공고문에서 '평가기준' 섹션을 찾지 못했습니다.",
+#                 },
+#             )
+
+#         # 3. 공고 평가기준 기준으로 초안 자가진단 수행
+#         result = evaluate_using_notice_criteria(
+#             draft_text=req.draftText,
+#             criteria_raw_text=criteria_raw_text,
+#         )
+
+#         return JSONResponse(
+#             status_code=200,
+#             content={
+#                 "status": "success",
+#                 "data": result,
+#             },
+#         )
+
+#     except Exception as e:
+#         print("❌ /evaluate/notice-criteria 처리 중 오류:", e)
+#         return JSONResponse(
+#             status_code=500,
+#             content={
+#                 "status": "error",
+#                 "message": "공고 평가기준 자가진단 중 서버 오류 발생",
+#                 "detail": str(e),
+#             },
+#         )
+    
+@app.post("/verify/full")
+async def verify_full(req: FullVerifyRequest):
+    """
+    공고 비교 + 법령 검증 + 공고 평가기준 자가진단을
+    LangGraph 기반으로 한 번에 수행하는 통합 검증 엔드포인트.
+    """
+    try:
+        input_state = {
+            "project_idx": req.projectIdx,
+            "draft_json": req.draftJson,
+            "law_focus": req.lawFocus,
+            "law_focuses": req.lawFocuses,
+        }
+
+        # batch_app.invoke와 동일하게 쓰면 됨 (동기 그래프를 쓰니까)
+        result = await run_in_threadpool(verify_app.invoke, input_state)
+
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "data": result,  # compare_result, law_result, notice_result, summary 포함
+            },
+        )
+
+    except Exception as e:
+        print("❌ /verify/full 처리 중 오류:", e)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "message": "통합 검증 중 서버 오류 발생",
+                "detail": str(e),
+            },
+        )
+
 # ========================================
 # 실행 (개발용)
 # ========================================

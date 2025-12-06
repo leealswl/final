@@ -8,7 +8,7 @@ import robotIcon from '../edit/icon/robot-icon.png';
 import { useFileStore } from '../../../store/useFileStore';
 import { Typewriter } from 'react-simple-typewriter';
 
-const toAbs = (p) => (p?.startsWith('http') ? p : `http://localhost:8081${p}`);
+// const toAbs = (p) => (p?.startsWith('http') ? p : `http://localhost:8081${p}`);
 
 const ChatBotMUI = () => {
     const [messages, setMessages] = useState([{ sender: 'bot', text: '안녕하세요! 기획서 작성을 도와드릴 ai도우미입니다 목차를 보고 원하는 챕터를 알려주세요' }]);
@@ -67,7 +67,7 @@ const ChatBotMUI = () => {
                             console.log('[ChatBotMUI] 📂 파일 읽기 시도:', filePath);
 
                             // 파일에서 JSON 읽기 (캐시 방지 헤더 추가)
-                            const response = await fetch(toAbs(`${filePath}?t=${timestamp}`), {
+                            const response = await fetch(`${filePath}?t=${timestamp}`, {
                                 // const response = await fetch(filePath, {
                                 method: 'GET',
                                 headers: {
