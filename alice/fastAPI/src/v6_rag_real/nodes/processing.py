@@ -404,6 +404,7 @@ def extract_features_rag(state: BatchState) -> BatchState:
                 'project_period',         # 사업기간
                 'support_scale',          # 지원규모
                 'announcing_agency',      # 공고기관 (핵심 정보)
+                'evaluation_criteria',    # 평가기준 (항목별 배점 포함)
             ]
             is_core_feature = feature_def['feature_key'] in core_features
             
