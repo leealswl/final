@@ -180,10 +180,29 @@ useEffect(() => {
         onExpandedItemsChange={(_e, items) => setExpandedItems(items)}
         onItemClick={(_e, itemId) => selectNode(itemId)}
         sx={{
-          "& .MuiTreeItem-label": { py: 0.5 },
-          "& .MuiTreeItem-content.Mui-selected .MuiTreeItem-label": {
-            bgcolor: "rgba(2,132,199,0.10)",
+          "& .MuiTreeItem-content": {
+            padding: 0,
+            "&:hover": {
+              bgcolor: "transparent !important",
+            },
+            "&.Mui-selected": {
+              bgcolor: "transparent !important",
+            },
+            "&.Mui-selected:hover": {
+              bgcolor: "transparent !important",
+            },
+          },
+          "& .MuiTreeItem-label": {
+            py: 0.5,
+            px: 1,
             borderRadius: 1,
+            transition: "background-color 0.15s",
+          },
+          "& .MuiTreeItem-content:not(.Mui-selected):hover > .MuiTreeItem-label": {
+            bgcolor: "rgba(0,0,0,0.04)",
+          },
+          "& .MuiTreeItem-content.Mui-selected > .MuiTreeItem-label": {
+            bgcolor: "rgba(2,132,199,0.12)",
           },
         }}
       >
