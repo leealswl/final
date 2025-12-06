@@ -296,13 +296,13 @@ def create_verify_graph():
     graph.add_node("compare", compare_node)
     graph.add_node("law", law_node)
     graph.add_node("notice", notice_node)
-    graph.add_node("summary", summary_node)
+    graph.add_node("summary_node", summary_node)
 
     graph.set_entry_point("load_context")
     graph.add_edge("load_context", "compare")
     graph.add_edge("compare", "law")
     graph.add_edge("law", "notice")
-    graph.add_edge("notice", "summary")
-    graph.add_edge("summary", END)
+    graph.add_edge("notice", "summary_node")
+    graph.add_edge("summary_node", END)
 
     return graph.compile()
