@@ -684,16 +684,7 @@ function NoticeCriteriaSelfCheck({ data }) {
 // =======================================================
 function LawVerifyDashboard({ results }) {
   const hasResults = results && Object.keys(results).length > 0;
-  // const totalFocusCount = sortedEntries.length;
 
-  // const highRiskFocuses = sortedEntries
-  // .filter(([, r]) =>
-  //   r?.status === "부적합" ||
-  //   r?.risk_level === "HIGH" ||
-  //   (r?.violations && r.violations.length > 0)
-  // )
-  // .slice(0, 3) // 상위 3개까지만
-  // .map(([, r]) => r.label);
 
   const {
     statusCounts,
@@ -832,6 +823,17 @@ function LawVerifyDashboard({ results }) {
     MEDIUM: "warning",
     HIGH: "error",
   };
+
+  const totalFocusCount = sortedEntries.length;
+
+  const highRiskFocuses = sortedEntries
+  .filter(([, r]) =>
+    r?.status === "부적합" ||
+    r?.risk_level === "HIGH" ||
+    (r?.violations && r.violations.length > 0)
+  )
+  .slice(0, 3) // 상위 3개까지만
+  .map(([, r]) => r.label);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: 3 }}>
@@ -1048,17 +1050,17 @@ function LawVerifyDashboard({ results }) {
                     <Typography sx={{ fontWeight: 600, mb: 1 }}>
                       법령 위반 가능성이 있는 조항
                     </Typography>
-                    <Stack spacing={1.2} sx={{ mt: 1.5, mb: 3 }}>
+                    {/* <Stack spacing={1.2} sx={{ mt: 1.5, mb: 3 }}> */}
                       {/* 전체 분포 한 줄 요약 */}
-                      <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                      {/* <Typography variant="body2" sx={{ color: "text.secondary" }}>
                         총 {totalFocusCount}개 관점 중{" "}
                         <b>적합 {statusCounts.적합}개</b>,{" "}
                         <b>보완 {statusCounts.보완}개</b>,{" "}
                         <b>부적합 {statusCounts.부적합}개</b>로 평가되었습니다.
-                      </Typography>
+                      </Typography> */}
 
                       {/* 법령 위반 리스크 한 줄 요약 */}
-                      {overallViolationSeverity && (
+                      {/* {overallViolationSeverity && (
                         <Typography variant="body2" sx={{ color: "text.secondary" }}>
                           전반적인 법령 위반 가능성은{" "}
                           <b>{SEVERITY_LABELS[overallViolationSeverity]}</b> 수준이며
@@ -1066,20 +1068,20 @@ function LawVerifyDashboard({ results }) {
                             <>,&nbsp;특히 {highRiskFocuses.join(", ")} 관점에서 리스크가 큽니다.</>
                           )}
                           .
-                        </Typography>
-                      )}
+                        </Typography> */}
+                      {/* )} */}
 
                       {/* 보완해야 할 항목 개수 안내 */}
-                      {actionItems.length > 0 && (
+                      {/* {actionItems.length > 0 && (
                         <Typography variant="body2" sx={{ color: "text.secondary" }}>
                           세부적으로 보완이 권장된 항목은 총{" "}
                           <b>{actionItems.length}개</b>이며, 아래{" "}
                           <b>관점별 상세 분석</b>에서 구체적인 수정 제안을 확인할 수 있습니다.
                         </Typography>
                       )}
-                    </Stack>
+                    </Stack> */}
 
-                    {/* <List dense>
+                    <List dense>
                       {r.violations.map((v, idx) => (
                         <ListItem key={idx} alignItems="flex-start">
                           <ListItemText
@@ -1146,7 +1148,7 @@ function LawVerifyDashboard({ results }) {
                           />
                         </ListItem>
                       ))}
-                    </List> */}
+                    </List>
                   </Box>
                 )}
 
@@ -1218,9 +1220,7 @@ function VerifyView3() {
     loadDraft,
     verifyAll,
     compareAll,
-    runNoticeEvaluation,
     noticeEvalResult,
-    runFullVerify,
   } = useVerifyStore();
 
   // 🔹 종합 리포트 이동 가능 여부 (검증 결과가 있어야 의미 있음)
@@ -1234,32 +1234,23 @@ function VerifyView3() {
   }, [filePath, loadDraft]);
 
   const handleVerifyAllClick = () => {
-    verifyAll();
+    if (!projectIdx) {
+      alert("프로젝트 정보(projectIdx)가 없습니다.");
+      console.error("[VerifyView3] projectIdx 없음:", projectIdx);
+      return;
+    }
+    verifyAll(projectIdx);
   };
 
-  // ✅ 초안 검증 버튼 클릭 시
-  //  1) 공고문 vs 초안 비교(compareAll)
-  //  2) 공고문 평가기준 자가진단(runNoticeEvaluation)
+  // ✅ 초안 검증 버튼 클릭 시 (LangGraph 통합 실행)
   const handleCompareClick = async () => {
-    // projectIdx 없으면 둘 다 의미 없으니까 가드 한 번
     if (!projectIdx) {
       alert("프로젝트 정보(projectIdx)가 없습니다.");
       console.error("[VerifyView3] projectIdx 없음:", projectIdx);
       return;
     }
 
-    // 순차 실행: compare → notice evaluation
     await compareAll(projectIdx);
-    await runNoticeEvaluation(projectIdx);
-  };
-
-  const handleFullVerifyClick = async () => {
-    if (!projectIdx) {
-      alert("프로젝트 정보(projectIdx)가 없습니다.");
-      console.error("[VerifyView3] projectIdx 없음:", projectIdx);
-      return;
-    }
-    await runFullVerify(projectIdx);
   };
 
   const handleReportClick = () => {
@@ -1311,10 +1302,6 @@ function VerifyView3() {
 
           <Button variant="outlined" onClick={handleCompareClick}>
             초안 검증
-          </Button>
-
-          <Button variant="contained" color="secondary" onClick={handleFullVerifyClick}>
-            통합 검증
           </Button>
 
           <Button
