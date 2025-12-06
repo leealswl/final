@@ -531,36 +531,29 @@ function NoticeCriteriaSelfCheck({ data }) {
 // 🚀 법령 검증 대시보드
 // =======================================================
 function LawVerifyDashboard({ results }) {
-    const hasResults = results && Object.keys(results).length > 0;
+  const hasResults = results && Object.keys(results).length > 0;
 
-    const { statusCounts, overallStatus, overallRisk, actionItems, sortedEntries, violationItems, overallViolationSeverity } = useMemo(() => {
-        if (!hasResults) {
-            return {
-                statusCounts: {},
-                overallStatus: null,
-                overallRisk: null,
-                actionItems: [],
-                sortedEntries: [],
-                violationItems: [],
-                overallViolationSeverity: null,
-            };
-        }
 
-        const statusCounts = { 적합: 0, 보완: 0, 부적합: 0 };
-        const actionItems = [];
-        const violationItems = [];
-        const entries = Object.entries(results);
-
-        const SEVERITY_ORDER = { LOW: 1, MEDIUM: 2, HIGH: 3 };
-
-        let overallViolationSeverity = null;
-
-        entries.forEach(([key, r]) => {
-            if (!r) return;
-
-            if (r.status && statusCounts[r.status] !== undefined) {
-                statusCounts[r.status] += 1;
-            }
+  const {
+    statusCounts,
+    overallStatus,
+    overallRisk,
+    actionItems,
+    sortedEntries,
+    violationItems,
+    overallViolationSeverity,
+  } = useMemo(() => {
+    if (!hasResults) {
+      return {
+        statusCounts: {},
+        overallStatus: null,
+        overallRisk: null,
+        actionItems: [],
+        sortedEntries: [],
+        violationItems: [],
+        overallViolationSeverity: null,
+      };
+    }
 
             // 부족한 요소 → 보완 항목
             if (Array.isArray(r.missing)) {
@@ -654,6 +647,128 @@ function LawVerifyDashboard({ results }) {
         MEDIUM: '위험도 보통',
         HIGH: '위험도 높음',
     };
+  }, [results, hasResults]);
+
+  const STATUS_COLORS = { 적합: "#4caf50", 보완: "#ffb300", 부적합: "#f44336" };
+  const statusChartData = Object.entries(statusCounts)
+    .filter(([, count]) => count > 0)
+    .map(([name, value]) => ({ name, value }));
+
+  const JUDGMENT_LABELS = {
+    NO_ISSUE: "법령 위반 징후 없음",
+    POTENTIAL_VIOLATION: "법령 위반 가능성 있음",
+    POSSIBLE_ISSUE: "법령 리스크 가능성 있음",
+    UNCLEAR: "법령 위반 판단 어려움",
+  };
+
+  const JUDGMENT_COLORS = {
+    NO_ISSUE: "success",
+    POTENTIAL_VIOLATION: "error",
+    POSSIBLE_ISSUE: "warning",
+    UNCLEAR: "default",
+  };
+
+  const SEVERITY_LABELS = {
+    LOW: "위험도 낮음",
+    MEDIUM: "위험도 보통",
+    HIGH: "위험도 높음",
+  };
+
+  const SEVERITY_CHIP_COLORS = {
+    LOW: "success",
+    MEDIUM: "warning",
+    HIGH: "error",
+  };
+
+  const totalFocusCount = sortedEntries.length;
+
+  const highRiskFocuses = sortedEntries
+  .filter(([, r]) =>
+    r?.status === "부적합" ||
+    r?.risk_level === "HIGH" ||
+    (r?.violations && r.violations.length > 0)
+  )
+  .slice(0, 3) // 상위 3개까지만
+  .map(([, r]) => r.label);
+
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: 3 }}>
+      {/* 요약 카드 */}
+      <Card>
+        <CardContent>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                법령 검증 종합 의견
+              </Typography>
+
+              <Stack spacing={1.2} sx={{ mt: 1.5, mb: 3 }}>
+                {sortedEntries.map(([key, r]) => (
+                  <Box key={key}>
+                    <Typography sx={{ fontWeight: 600 }}>{r.label}</Typography>
+                    {r.reason && (
+                      <Typography
+                        sx={{
+                          ml: 1,
+                          color: "text.secondary",
+                          whiteSpace: "pre-line",
+                        }}
+                      >
+                        {r.reason}
+                      </Typography>
+                    )}
+                  </Box>
+                ))}
+              </Stack>
+            </Box>
+
+            {/* 🔵 고정 크기 PieChart + Chip */}
+            <Box sx={{ width: 260 }}>
+              {statusChartData.length === 0 ? (
+                <Box
+                  sx={{
+                    height: 230,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Typography
+                    sx={{ textAlign: "center", color: "text.secondary" }}
+                  >
+                    검증 결과 없음
+                  </Typography>
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    width: 260,
+                    height: 230,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <PieChart width={260} height={230}>
+                    <Pie
+                      data={statusChartData}
+                      dataKey="value"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={3}
+                    >
+                      {statusChartData.map((entry, idx) => (
+                        <Cell
+                          key={idx}
+                          fill={STATUS_COLORS[entry.name] || "#999"}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </Box>
+              )}
 
     const SEVERITY_CHIP_COLORS = {
         LOW: 'success',
@@ -785,75 +900,38 @@ function LawVerifyDashboard({ results }) {
                     <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
                         관점별 상세 분석
                     </Typography>
+                    {/* <Stack spacing={1.2} sx={{ mt: 1.5, mb: 3 }}> */}
+                      {/* 전체 분포 한 줄 요약 */}
+                      {/* <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                        총 {totalFocusCount}개 관점 중{" "}
+                        <b>적합 {statusCounts.적합}개</b>,{" "}
+                        <b>보완 {statusCounts.보완}개</b>,{" "}
+                        <b>부적합 {statusCounts.부적합}개</b>로 평가되었습니다.
+                      </Typography> */}
 
-                    {sortedEntries.map(([key, r]) => (
-                        <Accordion key={key} sx={{ boxShadow: 'none' }}>
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                <Stack direction="row" spacing={1} alignItems="center">
-                                    <Typography sx={{ fontWeight: 600 }}>{r.label}</Typography>
+                      {/* 법령 위반 리스크 한 줄 요약 */}
+                      {/* {overallViolationSeverity && (
+                        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                          전반적인 법령 위반 가능성은{" "}
+                          <b>{SEVERITY_LABELS[overallViolationSeverity]}</b> 수준이며
+                          {highRiskFocuses.length > 0 && (
+                            <>,&nbsp;특히 {highRiskFocuses.join(", ")} 관점에서 리스크가 큽니다.</>
+                          )}
+                          .
+                        </Typography> */}
+                      {/* )} */}
 
-                                    {r.status && <Chip size="small" label={r.status} color={r.status === '적합' ? 'success' : r.status === '보완' ? 'warning' : 'error'} />}
+                      {/* 보완해야 할 항목 개수 안내 */}
+                      {/* {actionItems.length > 0 && (
+                        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                          세부적으로 보완이 권장된 항목은 총{" "}
+                          <b>{actionItems.length}개</b>이며, 아래{" "}
+                          <b>관점별 상세 분석</b>에서 구체적인 수정 제안을 확인할 수 있습니다.
+                        </Typography>
+                      )}
+                    </Stack> */}
 
-                                    {r.risk_level && <Chip size="small" variant="outlined" label={r.risk_level} />}
-
-                                    {r.violation_judgment && (
-                                        <Chip
-                                            size="small"
-                                            variant="outlined"
-                                            label={JUDGMENT_LABELS[r.violation_judgment] || r.violation_judgment}
-                                            color={JUDGMENT_COLORS[r.violation_judgment] || 'default'}
-                                        />
-                                    )}
-                                </Stack>
-                            </AccordionSummary>
-
-                            <AccordionDetails>
-                                {/* 법령 위반 가능성 요약 */}
-                                {r.violation_summary && r.violation_summary.trim().length > 0 && (
-                                    <Box
-                                        sx={{
-                                            mb: 2,
-                                            p: 1.5,
-                                            borderRadius: 1,
-                                            bgcolor: 'rgba(244, 67, 54, 0.04)',
-                                            border: '1px solid rgba(244, 67, 54, 0.3)',
-                                        }}
-                                    >
-                                        <Typography sx={{ fontWeight: 600, mb: 0.5 }}>법령 위반 가능성 요약</Typography>
-                                        <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
-                                            {r.violation_summary}
-                                        </Typography>
-                                    </Box>
-                                )}
-
-                                {/* 이 관점에서의 법령 위반 상세 목록 */}
-                                {r.violations?.length > 0 && (
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography sx={{ fontWeight: 600, mb: 1 }}>법령 위반 가능성이 있는 조항</Typography>
-                                        <Stack spacing={1.2} sx={{ mt: 1.5, mb: 3 }}>
-                                            {/* 전체 분포 한 줄 요약 */}
-                                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                                총 {totalFocusCount}개 관점 중 <b>적합 {statusCounts.적합}개</b>, <b>보완 {statusCounts.보완}개</b>, <b>부적합 {statusCounts.부적합}개</b>로
-                                                평가되었습니다.
-                                            </Typography>
-
-                                            {/* 법령 위반 리스크 한 줄 요약 */}
-                                            {overallViolationSeverity && (
-                                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                                    전반적인 법령 위반 가능성은 <b>{SEVERITY_LABELS[overallViolationSeverity]}</b> 수준이며
-                                                    {highRiskFocuses.length > 0 && <>,&nbsp;특히 {highRiskFocuses.join(', ')} 관점에서 리스크가 큽니다.</>}.
-                                                </Typography>
-                                            )}
-
-                                            {/* 보완해야 할 항목 개수 안내 */}
-                                            {actionItems.length > 0 && (
-                                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                                    세부적으로 보완이 권장된 항목은 총 <b>{actionItems.length}개</b>이며, 아래 <b>관점별 상세 분석</b>에서 구체적인 수정 제안을 확인할 수 있습니다.
-                                                </Typography>
-                                            )}
-                                        </Stack>
-
-                                        {/* <List dense>
+                    <List dense>
                       {r.violations.map((v, idx) => (
                         <ListItem key={idx} alignItems="flex-start">
                           <ListItemText
@@ -920,65 +998,140 @@ function LawVerifyDashboard({ results }) {
                           />
                         </ListItem>
                       ))}
-                    </List> */}
-                                    </Box>
-                                )}
+                    </List>
+                  </Box>
+                )}
 
-                                {/* 부족한 요소 */}
-                                {r.missing?.length > 0 && (
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography sx={{ fontWeight: 600 }}>부족한 요소</Typography>
-                                        <List dense>
-                                            {r.missing.map((m, i) => (
-                                                <ListItem key={i}>
-                                                    <ListItemText primary={m} />
-                                                </ListItem>
-                                            ))}
-                                        </List>
-                                    </Box>
-                                )}
+                {/* 부족한 요소 */}
+                {r.missing?.length > 0 && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography sx={{ fontWeight: 600 }}>부족한 요소</Typography>
+                    <List dense>
+                      {r.missing.map((m, i) => (
+                        <ListItem key={i}>
+                          <ListItemText primary={m} />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                )}
 
-                                {/* 보완 제안 */}
-                                {r.suggestion && (
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography sx={{ fontWeight: 600 }}>보완 제안</Typography>
-                                        <Typography sx={{ whiteSpace: 'pre-line' }}>{r.suggestion}</Typography>
-                                    </Box>
-                                )}
+                {/* 보완 제안 */}
+                {r.suggestion && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography sx={{ fontWeight: 600 }}>보완 제안</Typography>
+                    <Typography sx={{ whiteSpace: "pre-line" }}>
+                      {r.suggestion}
+                    </Typography>
+                  </Box>
+                )}
 
-                                {/* 관련 법령 */}
-                                {r.related_laws?.length > 0 && (
-                                    <Box>
-                                        <Typography sx={{ fontWeight: 600 }}>관련 법령</Typography>
-                                        <Stack direction="row" gap={1} flexWrap="wrap">
-                                            {r.related_laws.map((law, i) => (
-                                                <Chip key={i} size="small" variant="outlined" label={`${law.law_name} ${law.article_title}`} />
-                                            ))}
-                                        </Stack>
-                                    </Box>
-                                )}
-                            </AccordionDetails>
-                        </Accordion>
-                    ))}
-                </CardContent>
-            </Card>
-        </Box>
-    );
+                {/* 관련 법령 */}
+                {r.related_laws?.length > 0 && (
+                  <Box>
+                    <Typography sx={{ fontWeight: 600 }}>관련 법령</Typography>
+                    <Stack direction="row" gap={1} flexWrap="wrap">
+                      {r.related_laws.map((law, i) => (
+                        <Chip
+                          key={i}
+                          size="small"
+                          variant="outlined"
+                          label={`${law.law_name} ${law.article_title}`}
+                        />
+                      ))}
+                    </Stack>
+                  </Box>
+                )}
+              </AccordionDetails>
+            </Accordion>
+          ))}
+        </CardContent>
+      </Card>
+    </Box>
+  );
 }
 
 // =======================================================
 // 🚀 VerifyView Main
 // =======================================================
 function VerifyView3() {
-    const filePath = useFileStore((state) => state.filePath);
-    const project = useProjectStore((state) => state.project);
-    const projectIdx = project?.projectIdx;
-    const navigate = useNavigate();
+  const filePath = useFileStore((state) => state.filePath);
+  const project = useProjectStore((state) => state.project);
+  const projectIdx = project?.projectIdx;
+  const navigate = useNavigate();
 
-    const { loading, progress, text, results, compareResult, activeTab, loadDraft, verifyAll, compareAll, runNoticeEvaluation, noticeEvalResult, runFullVerify } = useVerifyStore();
+  const {
+    loading,
+    progress,
+    text,
+    results,
+    compareResult,
+    activeTab,
+    loadDraft,
+    verifyAll,
+    compareAll,
+    noticeEvalResult,
+  } = useVerifyStore();
 
-    // 🔹 종합 리포트 이동 가능 여부 (검증 결과가 있어야 의미 있음)
-    const isReportReady = (results && Object.keys(results).length > 0) || !!compareResult;
+  // 🔹 종합 리포트 이동 가능 여부 (검증 결과가 있어야 의미 있음)
+  const isReportReady =
+    (results && Object.keys(results).length > 0) || !!compareResult;
+
+  // 🔹 초안 로딩 (filePath 변경 시마다)
+  useEffect(() => {
+    if (!filePath) return;
+    loadDraft(filePath);
+  }, [filePath, loadDraft]);
+
+  const handleVerifyAllClick = () => {
+    if (!projectIdx) {
+      alert("프로젝트 정보(projectIdx)가 없습니다.");
+      console.error("[VerifyView3] projectIdx 없음:", projectIdx);
+      return;
+    }
+    verifyAll(projectIdx);
+  };
+
+  // ✅ 초안 검증 버튼 클릭 시 (LangGraph 통합 실행)
+  const handleCompareClick = async () => {
+    if (!projectIdx) {
+      alert("프로젝트 정보(projectIdx)가 없습니다.");
+      console.error("[VerifyView3] projectIdx 없음:", projectIdx);
+      return;
+    }
+
+    await compareAll(projectIdx);
+  };
+
+  const handleReportClick = () => {
+    navigate("/works/verify/report");
+  };
+
+  return (
+    <Box sx={{ p: 3 }}>
+      {/* 🔥 중앙 로딩 오버레이 */}
+      {loading && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            bgcolor: "rgba(255,255,255,0.7)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 2000,
+          }}
+        >
+          <CircularProgress size={60} />
+          <Typography sx={{ mt: 2, fontSize: 18, fontWeight: 600 }}>
+            분석 중... {progress}%
+          </Typography>
+        </Box>
+      )}
 
     // 🔹 초안 로딩 (filePath 변경 시마다)
     useEffect(() => {
@@ -1006,78 +1159,34 @@ function VerifyView3() {
         await runNoticeEvaluation(projectIdx);
     };
 
-    const handleFullVerifyClick = async () => {
-        if (!projectIdx) {
-            alert('프로젝트 정보(projectIdx)가 없습니다.');
-            console.error('[VerifyView3] projectIdx 없음:', projectIdx);
-            return;
-        }
-        await runFullVerify(projectIdx);
-    };
+          <Button
+            variant="outlined"
+            onClick={handleReportClick}
+            disabled={!isReportReady}
+          >
+            종합 리포트
+          </Button>
+        </Stack>
+      </Stack>
 
-    const handleReportClick = () => {
-        navigate('/works/verify/report');
-    };
+      {!text && (
+        <Typography sx={{ mt: 2, color: "text.secondary" }}>
+          초안을 불러오는 중입니다…
+        </Typography>
+      )}
 
-    return (
-        <Box sx={{ p: 3 }}>
-            {/* 🔥 중앙 로딩 오버레이 */}
-            {loading && (
-                <Box
-                    sx={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        width: '100vw',
-                        height: '100vh',
-                        bgcolor: 'rgba(255,255,255,0.7)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 2000,
-                    }}
-                >
-                    <CircularProgress size={60} />
-                    <Typography sx={{ mt: 2, fontSize: 18, fontWeight: 600 }}>분석 중... {progress}%</Typography>
-                </Box>
-            )}
+      {activeTab === "law" && results && Object.keys(results).length > 0 && (
+        <LawVerifyDashboard results={results} />
+      )}
 
-            {/* Header */}
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Box>
-                    <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                        검증
-                    </Typography>
-                    <Typography sx={{ color: 'text.secondary' }}>기획서 초안을 기반으로 법령 준수 및 공고문 요구사항 충족 여부를 자동 점검합니다.</Typography>
-                </Box>
-
-                <Stack direction="row" spacing={2}>
-                    <Button variant="contained" onClick={handleVerifyAllClick}>
-                        법령 검증
-                    </Button>
-
-                    <Button variant="outlined" onClick={handleCompareClick}>
-                        초안 검증
-                    </Button>
-
-                    {/* <Button variant="contained" color="secondary" onClick={handleFullVerifyClick}>
-            통합 검증
-          </Button> */}
-
-                    <Button variant="outlined" onClick={handleReportClick} disabled={!isReportReady}>
-                        종합 리포트
-                    </Button>
-                </Stack>
-            </Stack>
-
-            {!text && <Typography sx={{ mt: 2, color: 'text.secondary' }}>초안을 불러오는 중입니다…</Typography>}
-
-            {activeTab === 'law' && results && Object.keys(results).length > 0 && <LawVerifyDashboard results={results} />}
-
-            {activeTab === 'compare' && compareResult && <AnnouncementCompareDashboard result={compareResult} noticeEval={noticeEvalResult} />}
-        </Box>
-    );
+      {activeTab === "compare" && compareResult && (
+        <AnnouncementCompareDashboard
+          result={compareResult}
+          noticeEval={noticeEvalResult}
+        />
+      )}
+    </Box>
+  );
 }
 
 export default VerifyView3;

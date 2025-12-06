@@ -2,8 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { draftApi } from "../utils/draftApi";
 import { tiptapDocToPlainText } from "../utils/tiptapText";
-import { verifyLawSection, evaluateNoticeCriteria, runFullVerify as runFullVerifyApi } from "../utils/fastapi";
-import { compareDraft } from "../utils/compareDraft";
+import { evaluateNoticeCriteria, runFullVerify as runFullVerifyApi } from "../utils/fastapi";
 
 /**
  * 법령 검증 관점
@@ -84,62 +83,27 @@ export const useVerifyStore = create(
     }
   },
 
-  // 🔹 법령 검증 전체 실행 (FOCUSES 기반)
-  verifyAll: async () => {
-    const { text } = get();
-    if (!text) {
-      alert("초안이 없습니다.");
-      console.error("[verifyAll] text 없음");
+  // 🔹 법령 검증 전체 실행 (LangGraph 통합)
+  verifyAll: async (projectIdx) => {
+    const { draftJson } = get();
+
+    if (!draftJson) {
+      alert("초안 JSON이 없습니다.");
+      console.error("[verifyAll] draftJson 없음");
       return;
     }
 
-    set({ activeTab: "law", loading: true, progress: 0 });
-
-    const total = FOCUSES.length;
-    const next = {};
-
-    for (let i = 0; i < total; i++) {
-      const f = FOCUSES[i];
-
-      try {
-        const law = await verifyLawSection({
-          text,
-          focus: f.focus,
-        });
-
-        console.log("[verifyAll] law result for", f.key, law);
-
-        next[f.key] = {
-          label: f.label,
-          ...law, // ✅ 여기서 status, reason, violations 등이 바로 들어감
-        };
-      } catch (e) {
-        console.error(`verifyLawSection error for ${f.key}:`, e);
-
-        next[f.key] = {
-          label: f.label,
-          status: "error",
-          risk_level: "UNKNOWN",
-          reason: "검증 과정 중 오류가 발생했습니다.",
-          missing: [],
-          suggestion: "",
-          violation_judgment: "UNCLEAR",
-          violation_summary: "",
-          violations: [],
-          related_laws: [],
-        };
-      }
-
-      set({ progress: Math.round(((i + 1) / total) * 100) });
+    if (!projectIdx) {
+      alert("프로젝트 정보(projectIdx)가 없습니다.");
+      console.error("[verifyAll] projectIdx 없음:", projectIdx);
+      return;
     }
 
-    console.log("[verifyAll] final results:", next);
-
-    set({ results: next, loading: false });
+    await get().runFullVerify(projectIdx, { defaultTab: "law" });
   },
 
 
-  // 🔹 공고문 비교 실행 (초안 vs 공고문 요구사항)
+  // 🔹 공고문 비교/평가기준 실행 (LangGraph 통합)
   compareAll: async (projectIdx) => {
     const { draftJson } = get();
 
@@ -155,37 +119,9 @@ export const useVerifyStore = create(
       return;
     }
 
-    console.log("[compareAll] 실행, projectIdx:", projectIdx, draftJson);
-
-    set({ activeTab: "compare", loading: true, progress: 10 });
-
-    try {
-      set({ progress: 40 });
-
-      // utils/compareDraft 에서 res.data를 리턴한다고 가정
-      const result = await compareDraft(projectIdx, draftJson);
-      console.log("[compareAll] compareDraft 결과:", result);
-
-      if (result.status === "error") {
-        alert(result.message || "초안 비교 중 오류가 발생했습니다. (서버 응답)");
-        console.error("[compareAll] 서버 도메인 에러:", result);
-        return;
-      }
-
-      set({
-        compareResult: result,
-        progress: 100,
-      });
-    } catch (e) {
-      console.error(
-        "❌ 초안 비교 오류 (compareAll):",
-        e.response?.data || e.message || e
-      );
-      alert("초안 비교 중 서버 오류가 발생했습니다. 콘솔을 확인해주세요.");
-    } finally {
-      setTimeout(() => set({ loading: false }), 300);
-    }
+    await get().runFullVerify(projectIdx, { defaultTab: "compare" });
   },
+
 
   // 🔹 공고문 “평가기준” 기반 자가진단 실행
   runNoticeEvaluation: async (projectIdx) => {
@@ -235,8 +171,9 @@ export const useVerifyStore = create(
   },
 
   // 통합 검증 (공고문 비교 + 법령 다중 포커스 + 평가기준)
-  runFullVerify: async (projectIdx) => {
-    const { draftJson } = get();
+  runFullVerify: async (projectIdx, options = {}) => {
+    const { draftJson, text } = get();
+    const { defaultTab = "law" } = options;
 
     if (!draftJson) {
       alert("초안 JSON이 없습니다.");
@@ -253,7 +190,7 @@ export const useVerifyStore = create(
     const focusKeys = FOCUSES.map((f) => f.key);
 
     try {
-      set({ loading: true, progress: 10, activeTab: "law" });
+      set({ loading: true, progress: 10, activeTab: defaultTab });
 
       const res = await runFullVerifyApi({
         projectIdx,
@@ -278,10 +215,27 @@ export const useVerifyStore = create(
         };
       });
 
+      let noticeResult = data.notice_result || null;
+
+      // LangGraph 응답에 notice_result가 없으면 기존 단독 엔드포인트로 보강
+      if (!noticeResult && text) {
+        try {
+          const fallback = await evaluateNoticeCriteria({
+            projectIdx,
+            text,
+          });
+          if (fallback?.status === "success") {
+            noticeResult = fallback.data || fallback;
+          }
+        } catch (e) {
+          console.error("[runFullVerify] notice fallback error:", e.response?.data || e.message || e);
+        }
+      }
+
       set({
         results: mappedResults,
         compareResult: data.compare_result || null,
-        noticeEvalResult: data.notice_result || null,
+        noticeEvalResult: noticeResult,
         progress: 100,
       });
     } catch (e) {

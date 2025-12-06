@@ -148,13 +148,18 @@ def evaluate_using_notice_criteria(draft_text: str, criteria_raw_text: str) -> d
 def find_eval_section(extracted_features: list[dict]) -> str | None:
     """
     /api/analysis/get-context 에서 내려주는 extracted_features 리스트 중에서
-    '평가기준' 섹션에 해당하는 feature의 full_content를 찾아서 돌려준다.
+    '평가기준' 섹션(full_content)을 찾아서 돌려준다.
 
-    - 보통 feature_name 에 "평가기준" 이라는 단어가 들어있다고 가정
-    - 그래도 못 찾으면 full_content 안에서 '평가기준' 문구를 한 번 더 검색 (fallback)
+    - feature_name / feature_code 에 평가 관련 키워드가 들어있으면 우선 반환
+    - 그래도 못 찾으면 full_content 내부에서 키워드 검색
     """
     if not extracted_features:
         return None
+
+    keywords = ["평가기준", "평가 기준", "평가항목", "평가 항목", "배점", "심사기준", "심사 기준"]
+
+    def has_keyword(text: str) -> bool:
+        return any(k in text for k in keywords)
 
     # 1차: feature_name / feature_code 기준으로 찾기
     for f in extracted_features:
@@ -162,16 +167,15 @@ def find_eval_section(extracted_features: list[dict]) -> str | None:
         code = (f.get("feature_code") or "").strip()
         label = f"{name} {code}"
 
-        if "평가기준" in label or "평가 기준" in label:
+        if has_keyword(label):
             return f.get("full_content", "") or ""
 
-    # 2차: full_content 안에 '평가기준'이 들어간 것 찾기 (혹시 이름이 애매할 때)
+    # 2차: full_content 안에서 키워드 검색
     for f in extracted_features:
         full = (f.get("full_content") or "").strip()
         if not full:
             continue
-
-        if "평가기준" in full or "평가 기준" in full:
+        if has_keyword(full):
             return full
 
     # 그래도 없으면 None
