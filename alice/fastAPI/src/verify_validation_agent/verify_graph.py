@@ -11,6 +11,7 @@ from .comparison import (
     get_toc_titles,
     get_features,
     is_section_covered_by_headings,
+    is_section_covered_by_content,
     map_sections_ai,
     refine_missing_sections_ai,
     generate_suggestion,
@@ -97,10 +98,24 @@ def compare_node(state: VerifyState) -> VerifyState:
     effective_toc_titles = toc_titles[:]
     written_sections: List[str] = []
     strict_missing_sections: List[str] = []
+    final_missing_sections: List[str] = []
+    section_details: List[Dict[str, Any]] = []
 
     for title in effective_toc_titles:
-        if is_section_covered_by_headings(title, draft_sections):
+        covered_by_heading = is_section_covered_by_headings(title, draft_sections)
+        covered_by_content = is_section_covered_by_content(title, draft_text)
+
+        if covered_by_heading or covered_by_content:
             written_sections.append(title)
+            if not covered_by_heading and covered_by_content:
+                section_details.append(
+                    {
+                        "section": title,
+                        "status": "partial",
+                        "reason": f"본문에서 '{title}' 관련 핵심 키워드는 확인되었으나 별도 제목이 없습니다. 제목을 추가하고 세부 요건을 보완하세요.",
+                        "suggestion": generate_suggestion(title),
+                    }
+                )
         else:
             strict_missing_sections.append(title)
 
@@ -112,9 +127,6 @@ def compare_node(state: VerifyState) -> VerifyState:
         refine_missing_sections_ai(draft_text, strict_missing_sections) if strict_missing_sections else []
     )
     section_eval_map = {item.get("section"): item for item in section_eval}
-
-    final_missing_sections: List[str] = []
-    section_details: List[Dict[str, Any]] = []
 
     for sec in strict_missing_sections:
         info = section_eval_map.get(sec) or {}
@@ -140,19 +152,20 @@ def compare_node(state: VerifyState) -> VerifyState:
         status = f.get("status")
         if not status:
             included_val = str(f.get("included")).lower()
-            status = "ok" if included_val == "true" else "missing"
+            status = "ok" if included_val == "true" else "partial"
         status = status.lower()
         if status not in ("ok", "partial", "missing"):
-            status = "missing"
+            status = "partial"
 
         if status == "missing":
             missing_features.append(feature_name)
         if status in ("partial", "missing"):
+            reason = f.get("reason") or "초안에 일부 언급은 있으나 공고문 세부 조건(기간/금액/대상 등)이 부족합니다."
             feature_details.append(
                 {
                     "feature": feature_name,
                     "status": status,
-                    "reason": f.get("reason"),
+                    "reason": reason,
                     "suggestion": generate_suggestion(feature_name),
                 }
             )
