@@ -99,6 +99,7 @@ export const useVerifyStore = create(
       return;
     }
 
+    get().resetVerifyState();
     await get().runFullVerify(projectIdx, { defaultTab: "law" });
   },
 
@@ -119,6 +120,7 @@ export const useVerifyStore = create(
       return;
     }
 
+    get().resetVerifyState();
     await get().runFullVerify(projectIdx, { defaultTab: "compare" });
   },
 
@@ -190,7 +192,14 @@ export const useVerifyStore = create(
     const focusKeys = FOCUSES.map((f) => f.key);
 
     try {
-      set({ loading: true, progress: 10, activeTab: defaultTab });
+      set({
+        loading: true,
+        progress: 10,
+        activeTab: defaultTab,
+        results: {},
+        compareResult: null,
+        noticeEvalResult: null,
+      });
 
       const res = await runFullVerifyApi({
         projectIdx,
