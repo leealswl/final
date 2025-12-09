@@ -1,0 +1,160 @@
+package com.example.backend.service;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.example.backend.domain.Document;
+import com.example.backend.mapper.DocumentMapper;
+
+@Service
+public class DocumentServiceImpl implements DocumentService{
+
+    @Value("${upload.dir}") // application.yml의 upload.dir 사용 (예: C:/vs/final/uploads)
+    private String uploadDir;
+
+    @Autowired
+    DocumentMapper documentMapper;
+
+    @Transactional
+    @Override
+    public int saveFilesAndDocuments(List<MultipartFile> files, List<Long> folders, String userid, Long projectIdx) throws IOException {
+        System.out.println("document service 작동 시작");
+        System.out.println("uploadDir: " + uploadDir);
+        int totalInserted = 0;
+        Path baseUploadPath = Paths.get(uploadDir).toAbsolutePath();
+        System.out.println("resolved upload path: " + baseUploadPath);
+
+        for (int i = 0; i < files.size(); i++) {
+            MultipartFile file = files.get(i);
+            Long folderName = folders.get(i);
+
+            Path uploadPath = baseUploadPath.resolve(Paths.get(userid, String.valueOf(projectIdx), String.valueOf(folderName)));
+            System.out.println("uploadPath: " + uploadPath);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            } //절대경로로 저장
+
+            Path filePath = uploadPath.resolve(file.getOriginalFilename());
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            System.out.println("[SAVE] " + filePath.toAbsolutePath()); // 꼭 찍어보자
+
+            Document document = new Document();
+            document.setProjectIdx(projectIdx);
+            document.setFolder(String.valueOf(folderName)); // 필요시 String 변환
+            document.setFileName(file.getOriginalFilename());
+            document.setFilePath(filePath.toString());
+
+            totalInserted += documentMapper.insertDocument(document);
+        }
+        System.out.println("document service 작동 완료");
+        return totalInserted;
+    }
+
+    /**
+     * 2025-11-09 수연 추가: 파일 저장 후 파일 정보 반환
+     * 목적: Frontend가 파일 경로 정보를 받아서 store에 저장할 수 있도록 함
+     */
+    @Transactional
+    @Override
+    public List<Map<String, Object>> saveFilesAndReturnInfo(List<MultipartFile> files, List<Long> folders, String userid, Long projectIdx) throws IOException {
+        System.out.println("document service (with info) 작동 시작");
+        System.out.println("uploadDir: " + uploadDir);
+
+        List<Map<String, Object>> savedFiles = new ArrayList<>();
+
+        Path baseUploadPath = Paths.get(uploadDir).toAbsolutePath();
+        System.out.println("resolved upload path: " + baseUploadPath);
+
+        for (int i = 0; i < files.size(); i++) {
+            MultipartFile file = files.get(i);
+            Long folderName = folders.get(i);
+
+            Path uploadPath = baseUploadPath.resolve(Paths.get(userid, String.valueOf(projectIdx), String.valueOf(folderName)));
+            System.out.println("uploadPath: " + uploadPath);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            Path filePath = uploadPath.resolve(file.getOriginalFilename());
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            System.out.println("filePath.toString(): " + filePath.toString());
+
+            System.out.println("[SAVE] " + filePath.toAbsolutePath());
+
+            // 2025-11-09 suyeon 수정: 절대 경로 대신 /uploads 기준 상대 경로 생성
+            // 이유: OnlyOffice 및 Frontend가 /uploads/... 형태로 접근하므로 통일
+            String relativePath = String.format("/uploads/%s/%d/%d/%s",
+                userid, projectIdx, folderName, file.getOriginalFilename());
+
+            // DB에 저장
+            Document document = new Document();
+            document.setProjectIdx(projectIdx);
+            document.setFolder(String.valueOf(folderName));
+            document.setFileName(file.getOriginalFilename());
+            // document.setFilePath(filePath.toString()); // 기존: 절대 경로 저장
+            document.setFilePath(relativePath); // 수정: 상대 경로 저장
+
+            documentMapper.insertDocument(document);
+
+            // 파일 정보 수집 (Frontend로 반환)
+            Map<String, Object> fileInfo = new HashMap<>();
+            fileInfo.put("id", document.getDocumentIdx()); // DB에서 생성된 ID
+            fileInfo.put("name", file.getOriginalFilename());
+            // fileInfo.put("path", filePath.toString()); // 기존: 절대 경로 반환
+            fileInfo.put("path", relativePath); // 수정: 상대 경로 반환
+            fileInfo.put("folder", folderName);
+            fileInfo.put("size", file.getSize());
+
+            savedFiles.add(fileInfo);
+        }
+
+        System.out.println("document service (with info) 작동 완료: " + savedFiles.size() + "개");
+        return savedFiles;
+    }
+
+    @Override
+    public int insertDocument(Document document) {
+        documentMapper.insertDocument(document);
+        
+        return 0;
+    }
+
+    @Override
+    public Long saveDocument(Document request) {
+        if (request.getProjectIdx() == null) {
+            throw new IllegalArgumentException("projectIdx는 필수입니다.");
+        }
+
+        // 새 문서 생성
+        if (request.getDocumentIdx() == null) {
+            int rows = documentMapper.insertDocument(request);
+
+            if (rows != 1) {
+                throw new IllegalStateException("문서 INSERT 실패: rows=" + rows);
+            }
+
+            Long generatedId = request.getDocumentIdx();  // ← selectKey가 여기 채워줌
+            System.out.println("새 문서 생성: documentIdx=" + generatedId);
+            return generatedId;
+        }
+
+        // 기존 문서 업데이트
+        documentMapper.updateDocumentContent(request);
+        return request.getDocumentIdx();
+    }
+}

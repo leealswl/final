@@ -1,0 +1,827 @@
+"""
+문서 처리 노드들 (청킹, 임베딩, VectorDB 등)
+
+✅ 핵심 노드들:
+  1. chunk_all_documents: 섹션 기반 청킹 (□, ■, ● 마커 인식)
+  2. embed_all_chunks: OpenAI Embedding API로 벡터 변환
+  3. init_and_store_vectordb: Chroma VectorDB 저장
+  4. extract_features_rag: RAG 기반 Feature 추출 (LLM 분석)
+  5. save_to_csv: 로컬 파일 저장 (개발/테스트용)
+"""
+
+import json
+import pandas as pd
+from datetime import datetime
+from pathlib import Path
+from typing import List, Dict, Any
+
+# OpenAI
+from openai import OpenAI
+import os
+from dotenv import load_dotenv
+
+# 임베딩 & VectorDB
+import chromadb
+import numpy as np
+
+from ..state_types import BatchState
+from ..config import FEATURES, CSV_OUTPUT_DIR
+from ..utils import chunk_by_sections
+from .metadata_vision import extract_metadata_with_vision
+
+# OpenAI 클라이언트 초기화
+load_dotenv()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+
+def chunk_all_documents(state: BatchState) -> BatchState:
+    """
+    모든 문서를 섹션 기반으로 청킹 (공고문 + 첨부서류)
+
+    ✅ 핵심 기능: 문서를 의미있는 단위(섹션)로 분할
+    📌 청킹 전략:
+      - 섹션 마커 감지 (□, ■, ● 등)
+      - 섹션이 없으면 고정 길이 청킹 (fallback)
+      - MIN_CHUNK_LENGTH(50) 미만은 제외
+
+    Returns:
+        state['all_chunks']: 모든 청크 리스트
+        - 청크마다 문서 메타데이터, 섹션 정보, 페이지 번호 포함
+    """
+    documents = state['documents']
+    all_chunks = []
+    chunk_global_id = 0
+
+    print(f"\n{'='*60}")
+    print(f"📦 섹션 기반 청킹 시작")
+    print(f"{'='*60}")
+
+    for doc in documents:
+        print(f"\n  📄 {doc['file_name']} 청킹 중...")
+
+        doc_chunk_start = chunk_global_id
+
+        # [2025-01-10 suyeon] page_texts 타입 체크 추가
+        # 변경 이유:
+        # 1. 타입 안정성: dict/list 모두 처리하여 AttributeError 방지
+        # 2. 유연성: 문서 파싱 로직 변경 시에도 호환
+        # 근거: page_texts가 dict 또는 list로 들어올 수 있음
+
+        page_texts = doc.get('page_texts')
+        if not page_texts:
+            print(f"    ⚠️  page_texts가 없음 - 건너뜀")
+            continue
+
+        # 타입에 따라 순회 방식 분기
+        if isinstance(page_texts, dict):
+            page_items = page_texts.items()
+        elif isinstance(page_texts, list):
+            page_items = enumerate(page_texts, start=1)
+        else:
+            print(f"    ⚠️  잘못된 page_texts 타입: {type(page_texts)} - 건너뜀")
+            continue
+
+        # 페이지별로 청킹
+        empty_page_count = 0
+        for page_num, page_text in page_items:
+            page_chunks = chunk_by_sections(page_text, page_num)
+
+            # [2025-01-10 suyeon] 빈 페이지 처리 개선
+            # 변경 이유:
+            # 1. 가시성: 청크 생성 안된 페이지 명시적 로깅
+            # 2. 디버깅: 왜 청크 수가 적은지 사용자가 파악 가능
+            # 근거: 빈 페이지/짧은 페이지는 MIN_CHUNK_LENGTH(50)로 필터링됨
+            if not page_chunks:
+                empty_page_count += 1
+                continue
+
+            for chunk_data in page_chunks:
+                all_chunks.append({
+                    'chunk_id': f"{doc['document_id']}_chunk_{chunk_global_id}",
+                    'text': chunk_data['text'],
+                    # 문서 메타데이터
+                    'project_idx': state['project_idx'],
+                    'document_id': doc['document_id'],
+                    'document_type': doc['document_type'],
+                    'file_name': doc['file_name'],
+                    # 섹션 정보
+                    'section': chunk_data['section'],
+                    'page': chunk_data['page'],
+                    'is_sectioned': chunk_data['is_sectioned'],
+                    # 첨부서류 번호
+                    'attachment_number': doc.get('attachment_number'),
+                })
+                chunk_global_id += 1
+
+        doc_chunk_count = chunk_global_id - doc_chunk_start
+        print(f"    ✓ {doc_chunk_count}개 청크 생성", end="")
+
+        # 빈 페이지 경고 출력
+        if empty_page_count > 0:
+            print(f" (⚠️  {empty_page_count}개 페이지 건너뜀: 빈 페이지 또는 너무 짧음)")
+        else:
+            print()
+
+        # 문서에 청크 범위 저장
+        doc['chunk_start_id'] = doc_chunk_start
+        doc['chunk_end_id'] = chunk_global_id - 1
+        doc['chunk_count'] = doc_chunk_count
+
+    state['all_chunks'] = all_chunks
+    state['status'] = 'all_chunked'
+
+    print(f"\n  ✅ 총 {len(all_chunks)}개 청크 생성 ({len(documents)}개 문서)")
+
+    # 통계 출력
+    sectioned_count = sum(1 for c in all_chunks if c['is_sectioned'])
+    print(f"    - 섹션 기반 청크: {sectioned_count}개")
+    print(f"    - 고정 길이 청크: {len(all_chunks) - sectioned_count}개")
+    return state
+
+
+def embed_all_chunks(state: BatchState) -> BatchState:
+    """
+    OpenAI Embedding API로 모든 청크를 임베딩 벡터로 변환
+
+    ✅ 핵심 기능: 텍스트를 벡터로 변환하여 의미 검색 가능하게 만듦
+    📌 사용 모델: text-embedding-3-small (1536 차원, $0.02/1M tokens)
+    📌 배치 처리: 최대 2048개/요청으로 효율적 처리
+
+    Returns:
+        state['all_embeddings']: numpy array (shape: [N, 1536])
+        state['embedding_model']: 'text-embedding-3-small'
+    """
+    all_chunks = state['all_chunks']
+
+    print(f"\n{'='*60}")
+    print(f"🧠 OpenAI 임베딩 생성 시작")
+    print(f"{'='*60}")
+
+    # 청크 텍스트 추출
+    chunk_texts = [chunk['text'] for chunk in all_chunks]
+
+    # OpenAI API 배치 임베딩 (최대 2048개/요청)
+    batch_size = 2048
+    total_chunks = len(chunk_texts)
+    total_batches = (total_chunks + batch_size - 1) // batch_size
+
+    print(f"\n  🔢 {total_chunks}개 청크 임베딩 중... (배치 크기: {batch_size}, 총 {total_batches}개 배치)")
+    print(f"  📡 모델: text-embedding-3-small (1536 차원)")
+
+    all_embeddings = []
+
+    for i in range(0, total_chunks, batch_size):
+        batch_num = i // batch_size + 1
+        batch = chunk_texts[i:i+batch_size]
+
+        print(f"    ⏳ 배치 {batch_num}/{total_batches} 처리 중... ({i+1}-{min(i+len(batch), total_chunks)}/{total_chunks} 청크)")
+
+        try:
+            response = client.embeddings.create(
+                model="text-embedding-3-small",  # 1536 차원, $0.02/1M tokens
+                input=batch
+            )
+
+            # 임베딩 추출
+            batch_embeddings = [item.embedding for item in response.data]
+            all_embeddings.extend(batch_embeddings)
+
+        except Exception as e:
+            print(f"    ❌ 배치 {batch_num} 임베딩 실패: {str(e)}")
+            state['errors'].append(f"임베딩 배치 {batch_num} 실패: {str(e)}")
+            # 실패한 배치는 0 벡터로 채움
+            all_embeddings.extend([[0.0] * 1536 for _ in batch])
+
+    embeddings = np.array(all_embeddings)
+
+    state['all_embeddings'] = embeddings
+    state['embedding_model'] = 'text-embedding-3-small'  # API 모델명 저장
+    state['status'] = 'all_embedded'
+
+    print(f"\n  ✅ 임베딩 완료: {embeddings.shape}")
+    if len(embeddings.shape) > 1:
+        print(f"    - 청크 수: {embeddings.shape[0]}")
+        print(f"    - 차원: {embeddings.shape[1]}")
+    else:
+        print(f"    - 청크 수: {embeddings.shape[0] if embeddings.shape else 0}")
+    return state
+
+
+def init_and_store_vectordb(state: BatchState) -> BatchState:
+    """
+    Chroma VectorDB 초기화 및 청크 저장
+
+    ✅ 핵심 기능: RAG 검색을 위한 벡터 DB 생성 및 저장 (필수)
+    """
+    all_chunks = state['all_chunks']
+    embeddings = state['all_embeddings']
+
+    print(f"\n{'='*60}")
+    print(f"💾 Chroma VectorDB 초기화 및 저장")
+    print(f"{'='*60}")
+
+    # Chroma DB 경로 설정
+    # TODO: 운영 환경에서는 config.VECTOR_DB_DIR 또는 환경변수 사용 권장
+    db_path = Path("./chroma_db")
+    db_path.mkdir(exist_ok=True)
+
+    # Chroma Client 생성
+    print(f"\n  📂 VectorDB 경로: {db_path.absolute()}")
+    client = chromadb.PersistentClient(path=str(db_path))
+
+    # 컬렉션 이름
+    collection_name = f"project_{state['project_idx']}"
+
+    # 기존 컬렉션 삭제 (재실행 시 중복 방지)
+    try:
+        client.delete_collection(name=collection_name)
+        print(f"  🗑️  기존 컬렉션 삭제: {collection_name}")
+    except:
+        pass
+
+    # 새 컬렉션 생성
+    collection = client.create_collection(
+        name=collection_name,
+        metadata={
+            "description": "공고문 + 첨부서류 통합 RAG DB",
+            "project_idx": state['project_idx'],
+            "created_at": datetime.now().isoformat(),
+            "hnsw:space": "cosine"  # Cosine distance for text similarity
+        }
+    )
+
+    print(f"  ✓ 컬렉션 생성: {collection_name}")
+
+    # 청크 + 임베딩 저장
+    print(f"\n  💾 {len(all_chunks)}개 청크 저장 중...")
+
+    collection.add(
+        ids=[chunk['chunk_id'] for chunk in all_chunks],
+        embeddings=embeddings.tolist(),
+        documents=[chunk['text'] for chunk in all_chunks],
+        metadatas=[
+            {
+                'document_id': chunk['document_id'],
+                'document_type': chunk['document_type'],
+                'file_name': chunk['file_name'],
+                'section': chunk['section'],
+                'page': chunk['page'],
+                'attachment_number': chunk.get('attachment_number') or 0
+            }
+            for chunk in all_chunks
+        ]
+    )
+
+    state['chroma_client'] = client
+    state['chroma_collection'] = collection
+    state['vector_db_path'] = str(db_path)
+    state['status'] = 'vectordb_ready'
+
+    print(f"  ✅ VectorDB 저장 완료")
+    print(f"    - 컬렉션: {collection_name}")
+    print(f"    - 청크 수: {len(all_chunks)}")
+    print(f"    - 경로: {db_path.absolute()}")
+
+    return state
+
+
+def extract_features_rag(state: BatchState) -> BatchState:
+    """
+    RAG 기반 Feature 추출 (크로스 문서 검색)
+
+    ✅ 핵심 기능: 공고문과 첨부서류를 종합적으로 분석하여 핵심 정보 추출
+    📌 RAG 프로세스:
+      1. Feature 키워드로 쿼리 임베딩 생성
+      2. VectorDB 유사도 검색 (공고 + 첨부 통합, 상위 7개)
+      3. 검색된 청크만 LLM에 전달 (토큰 절약)
+      4. LLM이 구조화된 JSON으로 분석 결과 반환
+
+    📋 추출 정보:
+      - 핵심 내용 요약
+      - key_points (요점 리스트)
+      - writing_strategy (작성 전략 - 평가 포인트, 작성 팁, 주의사항)
+
+    Returns:
+        state['extracted_features']: 추출된 Feature 리스트
+        - feature_code, feature_name, summary, full_content
+        - key_points, writing_strategy
+        - RAG 메타데이터 (사용된 청크, 유사도 등)
+    """
+    collection = state['chroma_collection']
+    model = state['embedding_model']
+    documents = state['documents']
+    
+    print(f"\n{'='*60}")
+    print(f"🤖 RAG 기반 Feature 추출")
+    print(f"{'='*60}")
+
+    # 전체 프로젝트에서 Feature 추출 (공고 + 첨부 통합 RAG 검색)
+    # RAG는 VectorDB에서 모든 문서를 통합 검색하므로 Feature는 프로젝트당 1번만 추출
+    all_features = []
+
+    print(f"\n  📋 전체 프로젝트에서 Feature 추출 중... (총 {len(FEATURES)}개)")
+
+    for i, feature_def in enumerate(FEATURES):
+        print(f"\n    [{i+1}/{len(FEATURES)}] {feature_def['feature_type']}...", end=" ")
+
+        try:
+            # 1️⃣ Feature 쿼리 임베딩
+            # 키워드 우선순위: primary → secondary → related
+            keywords = feature_def['keywords']
+            if isinstance(keywords, dict):
+                # 새로운 구조: primary/secondary/related
+                all_keywords = []
+                all_keywords.extend(keywords.get('primary', []))
+                all_keywords.extend(keywords.get('secondary', []))
+                all_keywords.extend(keywords.get('related', []))
+                keywords_str = " ".join(all_keywords[:5])  # 상위 5개
+            else:
+                # 이전 구조 호환 (리스트)
+                keywords_str = " ".join(keywords[:5])
+
+            query_text = f"{feature_def['feature_type']} {keywords_str}"
+
+            # OpenAI API로 쿼리 임베딩
+            query_response = client.embeddings.create(
+                model="text-embedding-3-small",
+                input=[query_text]
+            )
+            query_embedding = [query_response.data[0].embedding]
+
+            # 2️⃣ VectorDB 유사도 검색
+            # [2025-11-19 수정] n_results 7 → 10으로 증가
+            # 텍스트 추출 방식 변경으로 청킹이 더 세분화되어
+            # 관련 정보가 더 많은 청크에 분산될 수 있음
+            results = collection.query(
+                query_embeddings=query_embedding,
+                n_results=10,  # 상위 10개 (공고 + 첨부 포함)
+                # where 조건 없음 → 모든 문서 검색 (공고 + 첨부)
+            )
+
+            # 결과 없음
+            if not results['ids'][0]:
+                print("✗ (검색 결과 없음)")
+                continue
+
+            # 3️⃣ 유사도 임계값 체크
+            top_distance = results['distances'][0][0]
+
+            # [2025-11-19 수정] 임계값 1.2 → 1.4로 완화
+            # 텍스트 추출 방식 변경으로 인해 청킹이 달라져서
+            # "사업명" 같은 메타 정보가 제목이나 본문에 분산됨
+            # → 유사도가 낮아져도 검색되도록 임계값 완화
+            if top_distance > 1.4:  # ChromaDB cosine: 0.0-2.0 range
+                print(f"✗ (거리 멀음: {top_distance:.3f}, 쿼리: '{query_text}')")
+                continue
+
+            # [디버깅] 검색 성공 시 거리 출력 (임계값 조정 참고용)
+            print(f"✓ (거리: {top_distance:.3f})", end=" ")
+
+            # 4️⃣ 검색된 chunk 정리
+            retrieved_chunks = []
+            for j in range(len(results['ids'][0])):
+                retrieved_chunks.append({
+                    'chunk_id': results['ids'][0][j],
+                    'text': results['documents'][0][j],
+                    'metadata': results['metadatas'][0][j],
+                    'distance': results['distances'][0][j]
+                })
+
+            # 5️⃣ 공고 vs 첨부 분리
+            announcement_chunks = [c for c in retrieved_chunks if c['metadata']['document_type'] == 'ANNOUNCEMENT']
+            attachment_chunks = [c for c in retrieved_chunks if c['metadata']['document_type'] == 'ATTACHMENT']
+
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            # 5-1️⃣ 핵심 정보 Feature의 경우: Vision API 우선 사용
+            # 사용자에게 우선적으로 보여줄 핵심 정보를 Vision API로 정확하게 추출
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            # Frontend AnalyzeView.jsx의 coreFeatures와 일치시킴
+            # 사용자가 첫 화면에서 보는 핵심 정보들
+            core_features = [
+                'project_name',           # 사업명
+                'announcement_date',      # 공고일
+                'application_period',     # 접수기간
+                'project_period',         # 사업기간
+                'support_scale',          # 지원규모
+                'announcing_agency',      # 공고기관 (핵심 정보)
+                'evaluation_criteria',    # 평가기준 (항목별 배점 포함)
+            ]
+            is_core_feature = feature_def['feature_key'] in core_features
+            
+            vision_result = None
+            
+            # 핵심 정보 feature인 경우 Vision API를 먼저 시도 (사용자 우선 표시 정보)
+            if is_core_feature:
+                announcement_doc = None
+                announcement_file_bytes = None
+                
+                # 공고문 문서 찾기
+                for doc in documents:
+                    if doc.get('document_type') == 'ANNOUNCEMENT':
+                        announcement_doc = doc
+                        break
+                
+                # 공고문 파일의 bytes 찾기
+                if announcement_doc:
+                    announcement_file_name = announcement_doc.get('file_name', '')
+                    for file_info in state.get('files', []):
+                        file_name = file_info.get('filename') or file_info.get('file_name', '')
+                        if file_name == announcement_file_name:
+                            announcement_file_bytes = file_info.get('bytes')
+                            break
+                
+                # Vision API로 메타 정보 추출 시도
+                if announcement_file_bytes and announcement_doc:
+                    print(f"      (Vision API 시도 중...) ", end="")
+                    vision_result = extract_metadata_with_vision(
+                        file_bytes=announcement_file_bytes,
+                        file_name=announcement_doc.get('file_name', ''),
+                        feature_type=feature_def['feature_type'],
+                        feature_description=feature_def['description'],
+                        feature_key=feature_def['feature_key']  # 날짜 포함 여부 판단용
+                    )
+                    
+                    # Vision API로 값을 찾은 경우, RAG 방식 건너뛰기
+                    if vision_result and vision_result.get("found"):
+                        print(f"✓ Vision API 성공 → RAG 건너뛰기")
+                        result = vision_result
+                        
+                        # 결과 저장
+                        all_features.append({
+                            'feature_code': feature_def['feature_key'],
+                            'feature_name': feature_def['feature_type'],
+                            'title': result.get('title', ''),
+                            'summary': result.get('content', ''),
+                            'full_content': result.get('full_content', ''),
+                            'key_points': result.get('key_points', []),
+                            'writing_strategy': result.get('writing_strategy', {}),
+                            
+                            # Vision API 메타데이터
+                            'extraction_method': 'vision_api',
+                            'chunks_from_announcement': 0,
+                            'chunks_from_attachments': 0,
+                            'vector_similarity': None,
+                            
+                            # 프로젝트 정보
+                            'project_idx': state['project_idx'],
+                            'extracted_at': datetime.now().isoformat()
+                        })
+                        
+                        continue  # RAG 방식 건너뛰기
+                    else:
+                        print(f"→ RAG로 fallback")
+                
+                # Vision API 실패 시 텍스트 기반 fallback: 공고문 첫 페이지 우선 확인
+                if announcement_doc and announcement_doc.get('page_texts'):
+                    # 첫 3페이지 우선 추가
+                    first_pages_text = []
+                    for page_num in sorted(announcement_doc['page_texts'].keys())[:3]:
+                        page_text = announcement_doc['page_texts'][page_num]
+                        if page_text:
+                            first_pages_text.append(f"[공고문 첫 페이지 {page_num}]\n{page_text[:2000]}")
+                    
+                    if first_pages_text:
+                        # 첫 페이지 내용을 맨 앞에 추가
+                        announcement_chunks.insert(0, {
+                            'chunk_id': 'first_pages',
+                            'text': '\n\n'.join(first_pages_text),
+                            'metadata': {
+                                'document_type': 'ANNOUNCEMENT',
+                                'page': 1,
+                                'section': '제목/서두',
+                                'file_name': announcement_doc.get('file_name', '')
+                            },
+                            'distance': 0.0  # 우선순위가 높음
+                        })
+
+            # 6️⃣ LLM 컨텍스트 구성
+            context_parts = []
+
+            if announcement_chunks:
+                context_parts.append("=== 📄 공고문 관련 섹션 ===")
+                for chunk in announcement_chunks:
+                    meta = chunk['metadata']
+                    context_parts.append(
+                        f"\n[섹션: {meta['section']}, 페이지: {meta['page']}]\n{chunk['text']}"
+                    )
+
+            if attachment_chunks:
+                context_parts.append("\n=== 📎 첨부서류 관련 섹션 ===")
+                for chunk in attachment_chunks:
+                    meta = chunk['metadata']
+                    context_parts.append(
+                        f"\n[파일: {meta['file_name']}, 섹션: {meta['section']}, 페이지: {meta['page']}]\n{chunk['text']}"
+                    )
+
+            context_text = "\n\n---\n".join(context_parts)
+
+            # 7️⃣ LLM 호출 - 핵심 정보 vs 작성 전략 구분
+            if is_core_feature:
+                # 날짜/기간이 필요한 Feature인지 판단
+                date_required_features = ['announcement_date', 'application_period', 'project_period']
+                requires_date = feature_def['feature_key'] in date_required_features
+                
+                # Feature 타입에 따라 프롬프트 조건부 작성
+                if requires_date:
+                    # 날짜/기간 정보가 필요한 Feature
+                    content_instruction = f"""실제 {feature_def['feature_type']} 값 - **구체적인 날짜/기간을 반드시 포함** (예: '2025년 9월 9일', '2025년 10월 1일 ~ 2026년 12월 31일')"""
+                    date_emphasis = """
+**⚠️ 매우 중요 (날짜/기간 정보):**
+- content 필드에는 **구체적인 날짜나 기간**을 반드시 포함하세요
+- 요약하지 말고, 공고문에 명시된 **정확한 날짜/기간**을 그대로 추출하세요
+- 예시: "2025년 9월 9일", "2025년 10월 1일 ~ 2026년 12월 31일", "2025.09.30(화) 14:00까지" 등"""
+                    user_examples = f"""
+  - {feature_def['feature_type']}: "2025년 9월 9일" 또는 "2025.09.09" (요약하지 말고 정확한 날짜)
+  - 또는 "2025년 10월 1일 ~ 2026년 12월 31일" (기간인 경우 시작일과 종료일 모두 포함)"""
+                    user_emphasis = "content 필드에는 구체적인 날짜/기간을 반드시 포함하세요."
+                elif feature_def['feature_key'] == 'support_scale':
+                    # 지원규모: 숫자/금액만 필요
+                    content_instruction = f"""실제 {feature_def['feature_type']} 값 - **구체적인 숫자/금액을 반드시 포함** (예: '연간 최대 20억원 이내', '7.35억원 이내')"""
+                    date_emphasis = """
+**⚠️ 매우 중요 (지원규모):**
+- content 필드에는 **구체적인 숫자/금액**을 반드시 포함하세요
+- 요약하지 말고, 공고문에 명시된 **정확한 금액/규모**를 그대로 추출하세요
+- 예시: "연간 최대 20억원 이내", "7.35억원 이내", "100억원" 등
+- **날짜나 기간 정보는 포함하지 마세요**"""
+                    user_examples = f"""
+  - {feature_def['feature_type']}: "연간 최대 20억원 이내" 또는 "7.35억원 이내" (정확한 숫자/금액)
+  - **날짜나 기간 정보는 포함하지 마세요**"""
+                    user_emphasis = "content 필드에는 구체적인 숫자/금액만 포함하세요. 날짜/기간은 포함하지 마세요."
+                else:
+                    # 사업명, 공고기관 등: 순수하게 해당 값만
+                    content_instruction = f"""실제 {feature_def['feature_type']} 값만 추출 (예: '2025년 공공AX 프로젝트 사업', '과학기술정보통신부')"""
+                    date_emphasis = f"""
+**⚠️ 매우 중요:**
+- content 필드에는 **{feature_def['feature_type']} 값만** 추출하세요
+- **다른 정보(날짜, 기간, 금액 등)를 섞지 마세요**
+- 요약하지 말고, 공고문에 명시된 **정확한 {feature_def['feature_type']} 값**만 그대로 추출하세요
+- 예시:
+  * 사업명: "2025년 공공AX 프로젝트 사업" (날짜나 기간 정보 포함 금지)
+  * 공고기관: "과학기술정보통신부" (날짜나 기간 정보 포함 금지)"""
+                    user_examples = f"""
+  - {feature_def['feature_type']}: "{feature_def['feature_type']} 값만" (예: 사업명이면 "2025년 공공AX 프로젝트 사업"만, 공고기관이면 "과학기술정보통신부"만)
+  - **다른 정보(날짜, 기간, 금액 등)를 섞지 마세요**"""
+                    user_emphasis = f"content 필드에는 {feature_def['feature_type']} 값만 추출하세요. 다른 정보를 섞지 마세요."
+                
+                # 메타 정보: 실제 값 추출에 집중
+                system_prompt = f"""당신은 정부 R&D 공고문을 분석하는 전문가입니다.
+공고문에서 '{feature_def['feature_type']}'의 **실제 값**을 추출해야 합니다.
+
+⚠️ 중요:
+- "{feature_def['feature_type']}" 작성 방법이나 가이드가 아닌, **공고문에 명시된 실제 값**을 찾으세요.
+- 공고문 제목, 첫 페이지, 헤더 부분을 우선 확인하세요.
+- 작성 방법/가이드가 아니라 실제로 명시된 값을 추출하세요.
+
+[분석 대상]
+- Feature: {feature_def['feature_type']}
+- 설명: {feature_def['description']}
+
+다음 정보를 JSON 형식으로 반환하세요:
+{{
+  "found": true/false,
+  "title": "추출된 실제 {feature_def['feature_type']} 값",
+  "content": "{content_instruction}",
+  "full_content": "해당 값이 나타난 전체 문맥",
+  "key_points": ["추출된 값의 특징이나 중요 사항"],
+  "writing_strategy": {{
+    "overview": "이 값의 의미 및 사업계획서 작성 시 활용 방법",
+    "writing_tips": ["이 값을 사업계획서에 어떻게 반영할지 팁"],
+    "common_mistakes": ["자주 발생하는 실수"],
+    "example_phrases": ["사업계획서에서 사용할 수 있는 예시 문구"]
+  }}
+}}
+
+{date_emphasis}
+
+**실제 값을 찾을 수 없으면 found를 false로 반환하세요.**"""
+
+                user_prompt = f"""공고문 내용:
+
+{context_text}
+
+위 내용에서 '{feature_def['feature_type']}'의 **실제 값**을 찾아서 추출하세요.
+
+⚠️ 매우 중요:
+- 요약하지 말고, 공고문에 명시된 **정확한 값**을 그대로 추출하세요
+- 예를 들어:{user_examples}
+
+작성 방법이나 가이드가 아니라, 공고문에 실제로 명시된 값을 찾으세요.
+{user_emphasis}"""
+            else:
+                # 일반 Feature: 작성 전략 추출
+                system_prompt = f"""당신은 정부 R&D 사업계획서 작성 컨설턴트입니다.
+공고문 및 첨부서류를 분석하여 '{feature_def['feature_type']}'에 대한 실질적인 작성 전략을 제시해야 합니다.
+
+[분석 대상]
+- Feature: {feature_def['feature_type']}
+- 설명: {feature_def['description']}
+
+다음 정보를 JSON 형식으로 반환하세요:
+{{
+  "found": true/false,
+  "title": "섹션 제목",
+  "content": "추출된 핵심 내용 요약 (200자 이내)",
+  "full_content": "전체 내용",
+  "key_points": ["핵심 요점 1", "핵심 요점 2"],
+  "writing_strategy": {{
+    "overview": "이 섹션 작성 시 평가위원이 중요하게 보는 핵심 포인트 (2-3문장)",
+    "writing_tips": ["효과적인 작성 팁 1", "효과적인 작성 팁 2", "효과적인 작성 팁 3"],
+    "common_mistakes": ["자주 발생하는 실수 1", "피해야 할 오류 2"],
+    "example_phrases": ["좋은 작성 예시 문구 1", "좋은 작성 예시 문구 2"]
+  }}
+}}
+
+**해당 내용을 찾을 수 없으면 found를 false로 반환하세요.**"""
+
+                user_prompt = f"""검색된 관련 섹션:
+
+{context_text}
+
+'{feature_def['feature_type']}' 정보를 찾아 JSON으로 반환해주세요."""
+
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0
+            )
+
+            result = json.loads(response.choices[0].message.content)
+
+            # 8️⃣ 결과 저장
+            if result.get("found"):
+                all_features.append({
+                    'feature_code': feature_def['feature_key'],
+                    'feature_name': feature_def['feature_type'],
+                    'title': result.get('title', ''),
+                    'summary': result.get('content', ''),
+                    'full_content': result.get('full_content', ''),
+                    'key_points': result.get('key_points', []),
+                    'writing_strategy': result.get('writing_strategy', {}),  # ✅ 작성 전략 추가
+
+                    # RAG 메타데이터
+                    'chunks_used': [
+                        {
+                            'file': c['metadata']['file_name'],
+                            'section': c['metadata']['section'],
+                            'page': c['metadata']['page']
+                        }
+                        for c in retrieved_chunks
+                    ],
+                    'keywords_detected': all_keywords if isinstance(keywords, dict) else keywords,
+                    'vector_similarity': float(top_distance) if top_distance is not None else None,
+                    'chunks_from_announcement': len(announcement_chunks),
+                    'chunks_from_attachments': len(attachment_chunks),
+                    'referenced_attachments': list(set(
+                        c['metadata']['file_name'] for c in attachment_chunks
+                    )),
+
+                    # 프로젝트 정보
+                    'project_idx': state['project_idx'],
+                    'extracted_at': datetime.now().isoformat()
+                })
+
+                print(f"✓ (공고:{len(announcement_chunks)} + 첨부:{len(attachment_chunks)}, 유사도:{top_distance:.2f})")
+            else:
+                print("✗ (LLM: found=false)")
+
+        except Exception as e:
+            print(f"✗ (에러: {e})")
+            state['errors'].append(f"Feature '{feature_def['feature_type']}' 추출 실패: {str(e)}")
+    
+    state['extracted_features'] = all_features
+    state['status'] = 'features_extracted'
+
+    print(f"\n  🎯 총 {len(all_features)}개 Feature 추출 완료")
+
+    return state
+
+
+# ========================================
+# [2025-01-10 suyeon] match_cross_references 함수 삭제
+# 삭제 이유:
+# 1. 현재 미사용: graph.py에서 노드로 등록되지 않음 (주석 처리됨)
+# 2. MVP2 재구현 예정: 현재 코드는 참고용이었으나 Git 히스토리에 보존
+# 3. 코드베이스 간소화: 115줄 삭제로 유지보수성 향상
+# 근거: MVP2에서 분석 대시보드 구현 시 새로운 구조로 재작성 예정
+
+
+def save_to_csv(state: BatchState) -> BatchState:
+    """
+    분석 결과를 로컬 파일로 저장 (개발/테스트용)
+
+    ⚠️ 운영 환경: Backend API 호출(build_response)이 Oracle DB 저장을 담당
+    📁 로컬 저장: 개발 중 디버깅, 테스트 결과 확인용
+
+    저장 파일:
+    1. ANALYSIS_RESULT_{timestamp}.csv - Feature 추출 결과 (RAG + LLM 분석)
+    2. ANALYSIS_RESULT_{timestamp}.json - Feature 추출 결과 (JSON)
+    3. table_of_contents_{timestamp}.json - 목차 정보 (JSON)
+    """
+
+    print(f"\n{'='*60}")
+    print(f"💾 분석 결과 로컬 저장 (개발/테스트용)")
+    print(f"{'='*60}")
+
+    # 저장 디렉토리 생성
+    output_folder = Path("./parsed_results/v6_rag")
+    output_folder.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    project_idx = state['project_idx']
+
+    output_paths = {}
+
+    try:
+        # ========================================
+        # 1. ANALYSIS_RESULT.csv (Feature 추출 결과만)
+        # ========================================
+        analysis_data = []
+        analysis_json = []
+        for idx, feature in enumerate(state['extracted_features'], start=1):
+            result_id = idx
+            analysis_json.append({
+                'result_id': result_id,
+                'project_idx': project_idx,
+                'feature_code': feature['feature_code'],
+                'feature_name': feature['feature_name'],
+                'title': feature.get('title', ''),
+                'summary': feature.get('summary', ''),
+                'full_content': feature.get('full_content', ''),
+                'key_points': feature.get('key_points', []),
+                'writing_strategy': feature.get('writing_strategy', {}),  # ✅ 작성 전략 추가
+                'vector_similarity': float(v) if (v := feature.get('vector_similarity')) is not None else 0.0,
+                'chunks_from_announcement': int(feature.get('chunks_from_announcement', 0)),
+                'chunks_from_attachments': int(feature.get('chunks_from_attachments', 0)),
+                'referenced_attachments': feature.get('referenced_attachments', []),
+                'extracted_at': feature.get('extracted_at', datetime.now().isoformat())
+            })
+
+            analysis_data.append({
+                'result_id': result_id,
+                'project_idx': project_idx,
+                'feature_code': feature['feature_code'],
+                'feature_name': feature['feature_name'],
+                'title': feature.get('title', ''),
+                'summary': feature.get('summary', ''),
+                'full_content': feature.get('full_content', ''),
+                'key_points': '|'.join(feature.get('key_points', [])),
+                'writing_strategy': json.dumps(feature.get('writing_strategy', {}), ensure_ascii=False),  # ✅ JSON 문자열로 저장
+                'vector_similarity': feature.get('vector_similarity') if feature.get('vector_similarity') is not None else 0.0,
+                'chunks_from_announcement': feature.get('chunks_from_announcement', 0),
+                'chunks_from_attachments': feature.get('chunks_from_attachments', 0),
+                'referenced_attachments': '|'.join(feature.get('referenced_attachments', [])),
+                'extracted_at': feature.get('extracted_at', datetime.now().isoformat())
+            })
+
+        df_analysis = pd.DataFrame(analysis_data)
+        csv_path = output_folder / f"ANALYSIS_RESULT_{project_idx}_{timestamp}.csv"
+        df_analysis.to_csv(csv_path, index=False, encoding='utf-8-sig')
+        output_paths['csv'] = str(csv_path)
+        print(f"\n  ✅ ANALYSIS_RESULT.csv: {len(analysis_data)}행")
+        print(f"     → {csv_path.name}")
+
+        # ========================================
+        # 2. ANALYSIS_RESULT.json (Feature 추출 결과)
+        # ========================================
+        json_result_path = output_folder / f"ANALYSIS_RESULT_{project_idx}_{timestamp}.json"
+        with open(json_result_path, 'w', encoding='utf-8') as f:
+            json.dump(analysis_json, f, ensure_ascii=False, indent=2)
+        output_paths['analysis_json'] = str(json_result_path)
+        print(f"\n  ✅ ANALYSIS_RESULT.json: {len(analysis_json)}개 항목")
+        print(f"     → {json_result_path.name}")
+        
+        # ========================================
+        # 3. table_of_contents.json (목차 정보)
+        # ========================================
+        toc = state.get('table_of_contents')
+        if toc:
+            json_path = output_folder / f"table_of_contents_{project_idx}_{timestamp}.json"
+
+            # JSON 저장 (들여쓰기 포함)
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(toc, f, ensure_ascii=False, indent=2)
+
+            output_paths['json'] = str(json_path)
+            print(f"\n  ✅ table_of_contents.json: {toc.get('total_sections', 0)}개 섹션")
+            print(f"     → {json_path.name}")
+            print(f"     출처: {toc.get('source', 'unknown')}")
+        else:
+            print(f"\n  ⚠️  table_of_contents.json: 목차 없음, 생성 스킵")
+
+        # State 업데이트
+        state['csv_paths'] = output_paths
+        state['status'] = 'csv_saved'
+
+        print(f"\n  💾 저장 위치: {output_folder.absolute()}")
+        print(f"  📊 총 {len(output_paths)}개 파일 생성")
+        
+    except Exception as e:
+        error_msg = f"파일 저장 실패: {str(e)}"
+        print(f"\n  ❌ {error_msg}")
+        state['errors'].append(error_msg)
+
+    return state

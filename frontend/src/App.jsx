@@ -1,35 +1,49 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import 'aos/dist/aos.css';
+import './App.css';
+import Homepage from './pages/home/Homepage';
+import { Route, Routes } from 'react-router-dom';
+import Login from './pages/login/Login';
+import Layout from './pages/works/Layout';
+import AnalyzeView from './pages/works/analyze/AnalyzeView';
+import AnalyzeDashboard from './pages/works/analyze/AnalyzeDashboard';
+import CreateView from './pages/works/create/CreateView';
+import GenerateView from './pages/works/create/GenerateView';
+import EditView from './pages/works/edit/EditView';
+import VerifyView3 from './pages/works/verify/VerifyView3';
+import VerifyReport2 from "./pages/works/verify/VerifyReport2";
+import Dashboard from './pages/main/Dashboard';
+import { useEffect } from 'react';
+import AOS from 'aos';
+
 
 function App() {
-  const [count, setCount] = useState(0)
+    useEffect(() => {
+        AOS.init({
+            duration: 1000,
+            once: true,
+            easing: 'ease-out',
+        });
+    }, []);
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    return (
+        <Routes>
+            <Route path="/" element={<Homepage />} />
+            <Route path="/login" element={<Login />} />
+
+            <Route path="/main" element={<Dashboard />} />
+
+            <Route path="/works" element={<Layout />}>
+                <Route path="analyze" element={<AnalyzeView />} />
+                <Route path="analyze/dashboard" element={<AnalyzeDashboard />} />
+                <Route path="create" element={<CreateView />} />
+                <Route path="generate" element={<GenerateView />} />
+                <Route path="edit" element={<EditView />} />
+                <Route path="edit/:docId" element={<EditView />} />
+                <Route path="verify" element={<VerifyView3 />} />
+                <Route path="verify/report" element={<VerifyReport2 />} />
+            </Route>
+        </Routes>
+    );
 }
 
-export default App
+export default App;
