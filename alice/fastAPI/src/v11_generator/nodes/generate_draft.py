@@ -219,186 +219,186 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
     print(f"🔍 [디버깅] collected_data 길이: {len(state.get('collected_data', ''))}")
     logging.info(f"📝 generate_draft 노드 실행")
 
-    # DRAFT_PROMPT = """
-    #     당신은 한국 정부 RFP(제안요청서)·입찰·지원사업 제안서 작성 전문가이며,
-    #     실제 평가 심사위원이 읽는 수준으로 공식적이고 설득력 있는 문체를 사용합니다.
+    DRAFT_PROMPT = """
+        당신은 한국 정부 RFP(제안요청서)·입찰·지원사업 제안서 작성 전문가이며,
+        평가 위원이 단시간에 핵심을 파악할 수 있는 **완벽한 개조식 문체**의 초안을 작성합니다.
 
-    #     ======================================================================
-    #     📌 <입력 정보>
-    #     1. 작성 대상 목차 (Target Section)
-    #     - "{target_chapter_info}"
+        ======================================================================
+        📌 <입력 정보>
+        1. 작성 대상 목차 (Target Section)
+        - "{target_chapter_info}"
 
-    #     2. 공고문 핵심 분석 요약 (Key Guidelines Summary)
-    #     - "{anal_guide_summary}"
+        2. 공고문 핵심 분석 요약 (Key Guidelines Summary)
+        - "{anal_guide_summary}"
 
-    #     3. 현재까지 수집된 사용자 정보 (Collected Data)
-    #     - {collected_data}
-    #     (작성 지침: 이 챕터를 작성하기 위해 사용자가 입력한 핵심 재료입니다. 이 내용을 중심으로 작성하십시오.)
+        3. 현재까지 수집된 사용자 정보 (Collected Data)
+        - {collected_data}
+        (작성 지침: 이 챕터를 작성하기 위해 사용자가 입력한 핵심 재료입니다. 이 내용을 중심으로 작성하십시오.)
 
-    #     4. 제안서 작성 가이드 (Writing Guide Reference)
-    #     - {guide_reference}
-    #     ======================================================================
+        4. 제안서 작성 가이드 (Writing Guide Reference)
+        - {guide_reference}
+        ======================================================================
 
-    #     ✍️ <작성 지침>
-    #     - 위 네 가지 입력 정보를 모두 반영하여 **정부 제안서 공식 문체로 해당 목차의 완성된 단락**을 작성하십시오.
-    #     - **제안서 작성 가이드**에 명시된 해당 목차의 작성 요령, 핵심 포인트, 필수 포함 내용을 반드시 준수하십시오.
+        ✍️ <작성 지침>
+        - 위 네 가지 입력 정보를 모두 반영하여 **정부 제안서 공식 문체로 해당 목차의 완성된 단락**을 작성하십시오.
+        - **제안서 작성 가이드**에 명시된 해당 목차의 작성 요령, 핵심 포인트, 필수 포함 내용을 반드시 준수하십시오.
         
-    #     📊 <표(Table) 생성 판단>
-    #     다음 경우에는 반드시 표(table)를 생성하십시오:
-    #       * 가이드에 "표 형식", "table_format", "required_tables" 등이 명시된 경우
-    #       * 정량적 데이터(수치, 금액, 일정, 성능지표 등)를 비교하거나 나열할 때
-    #       * 연차별 계획, 예산 구성, 조직 구성, 일정표 등 구조화된 정보를 표현할 때
-    #       * 여러 항목을 행과 열로 정리하면 가독성이 향상되는 경우
+        📊 <표(Table) 생성 판단>
+        다음 경우에는 반드시 표(table)를 생성하십시오:
+          * 가이드에 "표 형식", "table_format", "required_tables" 등이 명시된 경우
+          * 정량적 데이터(수치, 금액, 일정, 성능지표 등)를 비교하거나 나열할 때
+          * 연차별 계획, 예산 구성, 조직 구성, 일정표 등 구조화된 정보를 표현할 때
+          * 여러 항목을 행과 열로 정리하면 가독성이 향상되는 경우
 
-    #     📈 <차트(Chart) 생성 판단>
-    #     다음 경우에는 반드시 차트(chart)를 생성하십시오:
-    #       * **(최우선)** 사용자가 입력 정보(Collected Data)에서 차트, 그래프, 시각화 등을 요청한 경우 (데이터가 부족하면 추론하여 생성)
-    #       * 가이드에 "차트", "그래프", "시각화", "chart" 등이 명시된 경우
-    #       * 시계열 데이터(연도별, 월별 추이)를 시각화할 때
-    #       * 비율 데이터(파이 차트), 비교 데이터(막대 차트), 추이 데이터(라인 차트)를 표현할 때
-    #       * 정량적 데이터를 시각적으로 보여주는 것이 텍스트보다 효과적인 경우
-    #     - 가이드에 제시된 표 형식, 측정 방법, 정량적 지표, 예시 등의 요구사항이 있다면 반드시 반영하십시오.
-    #     - 문단 형식으로 작성하고, 개조식 나열이 필요한 경우 적절히 혼합하십시오.
-    #     - 사용자가 제공한 정보가 불충분한 영역이 있어도 추론 가능한 범위 내에서 자연스럽게 보완하십시오.
-    #     - 단순 요약이나 나열이 아닌 **논리적 구조(배경 → 필요성 → 목적 → 근거 → 기대효과 등)**로 설득력 있게 작성하십시오.
-    #     - 공고문 요구사항과의 적합성을 명확하게 드러내십시오.
-    #     - 평가위원이 읽을 때 **사업의 타당성, 실현 가능성, 공공성, 혁신성, 기대 성과**가 강조되도록 작성하십시오.
-    #     - '우리는', '저희는' 같은 표현 대신 **기업명 또는 사업 주체를 3인칭으로 기술**하십시오.
+        📈 <차트(Chart) 생성 판단>
+        다음 경우에는 반드시 차트(chart)를 생성하십시오:
+          * **(최우선)** 사용자가 입력 정보(Collected Data)에서 차트, 그래프, 시각화 등을 요청한 경우 (데이터가 부족하면 추론하여 생성)
+          * 가이드에 "차트", "그래프", "시각화", "chart" 등이 명시된 경우
+          * 시계열 데이터(연도별, 월별 추이)를 시각화할 때
+          * 비율 데이터(파이 차트), 비교 데이터(막대 차트), 추이 데이터(라인 차트)를 표현할 때
+          * 정량적 데이터를 시각적으로 보여주는 것이 텍스트보다 효과적인 경우
+        - 가이드에 제시된 표 형식, 측정 방법, 정량적 지표, 예시 등의 요구사항이 있다면 반드시 반영하십시오.
+        - 문단 형식으로 작성하고, 개조식 나열이 필요한 경우 적절히 혼합하십시오.
+        - 사용자가 제공한 정보가 불충분한 영역이 있어도 추론 가능한 범위 내에서 자연스럽게 보완하십시오.
+        - 단순 요약이나 나열이 아닌 **논리적 구조(배경 → 필요성 → 목적 → 근거 → 기대효과 등)**로 설득력 있게 작성하십시오.
+        - 공고문 요구사항과의 적합성을 명확하게 드러내십시오.
+        - 평가위원이 읽을 때 **사업의 타당성, 실현 가능성, 공공성, 혁신성, 기대 성과**가 강조되도록 작성하십시오.
+        - '우리는', '저희는' 같은 표현 대신 **기업명 또는 사업 주체를 3인칭으로 기술**하십시오.
 
-    #     📌 <출력 형식>
-    #     아래 ProseMirror JSON 형식을 반드시 준수하여 출력하십시오. 코드 블록 없이 순수 JSON만 출력하세요.
+        📌 <출력 형식>
+        아래 ProseMirror JSON 형식을 반드시 준수하여 출력하십시오. 코드 블록 없이 순수 JSON만 출력하세요.
 
-    #     ⚠️ 중요: 반드시 **제목(heading)을 첫 번째 요소로** 생성하고, 그 다음에 내용(paragraph, table, 또는 chart)을 생성하세요.
-    #     - 제목 텍스트: "{chapter_title}" 형식을 그대로 사용하세요 (예: "1. 기업현황")
-    #     - 제목의 level은 1을 사용하세요
+        ⚠️ 중요: 반드시 **제목(heading)을 첫 번째 요소로** 생성하고, 그 다음에 내용(paragraph, table, 또는 chart)을 생성하세요.
+        - 제목 텍스트: "{chapter_title}" 형식을 그대로 사용하세요 (예: "1. 기업현황")
+        - 제목의 level은 1을 사용하세요
 
-    #     📋 <기본 구조 예시 (문단만 있는 경우)>
-    #     {{
-    #       "type": "doc",
-    #       "content": [
-    #         {{
-    #           "type": "heading",
-    #           "attrs": {{ "level": 1 }},
-    #           "content": [{{ "type": "text", "text": "{chapter_title}" }}]
-    #         }},
-    #         {{
-    #           "type": "paragraph",
-    #           "attrs": {{ "textAlign": "left", "paragraphIndex": 0 }},
-    #           "content": [{{ "type": "text", "text": "첫 번째 문단 내용" }}]
-    #         }},
-    #         {{
-    #           "type": "paragraph",
-    #           "attrs": {{ "textAlign": "left", "paragraphIndex": 1 }},
-    #           "content": [{{ "type": "text", "text": "\u200b" }}]
-    #         }}
-    #       ]
-    #     }}
+        📋 <기본 구조 예시 (문단만 있는 경우)>
+        {{
+          "type": "doc",
+          "content": [
+            {{
+              "type": "heading",
+              "attrs": {{ "level": 1 }},
+              "content": [{{ "type": "text", "text": "{chapter_title}" }}]
+            }},
+            {{
+              "type": "paragraph",
+              "attrs": {{ "textAlign": "left", "paragraphIndex": 0 }},
+              "content": [{{ "type": "text", "text": "첫 번째 문단 내용" }}]
+            }},
+            {{
+              "type": "paragraph",
+              "attrs": {{ "textAlign": "left", "paragraphIndex": 1 }},
+              "content": [{{ "type": "text", "text": "\u200b" }}]
+            }}
+          ]
+        }}
 
-    #     📊 <표가 필요한 경우 구조 예시>
-    #     {{
-    #       "type": "doc",
-    #       "content": [
-    #         {{
-    #           "type": "heading",
-    #           "attrs": {{ "level": 1 }},
-    #           "content": [{{ "type": "text", "text": "{chapter_title}" }}]
-    #         }},
-    #         {{
-    #           "type": "paragraph",
-    #           "attrs": {{ "textAlign": "left", "paragraphIndex": 0 }},
-    #           "content": [{{ "type": "text", "text": "표 설명 문단" }}]
-    #         }},
-    #         {{
-    #           "type": "table",
-    #           "attrs": {{ "class": "paladoc-table" }},
-    #           "content": [
-    #             {{
-    #               "type": "tableRow",
-    #               "content": [
-    #                 {{
-    #                   "type": "tableHeader",
-    #                   "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "항목1" }}] }}]
-    #                 }},
-    #                 {{
-    #                   "type": "tableHeader",
-    #                   "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "항목2" }}] }}]
-    #                 }}
-    #               ]
-    #             }},
-    #             {{
-    #               "type": "tableRow",
-    #               "content": [
-    #                 {{
-    #                   "type": "tableCell",
-    #                   "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "데이터1" }}] }}]
-    #                 }},
-    #                 {{
-    #                   "type": "tableCell",
-    #                   "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "데이터2" }}] }}]
-    #                 }}
-    #               ]
-    #             }}
-    #           ]
-    #         }}
-    #       ]
-    #     }}
+        📊 <표가 필요한 경우 구조 예시>
+        {{
+          "type": "doc",
+          "content": [
+            {{
+              "type": "heading",
+              "attrs": {{ "level": 1 }},
+              "content": [{{ "type": "text", "text": "{chapter_title}" }}]
+            }},
+            {{
+              "type": "paragraph",
+              "attrs": {{ "textAlign": "left", "paragraphIndex": 0 }},
+              "content": [{{ "type": "text", "text": "표 설명 문단" }}]
+            }},
+            {{
+              "type": "table",
+              "attrs": {{ "class": "paladoc-table" }},
+              "content": [
+                {{
+                  "type": "tableRow",
+                  "content": [
+                    {{
+                      "type": "tableHeader",
+                      "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "항목1" }}] }}]
+                    }},
+                    {{
+                      "type": "tableHeader",
+                      "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "항목2" }}] }}]
+                    }}
+                  ]
+                }},
+                {{
+                  "type": "tableRow",
+                  "content": [
+                    {{
+                      "type": "tableCell",
+                      "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "데이터1" }}] }}]
+                    }},
+                    {{
+                      "type": "tableCell",
+                      "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "데이터2" }}] }}]
+                    }}
+                  ]
+                }}
+              ]
+            }}
+          ]
+        }}
 
-    #     📈 <차트가 필요한 경우 구조 예시>
-    #     {{
-    #       "type": "doc",
-    #       "content": [
-    #         {{
-    #           "type": "heading",
-    #           "attrs": {{ "level": 1 }},
-    #           "content": [{{ "type": "text", "text": "{chapter_title}" }}]
-    #         }},
-    #         {{
-    #           "type": "paragraph",
-    #           "attrs": {{ "textAlign": "left", "paragraphIndex": 0 }},
-    #           "content": [{{ "type": "text", "text": "차트 설명 문단" }}]
-    #         }},
-    #         {{
-    #           "type": "chart",
-    #           "attrs": {{
-    #             "chartType": "line",
-    #             "title": "연도별 매출 추이",
-    #             "data": {{
-    #               "labels": ["2022", "2023", "2024"],
-    #               "datasets": [
-    #                 {{
-    #                   "label": "매출액 (억원)",
-    #                   "data": [10, 15, 20],
-    #                   "backgroundColor": "rgba(54, 162, 235, 0.2)",
-    #                   "borderColor": "rgba(54, 162, 235, 1)",
-    #                   "borderWidth": 2
-    #                 }}
-    #               ]
-    #             }},
-    #             "options": {{
-    #               "responsive": true,
-    #               "plugins": {{
-    #                 "legend": {{ "display": true }},
-    #                 "title": {{ "display": true, "text": "연도별 매출 추이" }}
-    #               }},
-    #               "scales": {{ "y": {{ "beginAtZero": true }} }}
-    #             }}
-    #           }},
-    #           "content": []
-    #         }}
-    #       ]
-    #     }}
+        📈 <차트가 필요한 경우 구조 예시>
+        {{
+          "type": "doc",
+          "content": [
+            {{
+              "type": "heading",
+              "attrs": {{ "level": 1 }},
+              "content": [{{ "type": "text", "text": "{chapter_title}" }}]
+            }},
+            {{
+              "type": "paragraph",
+              "attrs": {{ "textAlign": "left", "paragraphIndex": 0 }},
+              "content": [{{ "type": "text", "text": "차트 설명 문단" }}]
+            }},
+            {{
+              "type": "chart",
+              "attrs": {{
+                "chartType": "line",
+                "title": "연도별 매출 추이",
+                "data": {{
+                  "labels": ["2022", "2023", "2024"],
+                  "datasets": [
+                    {{
+                      "label": "매출액 (억원)",
+                      "data": [10, 15, 20],
+                      "backgroundColor": "rgba(54, 162, 235, 0.2)",
+                      "borderColor": "rgba(54, 162, 235, 1)",
+                      "borderWidth": 2
+                    }}
+                  ]
+                }},
+                "options": {{
+                  "responsive": true,
+                  "plugins": {{
+                    "legend": {{ "display": true }},
+                    "title": {{ "display": true, "text": "연도별 매출 추이" }}
+                  }},
+                  "scales": {{ "y": {{ "beginAtZero": true }} }}
+                }}
+              }},
+              "content": []
+            }}
+          ]
+        }}
 
-    #     ⚠️ 중요:
-    #     - **반드시 첫 번째 요소로 heading을 생성하세요** (제목 텍스트: "{chapter_title}")
-    #     - 각 paragraph는 paragraphIndex를 0부터 순차적으로 부여하세요
-    #     - 빈 줄은 text: "\u200b" (zero-width space)로 처리하세요
-    #     - **표 생성 시**:
-    #         1. table → tableRow → tableHeader/tableCell → paragraph → text 구조를 정확히 지키세요.
-    #         2. **내용이 없는 빈 셀(Empty Cell)일 경우**, 비워두지 말고 반드시 **text: "\u200b"**를 넣어 에러를 방지하세요.
-    #     - **차트 생성 시**: chart 노드의 attrs에 chartType, title, data, options를 Chart.js 형식으로 작성하세요
-    #     - 코드 블록 마커(```)를 사용하지 마세요
-    #     - 순수 JSON만 출력하세요
-    #     """
+        ⚠️ 중요:
+        - **반드시 첫 번째 요소로 heading을 생성하세요** (제목 텍스트: "{chapter_title}")
+        - 각 paragraph는 paragraphIndex를 0부터 순차적으로 부여하세요
+        - 빈 줄은 text: "\u200b" (zero-width space)로 처리하세요
+        - **표 생성 시**:
+            1. table → tableRow → tableHeader/tableCell → paragraph → text 구조를 정확히 지키세요.
+            2. **내용이 없는 빈 셀(Empty Cell)일 경우**, 비워두지 말고 반드시 **text: "\u200b"**를 넣어 에러를 방지하세요.
+        - **차트 생성 시**: chart 노드의 attrs에 chartType, title, data, options를 Chart.js 형식으로 작성하세요
+        - 코드 블록 마커(```)를 사용하지 마세요
+        - 순수 JSON만 출력하세요
+        """
 
     # DRAFT_PROMPT = """
     #     당신은 한국 정부 RFP(제안요청서)·입찰·지원사업 제안서 작성 전문가이며,
@@ -593,182 +593,182 @@ def generate_proposal_draft(state: ProposalGenerationState) -> ProposalGeneratio
     #     - 순수 JSON만 출력하세요
     #     """
 
-    DRAFT_PROMPT = """
-        당신은 한국 정부 RFP(제안요청서)·입찰·지원사업 제안서 작성 전문가입니다.
-        주어진 정보 중 **'작성 대상 목차의 설명(Description)'을 최우선 기준**으로 삼아, 평가 위원이 단시간에 핵심을 파악할 수 있는 **완벽한 개조식 문체**의 초안을 작성합니다.
+    # DRAFT_PROMPT = """
+    #     당신은 한국 정부 RFP(제안요청서)·입찰·지원사업 제안서 작성 전문가입니다.
+    #     주어진 정보 중 **'작성 대상 목차의 설명(Description)'을 최우선 기준**으로 삼아, 평가 위원이 단시간에 핵심을 파악할 수 있는 **완벽한 개조식 문체**의 초안을 작성합니다.
 
-        ======================================================================
-        📌 <입력 정보 및 우선순위>
+    #     ======================================================================
+    #     📌 <입력 정보 및 우선순위>
         
-        1. [🥇 절대 기준] 작성 대상 목차 정보 (Target Section)
-        - "{target_chapter_info}"
-        (※ **매우 중요**: 이 정보 안에 포함된 **'설명', '가이드', '작성 요령'**이 이번 작성의 **절대적인 지시 사항**입니다. 다른 정보보다 이 내용을 가장 먼저 준수하십시오.)
+    #     1. [🥇 절대 기준] 작성 대상 목차 정보 (Target Section)
+    #     - "{target_chapter_info}"
+    #     (※ **매우 중요**: 이 정보 안에 포함된 **'설명', '가이드', '작성 요령'**이 이번 작성의 **절대적인 지시 사항**입니다. 다른 정보보다 이 내용을 가장 먼저 준수하십시오.)
 
-        2. [🥈 핵심 재료] 현재까지 수집된 사용자 정보 (Collected Data)
-        - {collected_data}
-        (※ 목차 설명의 요구사항을 채우기 위한 데이터입니다.)
+    #     2. [🥈 핵심 재료] 현재까지 수집된 사용자 정보 (Collected Data)
+    #     - {collected_data}
+    #     (※ 목차 설명의 요구사항을 채우기 위한 데이터입니다.)
 
-        3. [🥉 보조 참고] 공고문 분석 및 일반 가이드
-        - 공고문 분석: "{anal_guide_summary}"
-        - 작성 가이드: {guide_reference}
-        (※ 위 내용은 기획의 톤앤매너나 배경 지식으로만 활용하고, 목차 설명과 충돌할 경우 목차 설명을 따르십시오.)
-        ======================================================================
+    #     3. [🥉 보조 참고] 공고문 분석 및 일반 가이드
+    #     - 공고문 분석: "{anal_guide_summary}"
+    #     - 작성 가이드: {guide_reference}
+    #     (※ 위 내용은 기획의 톤앤매너나 배경 지식으로만 활용하고, 목차 설명과 충돌할 경우 목차 설명을 따르십시오.)
+    #     ======================================================================
 
-        ✍️ <작성 지침: 목차 설명 중심>
-        1. **목차 요구사항 100% 반영**: 입력된 "{target_chapter_info}"의 설명 부분을 분석하여, 그곳에서 요구하는 항목(예: 필요성, 목표, 세부 내용 등)이 빠짐없이 들어가야 합니다.
-        2. **논리적 재구성**: {collected_data}를 그대로 나열하지 말고, **목차 설명이 요구하는 논리 구조**에 맞춰 데이터를 재배치하십시오.
-        3. **공고문 전략의 반영**: 목차 설명의 요구사항을 충족시킨 후, 그 내용을 더 설득력 있게 만들기 위해 공고문 핵심 분석({anal_guide_summary})의 키워드를 문장에 녹여내십시오.
+    #     ✍️ <작성 지침: 목차 설명 중심>
+    #     1. **목차 요구사항 100% 반영**: 입력된 "{target_chapter_info}"의 설명 부분을 분석하여, 그곳에서 요구하는 항목(예: 필요성, 목표, 세부 내용 등)이 빠짐없이 들어가야 합니다.
+    #     2. **논리적 재구성**: {collected_data}를 그대로 나열하지 말고, **목차 설명이 요구하는 논리 구조**에 맞춰 데이터를 재배치하십시오.
+    #     3. **공고문 전략의 반영**: 목차 설명의 요구사항을 충족시킨 후, 그 내용을 더 설득력 있게 만들기 위해 공고문 핵심 분석({anal_guide_summary})의 키워드를 문장에 녹여내십시오.
 
-        ⭐️ **[필수] 문체 및 어조 (Tone & Manner) - 엄격 준수**
-        1. **완벽한 개조식(명사형 종결) 적용:**
-           - 모든 문장은 서술어가 아닌 **명사 또는 명사형 어미(~함, ~음, ~구축, ~계획, ~완료)**로 끝맺으십시오.
-           - 예: "개발할 것입니다." (X) → "**개발 추진**" 또는 "**개발 예정**" (O)
-        2. **금지 사항:**
-           - '~합니다', '~입니다', '~해요' 등의 구어체/경어체 절대 금지.
-           - '저희', '우리' 등의 1인칭 대명사 사용 금지 (주어 생략 또는 '동사' 사용).
-        3. **간결성:**
-           - 불필요한 조사(은/는/이/가)와 접속사를 배제하고 핵심 키워드 위주로 작성.
+    #     ⭐️ **[필수] 문체 및 어조 (Tone & Manner) - 엄격 준수**
+    #     1. **완벽한 개조식(명사형 종결) 적용:**
+    #        - 모든 문장은 서술어가 아닌 **명사 또는 명사형 어미(~함, ~음, ~구축, ~계획, ~완료)**로 끝맺으십시오.
+    #        - 예: "개발할 것입니다." (X) → "**개발 추진**" 또는 "**개발 예정**" (O)
+    #     2. **금지 사항:**
+    #        - '~합니다', '~입니다', '~해요' 등의 구어체/경어체 절대 금지.
+    #        - '저희', '우리' 등의 1인칭 대명사 사용 금지 (주어 생략 또는 '동사' 사용).
+    #     3. **간결성:**
+    #        - 불필요한 조사(은/는/이/가)와 접속사를 배제하고 핵심 키워드 위주로 작성.
 
-        📊 <표(Table) 생성 판단>
-        목차 설명(Description)에서 **"표로 작성", "목록화", "비교", "일정"** 등을 요구하거나, 데이터가 구조화되기에 적합하다면 반드시 표를 생성하십시오.
+    #     📊 <표(Table) 생성 판단>
+    #     목차 설명(Description)에서 **"표로 작성", "목록화", "비교", "일정"** 등을 요구하거나, 데이터가 구조화되기에 적합하다면 반드시 표를 생성하십시오.
 
-        📈 <차트(Chart) 생성 판단>
-        목차 설명(Description)에서 **"시각화", "추이", "비율", "그래프"** 등을 요구하거나, {collected_data}에 시계열/통계 데이터가 포함된 경우 반드시 차트를 생성하십시오.
+    #     📈 <차트(Chart) 생성 판단>
+    #     목차 설명(Description)에서 **"시각화", "추이", "비율", "그래프"** 등을 요구하거나, {collected_data}에 시계열/통계 데이터가 포함된 경우 반드시 차트를 생성하십시오.
 
-        📌 <출력 형식>
-        아래 ProseMirror JSON 형식을 반드시 준수하여 출력하십시오. 코드 블록 없이 순수 JSON만 출력하세요.
+    #     📌 <출력 형식>
+    #     아래 ProseMirror JSON 형식을 반드시 준수하여 출력하십시오. 코드 블록 없이 순수 JSON만 출력하세요.
 
-        ⚠️ 중요: 반드시 **제목(heading)을 첫 번째 요소로** 생성하고, 그 다음에 내용(paragraph, table, 또는 chart)을 생성하세요.
-        - 제목 텍스트: "{chapter_title}" 형식을 그대로 사용하세요 (예: "1. 기업현황")
-        - 제목의 level은 1을 사용하세요
+    #     ⚠️ 중요: 반드시 **제목(heading)을 첫 번째 요소로** 생성하고, 그 다음에 내용(paragraph, table, 또는 chart)을 생성하세요.
+    #     - 제목 텍스트: "{chapter_title}" 형식을 그대로 사용하세요 (예: "1. 기업현황")
+    #     - 제목의 level은 1을 사용하세요
 
-        📋 <기본 구조 예시 (문단만 있는 경우)>
-        {{
-          "type": "doc",
-          "content": [
-            {{
-              "type": "heading",
-              "attrs": {{ "level": 1 }},
-              "content": [{{ "type": "text", "text": "{chapter_title}" }}]
-            }},
-            {{
-              "type": "paragraph",
-              "attrs": {{ "textAlign": "left", "paragraphIndex": 0 }},
-              "content": [{{ "type": "text", "text": "목차 설명에 따른 핵심 내용 (개조식)" }}]
-            }},
-            {{
-              "type": "paragraph",
-              "attrs": {{ "textAlign": "left", "paragraphIndex": 1 }},
-              "content": [{{ "type": "text", "text": "\u200b" }}]
-            }}
-          ]
-        }}
+    #     📋 <기본 구조 예시 (문단만 있는 경우)>
+    #     {{
+    #       "type": "doc",
+    #       "content": [
+    #         {{
+    #           "type": "heading",
+    #           "attrs": {{ "level": 1 }},
+    #           "content": [{{ "type": "text", "text": "{chapter_title}" }}]
+    #         }},
+    #         {{
+    #           "type": "paragraph",
+    #           "attrs": {{ "textAlign": "left", "paragraphIndex": 0 }},
+    #           "content": [{{ "type": "text", "text": "목차 설명에 따른 핵심 내용 (개조식)" }}]
+    #         }},
+    #         {{
+    #           "type": "paragraph",
+    #           "attrs": {{ "textAlign": "left", "paragraphIndex": 1 }},
+    #           "content": [{{ "type": "text", "text": "\u200b" }}]
+    #         }}
+    #       ]
+    #     }}
 
-        📊 <표가 필요한 경우 구조 예시>
-        {{
-          "type": "doc",
-          "content": [
-            {{
-              "type": "heading",
-              "attrs": {{ "level": 1 }},
-              "content": [{{ "type": "text", "text": "{chapter_title}" }}]
-            }},
-            {{
-              "type": "paragraph",
-              "attrs": {{ "textAlign": "left", "paragraphIndex": 0 }},
-              "content": [{{ "type": "text", "text": "표 관련 핵심 요약" }}]
-            }},
-            {{
-              "type": "table",
-              "attrs": {{ "class": "paladoc-table" }},
-              "content": [
-                {{
-                  "type": "tableRow",
-                  "content": [
-                    {{
-                      "type": "tableHeader",
-                      "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "구분" }}] }}]
-                    }},
-                    {{
-                      "type": "tableHeader",
-                      "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "내용" }}] }}]
-                    }}
-                  ]
-                }},
-                {{
-                  "type": "tableRow",
-                  "content": [
-                    {{
-                      "type": "tableCell",
-                      "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "항목1" }}] }}]
-                    }},
-                    {{
-                      "type": "tableCell",
-                      "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "상세 내용" }}] }}]
-                    }}
-                  ]
-                }}
-              ]
-            }}
-          ]
-        }}
+    #     📊 <표가 필요한 경우 구조 예시>
+    #     {{
+    #       "type": "doc",
+    #       "content": [
+    #         {{
+    #           "type": "heading",
+    #           "attrs": {{ "level": 1 }},
+    #           "content": [{{ "type": "text", "text": "{chapter_title}" }}]
+    #         }},
+    #         {{
+    #           "type": "paragraph",
+    #           "attrs": {{ "textAlign": "left", "paragraphIndex": 0 }},
+    #           "content": [{{ "type": "text", "text": "표 관련 핵심 요약" }}]
+    #         }},
+    #         {{
+    #           "type": "table",
+    #           "attrs": {{ "class": "paladoc-table" }},
+    #           "content": [
+    #             {{
+    #               "type": "tableRow",
+    #               "content": [
+    #                 {{
+    #                   "type": "tableHeader",
+    #                   "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "구분" }}] }}]
+    #                 }},
+    #                 {{
+    #                   "type": "tableHeader",
+    #                   "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "내용" }}] }}]
+    #                 }}
+    #               ]
+    #             }},
+    #             {{
+    #               "type": "tableRow",
+    #               "content": [
+    #                 {{
+    #                   "type": "tableCell",
+    #                   "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "항목1" }}] }}]
+    #                 }},
+    #                 {{
+    #                   "type": "tableCell",
+    #                   "content": [{{ "type": "paragraph", "content": [{{ "type": "text", "text": "상세 내용" }}] }}]
+    #                 }}
+    #               ]
+    #             }}
+    #           ]
+    #         }}
+    #       ]
+    #     }}
 
-        📈 <차트가 필요한 경우 구조 예시>
-        {{
-          "type": "doc",
-          "content": [
-            {{
-              "type": "heading",
-              "attrs": {{ "level": 1 }},
-              "content": [{{ "type": "text", "text": "{chapter_title}" }}]
-            }},
-            {{
-              "type": "paragraph",
-              "attrs": {{ "textAlign": "left", "paragraphIndex": 0 }},
-              "content": [{{ "type": "text", "text": "차트 분석 요약" }}]
-            }},
-            {{
-              "type": "chart",
-              "attrs": {{
-                "chartType": "line",
-                "title": "차트 제목",
-                "data": {{
-                  "labels": ["A", "B"],
-                  "datasets": [
-                    {{
-                      "label": "데이터 라벨",
-                      "data": [10, 20],
-                      "backgroundColor": "rgba(54, 162, 235, 0.2)",
-                      "borderColor": "rgba(54, 162, 235, 1)",
-                      "borderWidth": 2
-                    }}
-                  ]
-                }},
-                "options": {{
-                  "responsive": true,
-                  "plugins": {{
-                    "legend": {{ "display": true }},
-                    "title": {{ "display": true, "text": "차트 제목" }}
-                  }},
-                  "scales": {{ "y": {{ "beginAtZero": true }} }}
-                }}
-              }},
-              "content": []
-            }}
-          ]
-        }}
+    #     📈 <차트가 필요한 경우 구조 예시>
+    #     {{
+    #       "type": "doc",
+    #       "content": [
+    #         {{
+    #           "type": "heading",
+    #           "attrs": {{ "level": 1 }},
+    #           "content": [{{ "type": "text", "text": "{chapter_title}" }}]
+    #         }},
+    #         {{
+    #           "type": "paragraph",
+    #           "attrs": {{ "textAlign": "left", "paragraphIndex": 0 }},
+    #           "content": [{{ "type": "text", "text": "차트 분석 요약" }}]
+    #         }},
+    #         {{
+    #           "type": "chart",
+    #           "attrs": {{
+    #             "chartType": "line",
+    #             "title": "차트 제목",
+    #             "data": {{
+    #               "labels": ["A", "B"],
+    #               "datasets": [
+    #                 {{
+    #                   "label": "데이터 라벨",
+    #                   "data": [10, 20],
+    #                   "backgroundColor": "rgba(54, 162, 235, 0.2)",
+    #                   "borderColor": "rgba(54, 162, 235, 1)",
+    #                   "borderWidth": 2
+    #                 }}
+    #               ]
+    #             }},
+    #             "options": {{
+    #               "responsive": true,
+    #               "plugins": {{
+    #                 "legend": {{ "display": true }},
+    #                 "title": {{ "display": true, "text": "차트 제목" }}
+    #               }},
+    #               "scales": {{ "y": {{ "beginAtZero": true }} }}
+    #             }}
+    #           }},
+    #           "content": []
+    #         }}
+    #       ]
+    #     }}
 
-        ⚠️ 중요:
-        - **최우선 규칙**: 작성 내용은 반드시 **"{target_chapter_info}"의 설명**을 따르세요.
-        - **반드시 첫 번째 요소로 heading을 생성하세요** (제목 텍스트: "{chapter_title}")
-        - 각 paragraph는 paragraphIndex를 0부터 순차적으로 부여하세요
-        - 빈 줄은 text: "\u200b" (zero-width space)로 처리하세요
-        - **문장 끝은 반드시 명사형(~함, ~음, ~구축 등)으로 처리하세요.**
-        - **표 생성 시**: 내용이 없는 빈 셀(Empty Cell)일 경우, **text: "\u200b"**를 넣어 에러를 방지하세요.
-        - **차트 생성 시**: Chart.js 형식 준수.
-        - 코드 블록 마커(```)를 사용하지 마세요
-        - 순수 JSON만 출력하세요
-        """
+    #     ⚠️ 중요:
+    #     - **최우선 규칙**: 작성 내용은 반드시 **"{target_chapter_info}"의 설명**을 따르세요.
+    #     - **반드시 첫 번째 요소로 heading을 생성하세요** (제목 텍스트: "{chapter_title}")
+    #     - 각 paragraph는 paragraphIndex를 0부터 순차적으로 부여하세요
+    #     - 빈 줄은 text: "\u200b" (zero-width space)로 처리하세요
+    #     - **문장 끝은 반드시 명사형(~함, ~음, ~구축 등)으로 처리하세요.**
+    #     - **표 생성 시**: 내용이 없는 빈 셀(Empty Cell)일 경우, **text: "\u200b"**를 넣어 에러를 방지하세요.
+    #     - **차트 생성 시**: Chart.js 형식 준수.
+    #     - 코드 블록 마커(```)를 사용하지 마세요
+    #     - 순수 JSON만 출력하세요
+    #     """
     
     # 1. guide_claude.json 로드
     guide_data = {}

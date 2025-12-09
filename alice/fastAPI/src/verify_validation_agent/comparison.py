@@ -141,6 +141,25 @@ def is_section_covered_by_headings(toc_title: str, draft_headings: List[str]) ->
     return False
 
 
+def is_section_covered_by_content(toc_title: str, draft_text: str) -> bool:
+    """
+    heading이 없더라도 본문에 섹션 핵심 키워드가 등장하면
+    최소 partial로 인정하기 위한 완화 로직.
+    """
+    if not toc_title or not draft_text:
+        return False
+
+    keywords = extract_core_keywords(toc_title)
+    if not keywords:
+        return False
+
+    text_lower = draft_text.lower()
+    for kw in keywords:
+        if kw and kw.lower() in text_lower:
+            return True
+    return False
+
+
 # -------------------------------
 # JSON / TEXT UTILITIES
 # -------------------------------
@@ -304,9 +323,14 @@ JSON ONLY 로만 응답하세요:
     try:
         parsed = json.loads(clean)
         for item in parsed:
-            if "status" not in item:
+            status = item.get("status")
+            if not status:
                 included_val = str(item.get("included")).lower()
-                item["status"] = "ok" if included_val == "true" else "missing"
+                status = "ok" if included_val == "true" else "partial"
+            status = str(status).lower()
+            if status not in ("ok", "partial", "missing"):
+                status = "partial"
+            item["status"] = status
         return parsed
     except Exception:
         print("❌ Feature JSON 파싱 실패:", clean)
@@ -548,10 +572,23 @@ def compare_draft_ai(request: DraftCompareRequest):
 
         written_sections: List[str] = []
         strict_missing_sections: List[str] = []
+        # 미리 선언해 두어 heading 없는 경우에도 append 가능하도록
+        final_missing_sections: List[str] = []
+        section_details: List[Dict[str, Any]] = []
 
         for title in effective_toc_titles:
-            if is_section_covered_by_headings(title, draft_sections):
+            covered_by_heading = is_section_covered_by_headings(title, draft_sections)
+            covered_by_content = is_section_covered_by_content(title, draft_text)
+
+            if covered_by_heading or covered_by_content:
                 written_sections.append(title)
+                if not covered_by_heading and covered_by_content:
+                    section_details.append({
+                        "section": title,
+                        "status": "partial",
+                        "reason": f"본문에서 '{title}' 관련 핵심 키워드는 확인되었으나 별도 제목이 없습니다. 제목을 추가하고 세부 요건을 보완하세요.",
+                        "suggestion": generate_suggestion(title),
+                    })
             else:
                 strict_missing_sections.append(title)
 
@@ -575,9 +612,6 @@ def compare_draft_ai(request: DraftCompareRequest):
             if strict_missing_sections else []
         )
         section_eval_map = {item.get("section"): item for item in section_eval}
-
-        final_missing_sections: List[str] = []
-        section_details: List[Dict[str, Any]] = []
 
         for sec in strict_missing_sections:
             info = section_eval_map.get(sec)
@@ -617,20 +651,21 @@ def compare_draft_ai(request: DraftCompareRequest):
             status = f.get("status")
             if not status:
                 included_val = str(f.get("included")).lower()
-                status = "ok" if included_val == "true" else "missing"
+                status = "ok" if included_val == "true" else "partial"
 
             status = status.lower()
             if status not in ("ok", "partial", "missing"):
-                status = "missing"
+                status = "partial"
 
             if status == "missing":
                 missing_features.append(feature_name)
 
             if status in ("partial", "missing"):
+                reason = f.get("reason") or "초안에 일부 언급은 있으나 공고문 세부 조건(기간/금액/대상 등)이 부족합니다."
                 feature_details.append({
                     "feature": feature_name,
                     "status": status,
-                    "reason": f.get("reason"),
+                    "reason": reason,
                     "suggestion": generate_suggestion(feature_name),
                 })
 
